@@ -3,19 +3,78 @@
 <head>
 <meta charset="UTF-8">
 <title>Digit Dashboard</title>
+
 <style>
 body{background:#0f172a;color:white;font-family:Arial;}
-.container{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
-.card{background:#1e293b;padding:10px;border-radius:10px;text-align:center;}
-@keyframes blink{0%{background:#1e293b;}50%{background:#ef4444;}100%{background:#1e293b;}}
+
+.container{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+}
+
+.card{
+  background:#1e293b;
+  padding:10px;
+  border-radius:10px;
+  text-align:center;
+}
+
+@keyframes blink{
+  0%{background:#1e293b;}
+  50%{background:#ef4444;}
+  100%{background:#1e293b;}
+}
+
 .signal{animation:blink 0.7s infinite;}
-.row{display:flex;justify-content:space-between;margin:10px 0;position:relative;}
-.digit{width:45px;height:45px;border-radius:8px;background:#334155;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;}
-.green{background:#22c55e;} .yellow{background:#eab308;} .orange{background:#f97316;} .red{background:#ef4444;}
-.cursor{position:absolute;width:10px;height:10px;background:#22c55e;border-radius:50%;top:-6px;transition:all 0.3s linear;box-shadow:0 0 8px #22c55e;}
+
+.row{
+  display:flex;
+  justify-content:space-between;
+  margin:10px 0;
+  position:relative;
+}
+
+.digit{
+  width:45px;
+  height:45px;
+  border-radius:8px;
+  background:#334155;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+}
+
+.green{background:#22c55e;}
+.yellow{background:#eab308;}
+.orange{background:#f97316;}
+.red{background:#ef4444;}
+
+.cursor{
+  position:absolute;
+  width:10px;
+  height:10px;
+  background:#22c55e;
+  border-radius:50%;
+  top:-6px;
+  transition:all 0.3s linear;
+  box-shadow:0 0 8px #22c55e;
+}
+
 .stats{font-size:12px;}
+
+.stream{
+  font-size:11px;
+  margin-top:5px;
+  word-break:break-all;
+  color:#38bdf8;
+  letter-spacing:1px;
+}
 </style>
 </head>
+
 <body>
 
 <h3>🔥 18 Market Signal Dashboard</h3>
@@ -24,10 +83,11 @@ body{background:#0f172a;color:white;font-family:Arial;}
 <div class="container" id="app"></div>
 
 <script>
+
 const names=[
 "Vol 10 (1s)","Vol 15 (1s)","Vol 25 (1s)","Vol 30 (1s)",
 "Vol 50 (1s)","Vol 75 (1s)","Vol 90 (1s)","Vol 100 (1s)",
-"Vol 10","Vol 25","Vol 50","Vol 75","Vol 100",
+"Vol 10 (50t)","Vol 25 (50t)","Vol 50 (50t)","Vol 75 (50t)","Vol 100 (50t)",
 "Jump 10","Jump 25","Jump 50","Jump 75","Jump 100"
 ];
 
@@ -38,12 +98,14 @@ let app=document.getElementById("app");
 let markets=[];
 let audioCtx=null;
 
+// ENABLE AUDIO
 document.body.addEventListener("click",()=>{
  if(!audioCtx){
   audioCtx=new (window.AudioContext||window.webkitAudioContext)();
  }
 });
 
+// BEEP
 function beep(){
  if(!audioCtx) return;
  let osc=audioCtx.createOscillator();
@@ -56,26 +118,35 @@ function beep(){
  osc.stop(audioCtx.currentTime+0.15);
 }
 
+// CREATE MARKETS
 names.forEach((n,i)=>{
+
  let card=document.createElement("div");
  card.className="card";
+
  card.innerHTML=`
   <h4>${n}</h4>
   <div class="row" id="evenRow${i}">
-   <div class="cursor" id="cursor${i}"></div>
+    <div class="cursor" id="cursor${i}"></div>
   </div>
   <div class="row" id="oddRow${i}"></div>
   <div class="stats" id="s${i}"></div>
+  <div class="stream" id="stream${i}"></div>
  `;
+
  app.appendChild(card);
+
  createRow(i,"even");
  createRow(i,"odd");
- markets.push({ticks:[],active:false});
+
+ markets.push({ticks:[],stream:[],active:false});
 });
 
+// CREATE DIGITS
 function createRow(i,type){
  let row=document.getElementById(type+"Row"+i);
  let arr= type==="even"?even:odd;
+
  arr.forEach(d=>{
   let el=document.createElement("div");
   el.className="digit";
@@ -85,13 +156,25 @@ function createRow(i,type){
  });
 }
 
+// MAIN LOOP
 setInterval(()=>{
+
  markets.forEach((m,i)=>{
+
   let d=Math.floor(Math.random()*10);
 
+  // STORE TICKS (1000 MAX)
   m.ticks.push(d);
   if(m.ticks.length>1000) m.ticks.shift();
 
+  // STORE STREAM (E/O)
+  let eo = d % 2 === 0 ? "E" : "O";
+  m.stream.push(eo);
+  if(m.stream.length>50) m.stream.shift();
+
+  document.getElementById("stream"+i).innerText = m.stream.join("");
+
+  // COUNT
   let counts=Array(10).fill(0);
   m.ticks.forEach(x=>counts[x]++);
 
@@ -102,19 +185,20 @@ setInterval(()=>{
   let evenSum=0, oddSum=0;
 
   perc.forEach((p,x)=>{
-   let el=document.getElementById(`m${i}d${x}`);
-   el.className="digit";
-   el.innerHTML=`${x}<br>${p.toFixed(1)}%`;
+    let el=document.getElementById(`m${i}d${x}`);
+    el.className="digit";
+    el.innerHTML=`${x}<br>${p.toFixed(1)}%`;
 
-   if(p===sorted[0]) el.classList.add("green");
-   else if(p===sorted[1]) el.classList.add("yellow");
-   else if(p===sorted[sorted.length-1]) el.classList.add("red");
-   else if(p===sorted[sorted.length-2]) el.classList.add("orange");
+    if(p===sorted[0]) el.classList.add("green");
+    else if(p===sorted[1]) el.classList.add("yellow");
+    else if(p===sorted[sorted.length-1]) el.classList.add("red");
+    else if(p===sorted[sorted.length-2]) el.classList.add("orange");
 
-   if(x%2===0) evenSum+=p;
-   else oddSum+=p;
+    if(x%2===0) evenSum+=p;
+    else oddSum+=p;
   });
 
+  // CURSOR
   let cursor=document.getElementById("cursor"+i);
   let target=document.getElementById(`m${i}d${d}`);
   let row=target.parentElement;
@@ -123,35 +207,47 @@ setInterval(()=>{
   let parent=row.getBoundingClientRect();
 
   if(d%2===0){
-   document.getElementById("evenRow"+i).appendChild(cursor);
+    document.getElementById("evenRow"+i).appendChild(cursor);
   }else{
-   document.getElementById("oddRow"+i).appendChild(cursor);
+    document.getElementById("oddRow"+i).appendChild(cursor);
   }
 
   cursor.style.left=(rect.left-parent.left+22)+"px";
 
+  // SIGNAL LOGIC
   let evenStrong = evenSum>oddSum && [1,3,5,7,9].every(x=>perc[x]<10);
   let oddStrong  = oddSum>evenSum && [0,2,4,6,8].every(x=>perc[x]<10);
 
   let card=document.getElementsByClassName("card")[i];
 
   if(evenStrong || oddStrong){
-   if(!m.active){
-    beep();
-    m.active=true;
-   }
-   card.classList.add("signal");
-   app.prepend(card);
-   document.getElementById("s"+i).innerHTML=
-    `E:${evenSum.toFixed(1)}% | O:${oddSum.toFixed(1)}%<br>🚨 SIGNAL`;
+
+    if(!m.active){
+      beep();
+      m.active=true;
+    }
+
+    card.classList.add("signal");
+    app.prepend(card);
+
+    document.getElementById("s"+i).innerHTML=
+      `E:${evenSum.toFixed(1)}% | O:${oddSum.toFixed(1)}%<br>
+       🚨 ${evenStrong?"STRONG EVEN":"STRONG ODD"}`;
+
   }else{
-   card.classList.remove("signal");
-   m.active=false;
-   document.getElementById("s"+i).innerHTML=
-    `E:${evenSum.toFixed(1)}% | O:${oddSum.toFixed(1)}%`;
+
+    card.classList.remove("signal");
+    m.active=false;
+
+    document.getElementById("s"+i).innerHTML=
+      `E:${evenSum.toFixed(1)}% | O:${oddSum.toFixed(1)}%`;
+
   }
+
  });
+
 },700);
+
 </script>
 
 </body>
