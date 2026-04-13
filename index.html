@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Digit Dashboard</title>
+<title>Live Digit Dashboard</title>
 
 <style>
 body{background:#0f172a;color:white;font-family:Arial;margin:0;}
@@ -70,20 +70,12 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
   background:#22c55e;
   border-radius:50%;
   top:-6px;
-  transition:all 0.25s linear;
-  box-shadow:0 0 8px #22c55e;
+  transition:all 0.2s linear;
 }
 
 .stats{font-size:12px;}
+.stream{font-size:12px;margin-top:5px;letter-spacing:2px;}
 
-.stream{
-  font-size:12px;
-  margin-top:5px;
-  word-break:break-all;
-  letter-spacing:2px;
-}
-
-/* E and O colors */
 .evenLetter{color:#22c55e;}
 .oddLetter{color:#ef4444;}
 </style>
@@ -92,22 +84,21 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 <body>
 
 <div class="container">
-  
   <div class="left" id="app"></div>
-
   <div class="right">
-    <h3>🤖 Trading Bot (Coming Next)</h3>
+    <h3>🤖 Trading Bot (Next)</h3>
   </div>
-
 </div>
 
 <script>
 
-const names=[
-"Vol 10 (1s)","Vol 15 (1s)","Vol 25 (1s)","Vol 30 (1s)",
-"Vol 50 (1s)","Vol 75 (1s)","Vol 90 (1s)","Vol 100 (1s)",
-"Vol 10 (50t)","Vol 25 (50t)","Vol 50 (50t)","Vol 75 (50t)","Vol 100 (50t)",
-"Jump 10","Jump 25","Jump 50","Jump 75","Jump 100"
+// 🔑 PUT YOUR NEW TOKEN HERE
+const TOKEN = "REPLACE_WITH_NEW_TOKEN";
+
+const symbols=[
+"R_10","R_25","R_50","R_75","R_100",
+"1HZ10V","1HZ25V","1HZ50V","1HZ75V","1HZ100V",
+"JD10","JD25","JD50","JD75","JD100"
 ];
 
 const even=[0,2,4,6,8];
@@ -117,6 +108,7 @@ let app=document.getElementById("app");
 let markets=[];
 let audioCtx=null;
 
+// SOUND
 document.body.addEventListener("click",()=>{
  if(!audioCtx){
   audioCtx=new (window.AudioContext||window.webkitAudioContext)();
@@ -135,13 +127,14 @@ function beep(){
  osc.stop(audioCtx.currentTime+0.15);
 }
 
-names.forEach((n,i)=>{
+// CREATE UI
+symbols.forEach((s,i)=>{
 
  let card=document.createElement("div");
  card.className="card";
 
  card.innerHTML=`
-  <h4>${n}</h4>
+  <h4>${s}</h4>
   <div class="row" id="evenRow${i}">
     <div class="cursor" id="cursor${i}"></div>
   </div>
@@ -155,7 +148,7 @@ names.forEach((n,i)=>{
  createRow(i,"even");
  createRow(i,"odd");
 
- markets.push({ticks:[],stream:[],active:false});
+ markets.push({symbol:s,ticks:[],stream:[],active:false});
 });
 
 function createRow(i,type){
@@ -171,95 +164,115 @@ function createRow(i,type){
  });
 }
 
-setInterval(()=>{
+// CONNECT TO DERIV
+const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
 
- markets.forEach((m,i)=>{
+ws.onopen = ()=>{
+ ws.send(JSON.stringify({authorize:TOKEN}));
 
-  let d=Math.floor(Math.random()*10);
+ symbols.forEach(sym=>{
+   ws.send(JSON.stringify({ticks:sym,subscribe:1}));
+ });
+};
 
-  m.ticks.push(d);
-  if(m.ticks.length>1000) m.ticks.shift();
+ws.onmessage = (msg)=>{
+ let data = JSON.parse(msg.data);
 
-  // STREAM (colored E/O)
-  let eo = d % 2 === 0 
-    ? '<span class="evenLetter">E</span>' 
-    : '<span class="oddLetter">O</span>';
+ if(data.tick){
+   let symbol = data.echo_req.ticks;
+   let digit = parseInt(data.tick.quote.toString().slice(-1));
+   updateMarket(symbol,digit);
+ }
+};
 
-  m.stream.push(eo);
-  if(m.stream.length>50) m.stream.shift();
+// UPDATE
+function updateMarket(symbol,d){
 
-  document.getElementById("stream"+i).innerHTML = m.stream.join("");
+ let i = symbols.indexOf(symbol);
+ if(i===-1) return;
 
-  let counts=Array(10).fill(0);
-  m.ticks.forEach(x=>counts[x]++);
+ let m = markets[i];
 
-  let total=m.ticks.length;
-  let perc=counts.map(c=>c/total*100);
-  let sorted=[...perc].sort((a,b)=>b-a);
+ m.ticks.push(d);
+ if(m.ticks.length>1000) m.ticks.shift();
 
-  let evenSum=0, oddSum=0;
+ let eo = d%2===0 
+   ? '<span class="evenLetter">E</span>' 
+   : '<span class="oddLetter">O</span>';
 
-  perc.forEach((p,x)=>{
-    let el=document.getElementById(`m${i}d${x}`);
-    el.className="digit";
-    el.innerHTML=`${x}<br>${p.toFixed(1)}%`;
+ m.stream.push(eo);
+ if(m.stream.length>50) m.stream.shift();
 
-    if(p===sorted[0]) el.classList.add("green");
-    else if(p===sorted[1]) el.classList.add("blue");
-    else if(p===sorted[sorted.length-1]) el.classList.add("red");
-    else if(p===sorted[sorted.length-2]) el.classList.add("orange");
+ document.getElementById("stream"+i).innerHTML = m.stream.join("");
 
-    if(x%2===0) evenSum+=p;
-    else oddSum+=p;
-  });
+ let counts=Array(10).fill(0);
+ m.ticks.forEach(x=>counts[x]++);
 
-  let cursor=document.getElementById("cursor"+i);
-  let target=document.getElementById(`m${i}d${d}`);
-  let row=target.parentElement;
+ let total=m.ticks.length;
+ let perc=counts.map(c=>c/total*100);
+ let sorted=[...perc].sort((a,b)=>b-a);
 
-  let rect=target.getBoundingClientRect();
-  let parent=row.getBoundingClientRect();
+ let evenSum=0, oddSum=0;
 
-  if(d%2===0){
-    document.getElementById("evenRow"+i).appendChild(cursor);
-  }else{
-    document.getElementById("oddRow"+i).appendChild(cursor);
-  }
+ perc.forEach((p,x)=>{
+  let el=document.getElementById(`m${i}d${x}`);
+  el.className="digit";
+  el.innerHTML=`${x}<br>${p.toFixed(1)}%`;
 
-  cursor.style.left=(rect.left-parent.left+20)+"px";
+  if(p===sorted[0]) el.classList.add("green");
+  else if(p===sorted[1]) el.classList.add("blue");
+  else if(p===sorted[sorted.length-1]) el.classList.add("red");
+  else if(p===sorted[sorted.length-2]) el.classList.add("orange");
 
-  let evenStrong = evenSum>oddSum && [1,3,5,7,9].every(x=>perc[x]<10);
-  let oddStrong  = oddSum>evenSum && [0,2,4,6,8].every(x=>perc[x]<10);
-
-  let card=document.getElementsByClassName("card")[i];
-
-  if(evenStrong || oddStrong){
-
-    if(!m.active){
-      beep();
-      m.active=true;
-    }
-
-    card.classList.add("signal");
-    app.prepend(card);
-
-    document.getElementById("s"+i).innerHTML=
-      `E:${evenSum.toFixed(1)}% | O:${oddSum.toFixed(1)}%<br>
-       🚨 ${evenStrong?"STRONG EVEN":"STRONG ODD"}`;
-
-  }else{
-
-    card.classList.remove("signal");
-    m.active=false;
-
-    document.getElementById("s"+i).innerHTML=
-      `E:${evenSum.toFixed(1)}% | O:${oddSum.toFixed(1)}%`;
-
-  }
-
+  if(x%2===0) evenSum+=p;
+  else oddSum+=p;
  });
 
-},700);
+ let cursor=document.getElementById("cursor"+i);
+ let target=document.getElementById(`m${i}d${d}`);
+ let row=target.parentElement;
+
+ let rect=target.getBoundingClientRect();
+ let parent=row.getBoundingClientRect();
+
+ if(d%2===0){
+  document.getElementById("evenRow"+i).appendChild(cursor);
+ }else{
+  document.getElementById("oddRow"+i).appendChild(cursor);
+ }
+
+ cursor.style.left=(rect.left-parent.left+20)+"px";
+
+ let evenStrong = evenSum>oddSum && [1,3,5,7,9].every(x=>perc[x]<10);
+ let oddStrong  = oddSum>evenSum && [0,2,4,6,8].every(x=>perc[x]<10);
+
+ let card=document.getElementsByClassName("card")[i];
+
+ if(evenStrong || oddStrong){
+
+  if(!m.active){
+   beep();
+   m.active=true;
+  }
+
+  card.classList.add("signal");
+  app.prepend(card);
+
+  document.getElementById("s"+i).innerHTML=
+    `E:${evenSum.toFixed(1)}% | O:${oddSum.toFixed(1)}%<br>
+     🚨 ${evenStrong?"STRONG EVEN":"STRONG ODD"}`;
+
+ }else{
+
+  card.classList.remove("signal");
+  m.active=false;
+
+  document.getElementById("s"+i).innerHTML=
+    `E:${evenSum.toFixed(1)}% | O:${oddSum.toFixed(1)}%`;
+
+ }
+
+}
 
 </script>
 
