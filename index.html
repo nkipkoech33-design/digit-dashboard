@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Digit Analyzer PRO SAFE</title>
+<title>Digit Analyzer FINAL</title>
 
 <style>
 body{background:#0f172a;color:white;font-family:Arial;margin:0;}
@@ -31,6 +31,18 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
   justify-content:center;
 }
 
+/* 🔥 BIGGER DIGIT */
+.digit{
+  font-size:28px;
+  font-weight:bold;
+  line-height:1;
+}
+
+/* percentage stays smaller */
+.percent{
+  font-size:11px;
+}
+
 .pointer{
   position:absolute;
   top:-10px;
@@ -51,7 +63,7 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 .o{color:red;}
 
 .bot-box{border:1px solid #1e293b;padding:10px;border-radius:6px;}
-input{width:100%;margin:3px 0;}
+input,select{width:100%;margin:3px 0;}
 button{margin-top:5px;padding:5px;cursor:pointer;}
 </style>
 </head>
@@ -107,13 +119,13 @@ let API_TOKEN="PUT_YOUR_TOKEN_HERE";
 
 let currentStake=1, profit=0;
 let tradeEnabled=false, contractId=null;
-let activeMarket=null;
+let activeMarket=null, activeSignal=null;
 let tickCounter=0;
 
 let lossStreak=0;
 let cooldownActive=false;
 
-const markets=[ /* SAME 18 MARKETS */
+const markets=[
 {sym:"R_10",name:"Volatility 10 Index"},
 {sym:"R_25",name:"Volatility 25 Index"},
 {sym:"R_50",name:"Volatility 50 Index"},
@@ -199,7 +211,6 @@ if(data.msg_type==="proposal_open_contract"){
 let c=data.proposal_open_contract;
 
 if(c.is_sold){
-
 profit+=c.profit;
 
 if(c.profit>0){
@@ -218,12 +229,10 @@ contractId=null;
 };
 
 function handleCooldown(){
-
 let maxLoss=parseInt(document.getElementById("maxLoss").value);
 let cooldownTime=parseInt(document.getElementById("cooldown").value)*1000;
 
 if(lossStreak>=maxLoss && !cooldownActive){
-
 cooldownActive=true;
 document.getElementById("cooldownStatus").innerText="ACTIVE";
 
@@ -232,8 +241,20 @@ cooldownActive=false;
 lossStreak=0;
 document.getElementById("cooldownStatus").innerText="OFF";
 }, cooldownTime);
-
 }
+}
+
+function analyze(arr){
+let counts=Array(10).fill(0);
+arr.forEach(d=>counts[d]++);
+
+let total=arr.length||1;
+let perc=counts.map(c=>(c/total*100).toFixed(1));
+
+let even=0,odd=0;
+counts.forEach((c,i)=>i%2==0?even+=c:odd+=c);
+
+return {perc,evenPct:(even/total*100).toFixed(1),oddPct:(odd/total*100).toFixed(1)};
 }
 
 function botLogic(sym){
@@ -246,7 +267,19 @@ let tradeMarket=activeMarket;
 let tradeSignal=document.getElementById("manualSignal").value;
 
 if(mode==="AUTO"){
-// keep your signal logic here if needed
+let arr=dataStore[sym];
+if(!arr || arr.length<100) return;
+
+let {perc,evenPct,oddPct}=analyze(arr);
+
+let evenDom=evenPct>oddPct && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
+let oddDom=oddPct>evenPct && perc.filter((p,i)=>i%2==0).every(p=>p<10);
+
+if(evenDom||oddDom){
+activeMarket=sym;
+activeSignal=evenDom?"EVEN":"ODD";
+tradeSignal=activeSignal;
+}
 }
 
 if(!tradeMarket || !tradeEnabled || contractId) return;
@@ -283,7 +316,11 @@ markets.forEach(m=>{
 let arr=dataStore[m.sym];
 if(!arr || arr.length<10) return;
 
+let {perc,evenPct,oddPct}=analyze(arr);
 let lastDigit=arr[arr.length-1];
+
+let values=perc.map(Number);
+let sorted=[...values].sort((a,b)=>b-a);
 
 let ticks=arr.slice(-50).map(d=>
 `<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`
@@ -297,12 +334,39 @@ div.onclick=()=>{activeMarket=m.sym};
 div.innerHTML=`
 <b>${m.name}</b>
 <div class="price">Price: ${lastPriceMap[m.sym]||"--"}</div>
+<div class="winrate">Even: ${evenPct}% | Odd: ${oddPct}%</div>
+
+<div class="grid">
+${[0,2,4,6,8].map(i=>box(i,perc,sorted,lastDigit)).join("")}
+</div>
+
+<div class="grid">
+${[1,3,5,7,9].map(i=>box(i,perc,sorted,lastDigit)).join("")}
+</div>
 
 <div class="tick">${ticks}</div>
 `;
 
 container.appendChild(div);
 });
+}
+
+function box(i,perc,sorted,lastDigit){
+
+let p=parseFloat(perc[i]);
+let color="#1e293b";
+
+if(p===sorted[0]) color="green";
+else if(p===sorted[1]) color="blue";
+else if(p===sorted[sorted.length-1]) color="red";
+else if(p===sorted[sorted.length-2]) color="orange";
+
+return `
+<div class="box" style="background:${color}">
+<div class="digit">${i}</div>
+<div class="percent">${perc[i]}%</div>
+${i===lastDigit?'<div class="pointer">▲</div>':''}
+</div>`;
 }
 
 function toggleTrade(){tradeEnabled=!tradeEnabled;}
