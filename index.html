@@ -27,13 +27,13 @@ select{
   padding:10px;
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:8px;
 }
 
 .market{
   border:1px solid #1e293b;
-  padding:10px;
-  border-radius:10px;
+  padding:8px;
+  border-radius:8px;
   background:#020617;
   transition:0.3s;
 }
@@ -48,39 +48,42 @@ select{
   100%{background:#020617;}
 }
 
+/* SMALLER BOXES */
 .grid{
   display:grid;
   grid-template-columns:repeat(5,1fr);
-  gap:5px;
-  margin-top:5px;
+  gap:4px;
+  margin-top:4px;
 }
 
 .box{
   background:#1e293b;
-  padding:5px;
+  padding:3px;
+  font-size:11px;
   text-align:center;
-  border-radius:5px;
-  position:relative;
+  border-radius:4px;
 }
 
-.pointer{
-  position:absolute;
-  top:-10px;
-  left:50%;
-  transform:translateX(-50%);
-  font-size:10px;
-}
-
+/* FIXED TICK WIDTH */
 .tick{
   font-family:monospace;
   margin-top:5px;
+  display:grid;
+  grid-template-columns:repeat(50, 1fr);
+  gap:2px;
+}
+
+.tick span{
+  font-size:10px;
+  text-align:center;
 }
 
 .e{color:lime;}
 .o{color:red;}
 
 .win{
-  margin-top:5px;
+  margin-top:4px;
+  font-size:12px;
 }
 </style>
 </head>
@@ -99,20 +102,37 @@ select{
 
 <script>
 
-const symbols = [
-  "R_10","R_25","R_50","R_75","R_100",
-  "1HZ10V","1HZ25V","1HZ50V","1HZ75V","1HZ100V",
-  "JD10","JD25","JD50","JD75","JD100",
-  "JD200","JD300","JD400"
+/* FULL MARKET NAMES */
+const markets = [
+  {sym:"R_10", name:"Volatility 10 Index"},
+  {sym:"R_25", name:"Volatility 25 Index"},
+  {sym:"R_50", name:"Volatility 50 Index"},
+  {sym:"R_75", name:"Volatility 75 Index"},
+  {sym:"R_100", name:"Volatility 100 Index"},
+
+  {sym:"1HZ10V", name:"Volatility 10 (1s) Index"},
+  {sym:"1HZ25V", name:"Volatility 25 (1s) Index"},
+  {sym:"1HZ50V", name:"Volatility 50 (1s) Index"},
+  {sym:"1HZ75V", name:"Volatility 75 (1s) Index"},
+  {sym:"1HZ100V", name:"Volatility 100 (1s) Index"},
+
+  {sym:"JD10", name:"Jump 10 Index"},
+  {sym:"JD25", name:"Jump 25 Index"},
+  {sym:"JD50", name:"Jump 50 Index"},
+  {sym:"JD75", name:"Jump 75 Index"},
+  {sym:"JD100", name:"Jump 100 Index"},
+  {sym:"JD200", name:"Jump 200 Index"},
+  {sym:"JD300", name:"Jump 300 Index"},
+  {sym:"JD400", name:"Jump 400 Index"}
 ];
 
 let dataStore = {};
 let ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
 
 ws.onopen = () => {
-  symbols.forEach(s=>{
-    ws.send(JSON.stringify({ticks:s, subscribe:1}));
-    dataStore[s]=[];
+  markets.forEach(m=>{
+    ws.send(JSON.stringify({ticks:m.sym, subscribe:1}));
+    dataStore[m.sym]=[];
   });
 };
 
@@ -159,23 +179,25 @@ function render(){
   container.innerHTML="";
 
   let mode = document.getElementById("viewMode").value;
-  let list = [...symbols];
+  let list = [...markets];
 
   if(mode==="two") list = list.slice(0,2);
 
-  list.forEach(sym=>{
+  list.forEach(m=>{
 
-    let arr = dataStore[sym];
+    let arr = dataStore[m.sym];
     if(!arr || arr.length<10) return;
 
-    let {counts,perc,even,odd} = analyze(arr);
+    let {perc,even,odd} = analyze(arr);
 
-    let last50 = arr.slice(-50).map(d=> d%2==0 ? "E":"O").join("");
+    let last50 = arr.slice(-50);
+
+    /* FORCE EXACTLY 50 TICKS */
+    while(last50.length < 50) last50.unshift(0);
 
     let marketDiv = document.createElement("div");
     marketDiv.className="market";
 
-    // DOMINANCE LOGIC
     let evenDom = even > odd && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
     let oddDom = odd > even && perc.filter((p,i)=>i%2==0).every(p=>p<10);
 
@@ -185,7 +207,7 @@ function render(){
     }
 
     marketDiv.innerHTML = `
-      <b>${sym}</b>
+      <b>${m.name}</b>
 
       <div class="win">
         Even: ${even}% | Odd: ${odd}%
@@ -200,8 +222,10 @@ function render(){
       </div>
 
       <div class="tick">
-        ${last50.split("").map(c=> 
-          c==="E" ? `<span class="e">E</span>` : `<span class="o">O</span>`
+        ${last50.map(d=> 
+          d%2==0 
+          ? `<span class="e">E</span>` 
+          : `<span class="o">O</span>`
         ).join("")}
       </div>
     `;
@@ -213,7 +237,6 @@ function render(){
 function box(i,perc){
 
   let p = parseFloat(perc[i]);
-
   let color = "#1e293b";
 
   let sorted = [...perc].map(Number).sort((a,b)=>b-a);
@@ -235,7 +258,7 @@ function beep(){
   let osc = ctx.createOscillator();
   osc.connect(ctx.destination);
   osc.start();
-  osc.stop(ctx.currentTime + 0.1);
+  osc.stop(ctx.currentTime + 0.08);
 }
 
 </script>
