@@ -5,12 +5,7 @@
 <title>Deriv Digit Analyzer PRO</title>
 
 <style>
-body{
-  background:#0f172a;
-  color:white;
-  font-family:Arial;
-  margin:0;
-}
+body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 
 .header{
   padding:10px;
@@ -20,15 +15,8 @@ body{
   align-items:center;
 }
 
-.controls{
-  display:flex;
-  gap:10px;
-}
-
-button, select{
-  padding:5px;
-  cursor:pointer;
-}
+.controls{display:flex;gap:10px;}
+button, select{padding:5px;cursor:pointer;}
 
 .container{
   padding:10px;
@@ -44,10 +32,7 @@ button, select{
   background:#020617;
 }
 
-.blink{
-  animation:blink 1s infinite;
-}
-
+.blink{animation:blink 1s infinite;}
 @keyframes blink{
   0%{background:#020617;}
   50%{background:#78350f;}
@@ -64,7 +49,6 @@ button, select{
   color:yellow;
   animation:jump 0.3s ease;
 }
-
 @keyframes jump{
   0%{transform:translate(-50%,0);}
   50%{transform:translate(-50%,-8px);}
@@ -95,33 +79,18 @@ button, select{
   gap:2px;
 }
 
-.tick span{
-  font-size:10px;
-  text-align:center;
-}
-
+.tick span{font-size:10px;text-align:center;}
 .e{color:lime;}
 .o{color:red;}
 
-.win{
-  margin-top:5px;
-  font-size:12px;
-}
+.win{margin-top:5px;font-size:12px;}
 
-.signal{
-  margin-top:5px;
-  font-weight:bold;
-}
-
+.signal{margin-top:5px;font-weight:bold;}
 .buy-even{color:lime;}
 .buy-odd{color:red;}
 .wait{color:gray;}
 
-.price{
-  color:#38bdf8;
-  font-size:12px;
-  margin-top:2px;
-}
+.price{color:#38bdf8;font-size:12px;margin-top:2px;}
 </style>
 </head>
 
@@ -200,20 +169,21 @@ ws.onmessage = (msg)=>{
 
   if(data.history){
     let sym = data.echo_req.ticks_history;
-    dataStore[sym] = data.history.prices.map(p =>
-      parseInt(p.toString().slice(-1))
-    );
+    dataStore[sym] = data.history.prices.map(p=>{
+      let formatted = parseFloat(p).toFixed(2);
+      return parseInt(formatted.slice(-1));
+    });
     return;
   }
 
   if(data.tick){
     let sym = data.tick.symbol;
 
-    let price = parseFloat(data.tick.quote);
-    let digit = parseInt(price.toString().slice(-1));
+    let price = parseFloat(data.tick.quote).toFixed(2);
+    let digit = parseInt(price.slice(-1)); // ✅ MATCHED DIGIT
 
+    lastPriceMap[sym] = price;
     lastDigitMap[sym] = digit;
-    lastPriceMap[sym] = price.toFixed(2);
 
     let arr = dataStore[sym];
     arr.push(digit);
@@ -226,21 +196,17 @@ ws.onmessage = (msg)=>{
 
 function analyze(arr){
   let counts = Array(10).fill(0);
-
   arr.forEach(d=>counts[d]++);
 
   let total = arr.length || 1;
 
   let perc = counts.map(c=> (c/total*100).toFixed(1));
 
-  let even = 0, odd = 0;
-  counts.forEach((c,i)=>{
-    if(i%2==0) even+=c;
-    else odd+=c;
-  });
+  let even=0, odd=0;
+  counts.forEach((c,i)=> i%2==0 ? even+=c : odd+=c);
 
-  even = (even/total*100).toFixed(1);
-  odd = (odd/total*100).toFixed(1);
+  even=(even/total*100).toFixed(1);
+  odd=(odd/total*100).toFixed(1);
 
   return {perc,even,odd};
 }
@@ -250,30 +216,9 @@ function render(){
   let container = document.getElementById("markets");
   container.innerHTML="";
 
-  let mode = document.getElementById("viewMode").value;
   let list = [...markets];
 
-  if(mode==="two") list = list.slice(0,2);
-
-  let priority = [];
-
   list.forEach(m=>{
-    let arr = dataStore[m.sym];
-    if(!arr || arr.length<10) return;
-
-    let {perc,even,odd} = analyze(arr);
-
-    let evenDom = even > odd && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
-    let oddDom = odd > even && perc.filter((p,i)=>i%2==0).every(p=>p<10);
-
-    if(evenDom || oddDom){
-      priority.unshift(m);
-    } else {
-      priority.push(m);
-    }
-  });
-
-  priority.forEach(m=>{
 
     let arr = dataStore[m.sym];
     if(!arr || arr.length<10) return;
@@ -282,44 +227,12 @@ function render(){
     let lastDigit = lastDigitMap[m.sym];
     let price = lastPriceMap[m.sym] || "--";
 
-    let last50 = arr.slice(-50);
-    while(last50.length < 50) last50.unshift(0);
-
-    let evenDom = even > odd && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
-    let oddDom = odd > even && perc.filter((p,i)=>i%2==0).every(p=>p<10);
-
-    let signal = "WAIT";
-    let signalClass = "wait";
-
-    if(evenDom){
-      signal = "BUY EVEN";
-      signalClass = "buy-even";
-    }
-
-    if(oddDom){
-      signal = "BUY ODD";
-      signalClass = "buy-odd";
-    }
-
     let marketDiv = document.createElement("div");
     marketDiv.className="market";
-
-    if(evenDom || oddDom){
-      marketDiv.classList.add("blink");
-      if(soundOn) beep();
-    }
 
     marketDiv.innerHTML = `
       <b>${m.name} (${arr.length}/1000)</b>
       <div class="price">Price: ${price}</div>
-
-      <div class="signal ${signalClass}">
-        ${signal}
-      </div>
-
-      <div class="win">
-        Even: ${even}% | Odd: ${odd}%
-      </div>
 
       <div class="grid">
         ${[0,2,4,6,8].map(i=>box(i,perc,lastDigit)).join("")}
@@ -328,14 +241,6 @@ function render(){
       <div class="grid">
         ${[1,3,5,7,9].map(i=>box(i,perc,lastDigit)).join("")}
       </div>
-
-      <div class="tick">
-        ${last50.map(d=> 
-          d%2==0 
-          ? `<span class="e">E</span>` 
-          : `<span class="o">O</span>`
-        ).join("")}
-      </div>
     `;
 
     container.appendChild(marketDiv);
@@ -343,31 +248,12 @@ function render(){
 }
 
 function box(i,perc,lastDigit){
-
-  let p = parseFloat(perc[i]);
-  let color = "#1e293b";
-
-  let sorted = [...perc].map(Number).sort((a,b)=>b-a);
-
-  if(p===sorted[0]) color="green";
-  else if(p===sorted[1]) color="blue";
-  else if(p===sorted[sorted.length-1]) color="red";
-  else if(p===sorted[sorted.length-2]) color="orange";
-
   return `
-    <div class="box" style="background:${color}">
+    <div class="box">
       ${i}<br>${perc[i]}%
       ${i===lastDigit ? '<div class="pointer">▲</div>' : ''}
     </div>
   `;
-}
-
-function beep(){
-  let ctx = new AudioContext();
-  let osc = ctx.createOscillator();
-  osc.connect(ctx.destination);
-  osc.start();
-  osc.stop(ctx.currentTime + 0.08);
 }
 
 </script>
