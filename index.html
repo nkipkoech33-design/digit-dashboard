@@ -2,15 +2,12 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Deriv Digit Analyzer PRO FINAL</title>
+<title>Digit Analyzer PRO + Signals</title>
 
 <style>
 body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 
-.header{
-  padding:10px;
-  background:#020617;
-}
+.header{padding:10px;background:#020617;}
 
 .container{
   padding:10px;
@@ -26,11 +23,23 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
   background:#020617;
 }
 
-.price{
-  color:#38bdf8;
-  font-size:12px;
-  margin-top:2px;
+.blink{animation:blink 1s infinite;}
+@keyframes blink{
+  50%{background:#78350f;}
 }
+
+.price{color:#38bdf8;font-size:12px;}
+
+.signal{
+  font-weight:bold;
+  margin-top:4px;
+}
+
+.buy-even{color:lime;}
+.buy-odd{color:red;}
+.wait{color:gray;}
+
+.win{font-size:12px;margin-top:3px;}
 
 .grid{
   display:grid;
@@ -47,13 +56,11 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
   position:relative;
 }
 
-/* pointer */
 .pointer{
   position:absolute;
   top:-12px;
   left:50%;
   transform:translateX(-50%);
-  font-size:12px;
   color:yellow;
   animation:jump 0.3s ease;
 }
@@ -67,7 +74,7 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 <body>
 
 <div class="header">
-  <h3>Digit Analyzer PRO FINAL</h3>
+  <h3>Digit Analyzer PRO + Signals</h3>
 </div>
 
 <div class="container" id="markets"></div>
@@ -117,7 +124,6 @@ ws.onopen = () => {
 ws.onmessage = (msg)=>{
   let data = JSON.parse(msg.data);
 
-  // LIVE
   if(data.tick){
     let sym = data.tick.symbol;
 
@@ -125,12 +131,11 @@ ws.onmessage = (msg)=>{
     pipMap[sym] = pip;
 
     let price = parseFloat(data.tick.quote).toFixed(pip);
-    let digit = parseInt(price[price.length-1]);
+    let digit = parseInt(price.slice(-1));
 
     lastPriceMap[sym] = price;
     lastDigitMap[sym] = digit;
 
-    // load history AFTER pip known
     if(!historyLoaded[sym]){
       historyLoaded[sym] = true;
 
@@ -151,14 +156,13 @@ ws.onmessage = (msg)=>{
     render();
   }
 
-  // HISTORY (FIXED)
   if(data.history){
     let sym = data.echo_req.ticks_history;
     let pip = pipMap[sym] || 2;
 
     dataStore[sym] = data.history.prices.map(p=>{
       let formatted = parseFloat(p).toFixed(pip);
-      return parseInt(formatted[formatted.length-1]);
+      return parseInt(formatted.slice(-1));
     });
 
     render();
@@ -173,10 +177,15 @@ function analyze(arr){
 
   let perc = counts.map(c=> (c/total*100).toFixed(1));
 
-  // ranking
+  let even=0, odd=0;
+  counts.forEach((c,i)=> i%2==0 ? even+=c : odd+=c);
+
+  even=(even/total*100).toFixed(1);
+  odd=(odd/total*100).toFixed(1);
+
   let sorted = [...perc].map(Number).sort((a,b)=>b-a);
 
-  return {perc, sorted};
+  return {perc, sorted, even, odd};
 }
 
 function render(){
@@ -184,21 +193,54 @@ function render(){
   let container = document.getElementById("markets");
   container.innerHTML="";
 
+  let priority=[];
+
   markets.forEach(m=>{
+    let arr = dataStore[m.sym];
+    if(!arr || arr.length<10) return;
+
+    let {perc, even, odd} = analyze(arr);
+
+    let evenDom = even>odd && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
+    let oddDom = odd>even && perc.filter((p,i)=>i%2==0).every(p=>p<10);
+
+    if(evenDom || oddDom){
+      priority.unshift(m);
+    } else {
+      priority.push(m);
+    }
+  });
+
+  priority.forEach(m=>{
 
     let arr = dataStore[m.sym];
     if(!arr || arr.length<10) return;
 
-    let {perc, sorted} = analyze(arr);
+    let {perc, sorted, even, odd} = analyze(arr);
+
     let lastDigit = lastDigitMap[m.sym];
     let price = lastPriceMap[m.sym] || "--";
 
-    let marketDiv = document.createElement("div");
-    marketDiv.className="market";
+    let evenDom = even>odd && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
+    let oddDom = odd>even && perc.filter((p,i)=>i%2==0).every(p=>p<10);
 
-    marketDiv.innerHTML = `
+    let signal="WAIT", cls="wait";
+
+    if(evenDom){signal="BUY EVEN"; cls="buy-even";}
+    if(oddDom){signal="BUY ODD"; cls="buy-odd";}
+
+    let div = document.createElement("div");
+    div.className="market";
+
+    if(evenDom || oddDom) div.classList.add("blink");
+
+    div.innerHTML=`
       <b>${m.name} (${arr.length}/1000)</b>
       <div class="price">Price: ${price}</div>
+
+      <div class="signal ${cls}">${signal}</div>
+
+      <div class="win">Even: ${even}% | Odd: ${odd}%</div>
 
       <div class="grid">
         ${[0,2,4,6,8].map(i=>box(i,perc,sorted,lastDigit)).join("")}
@@ -209,19 +251,19 @@ function render(){
       </div>
     `;
 
-    container.appendChild(marketDiv);
+    container.appendChild(div);
   });
 }
 
 function box(i,perc,sorted,lastDigit){
 
-  let p = parseFloat(perc[i]);
-  let color = "#1e293b";
+  let p=parseFloat(perc[i]);
+  let color="#1e293b";
 
-  if(p === sorted[0]) color="green";
-  else if(p === sorted[1]) color="blue";
-  else if(p === sorted[sorted.length-1]) color="red";
-  else if(p === sorted[sorted.length-2]) color="orange";
+  if(p===sorted[0]) color="green";
+  else if(p===sorted[1]) color="blue";
+  else if(p===sorted[sorted.length-1]) color="red";
+  else if(p===sorted[sorted.length-2]) color="orange";
 
   return `
     <div class="box" style="background:${color}">
