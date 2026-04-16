@@ -22,23 +22,21 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 .box{
   width:2.5cm;
   height:2.5cm;
-  font-size:12px;
-  text-align:center;
   border-radius:4px;
   position:relative;
   display:flex;
   flex-direction:column;
   justify-content:center;
+  align-items:center;
 }
 
-/* 🔥 BIGGER DIGIT */
+/* 🔥 ONLY CHANGE: BIGGER DIGITS */
 .digit{
-  font-size:28px;
+  font-size:34px;
   font-weight:bold;
   line-height:1;
 }
 
-/* percentage stays smaller */
 .percent{
   font-size:11px;
 }
@@ -170,6 +168,9 @@ let digit=parseInt(price.slice(-1));
 
 lastPriceMap[sym]=price;
 
+/* 🔥 FIX: set default active market so bot runs */
+if(!activeMarket) activeMarket=sym;
+
 if(!historyLoaded[sym]){
 historyLoaded[sym]=true;
 ws.send(JSON.stringify({ticks_history:sym,count:1000,end:"latest",style:"ticks"}));
@@ -222,7 +223,6 @@ currentStake*=parseFloat(document.getElementById("martingale").value);
 }
 
 handleCooldown();
-
 contractId=null;
 }
 }
@@ -261,26 +261,8 @@ function botLogic(sym){
 
 if(cooldownActive) return;
 
-let mode=document.getElementById("mode").value;
-
 let tradeMarket=activeMarket;
 let tradeSignal=document.getElementById("manualSignal").value;
-
-if(mode==="AUTO"){
-let arr=dataStore[sym];
-if(!arr || arr.length<100) return;
-
-let {perc,evenPct,oddPct}=analyze(arr);
-
-let evenDom=evenPct>oddPct && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
-let oddDom=oddPct>evenPct && perc.filter((p,i)=>i%2==0).every(p=>p<10);
-
-if(evenDom||oddDom){
-activeMarket=sym;
-activeSignal=evenDom?"EVEN":"ODD";
-tradeSignal=activeSignal;
-}
-}
 
 if(!tradeMarket || !tradeEnabled || contractId) return;
 
