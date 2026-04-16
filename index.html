@@ -17,10 +17,17 @@ body{
   background:#020617;
   display:flex;
   justify-content:space-between;
+  align-items:center;
 }
 
-select{
+.controls{
+  display:flex;
+  gap:10px;
+}
+
+button, select{
   padding:5px;
+  cursor:pointer;
 }
 
 .container{
@@ -36,6 +43,7 @@ select{
   border-radius:8px;
   background:#020617;
   transition:0.3s;
+  position:relative;
 }
 
 .blink{
@@ -48,26 +56,36 @@ select{
   100%{background:#020617;}
 }
 
-/* SMALLER BOXES */
 .grid{
   display:grid;
   grid-template-columns:repeat(5,1fr);
   gap:4px;
-  margin-top:4px;
+  margin-top:6px;
 }
 
 .box{
   background:#1e293b;
-  padding:3px;
+  padding:4px;
   font-size:11px;
   text-align:center;
   border-radius:4px;
+  position:relative;
 }
 
-/* FIXED TICK WIDTH */
+/* POINTER */
+.pointer{
+  position:absolute;
+  top:-12px;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:12px;
+  color:yellow;
+}
+
+/* TICKS */
 .tick{
   font-family:monospace;
-  margin-top:5px;
+  margin-top:6px;
   display:grid;
   grid-template-columns:repeat(50, 1fr);
   gap:2px;
@@ -82,7 +100,7 @@ select{
 .o{color:red;}
 
 .win{
-  margin-top:4px;
+  margin-top:5px;
   font-size:12px;
 }
 </style>
@@ -92,30 +110,32 @@ select{
 
 <div class="header">
   <h3>Digit Analyzer</h3>
-  <select id="viewMode">
-    <option value="all">All Markets</option>
-    <option value="two">2 Markets Only</option>
-  </select>
+
+  <div class="controls">
+    <select id="viewMode">
+      <option value="all">All Markets</option>
+      <option value="two">2 Markets Only</option>
+    </select>
+
+    <button id="muteBtn">🔊 Sound ON</button>
+  </div>
 </div>
 
 <div class="container" id="markets"></div>
 
 <script>
 
-/* FULL MARKET NAMES */
 const markets = [
   {sym:"R_10", name:"Volatility 10 Index"},
   {sym:"R_25", name:"Volatility 25 Index"},
   {sym:"R_50", name:"Volatility 50 Index"},
   {sym:"R_75", name:"Volatility 75 Index"},
   {sym:"R_100", name:"Volatility 100 Index"},
-
   {sym:"1HZ10V", name:"Volatility 10 (1s) Index"},
   {sym:"1HZ25V", name:"Volatility 25 (1s) Index"},
   {sym:"1HZ50V", name:"Volatility 50 (1s) Index"},
   {sym:"1HZ75V", name:"Volatility 75 (1s) Index"},
   {sym:"1HZ100V", name:"Volatility 100 (1s) Index"},
-
   {sym:"JD10", name:"Jump 10 Index"},
   {sym:"JD25", name:"Jump 25 Index"},
   {sym:"JD50", name:"Jump 50 Index"},
@@ -127,6 +147,14 @@ const markets = [
 ];
 
 let dataStore = {};
+let lastDigitMap = {};
+let soundOn = true;
+
+document.getElementById("muteBtn").onclick = () => {
+  soundOn = !soundOn;
+  document.getElementById("muteBtn").innerText = soundOn ? "🔊 Sound ON" : "🔇 Muted";
+};
+
 let ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
 
 ws.onopen = () => {
@@ -142,6 +170,8 @@ ws.onmessage = (msg)=>{
   if(data.tick){
     let sym = data.tick.symbol;
     let digit = parseInt(data.tick.quote.toString().slice(-1));
+
+    lastDigitMap[sym] = digit;
 
     let arr = dataStore[sym];
     arr.push(digit);
@@ -170,7 +200,7 @@ function analyze(arr){
   even = (even/total*100).toFixed(1);
   odd = (odd/total*100).toFixed(1);
 
-  return {counts,perc,even,odd};
+  return {perc,even,odd};
 }
 
 function render(){
@@ -189,10 +219,9 @@ function render(){
     if(!arr || arr.length<10) return;
 
     let {perc,even,odd} = analyze(arr);
+    let lastDigit = lastDigitMap[m.sym];
 
     let last50 = arr.slice(-50);
-
-    /* FORCE EXACTLY 50 TICKS */
     while(last50.length < 50) last50.unshift(0);
 
     let marketDiv = document.createElement("div");
@@ -203,7 +232,7 @@ function render(){
 
     if(evenDom || oddDom){
       marketDiv.classList.add("blink");
-      beep();
+      if(soundOn) beep();
     }
 
     marketDiv.innerHTML = `
@@ -214,11 +243,11 @@ function render(){
       </div>
 
       <div class="grid">
-        ${[0,2,4,6,8].map(i=>box(i,perc)).join("")}
+        ${[0,2,4,6,8].map(i=>box(i,perc,lastDigit)).join("")}
       </div>
 
       <div class="grid">
-        ${[1,3,5,7,9].map(i=>box(i,perc)).join("")}
+        ${[1,3,5,7,9].map(i=>box(i,perc,lastDigit)).join("")}
       </div>
 
       <div class="tick">
@@ -234,7 +263,7 @@ function render(){
   });
 }
 
-function box(i,perc){
+function box(i,perc,lastDigit){
 
   let p = parseFloat(perc[i]);
   let color = "#1e293b";
@@ -249,6 +278,7 @@ function box(i,perc){
   return `
     <div class="box" style="background:${color}">
       ${i}<br>${perc[i]}%
+      ${i===lastDigit ? '<div class="pointer">▲</div>' : ''}
     </div>
   `;
 }
