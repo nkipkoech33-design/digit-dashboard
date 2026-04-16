@@ -2,19 +2,12 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Digit Analyzer PRO FINAL+</title>
+<title>Digit Analyzer PRO MAX + Trading</title>
 
 <style>
 body{background:#0f172a;color:white;font-family:Arial;margin:0;}
-
-.header{padding:10px;background:#020617;}
-
-.container{
-  padding:10px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
+.header{padding:10px;background:#020617;display:flex;gap:10px;align-items:center;}
+.container{padding:10px;display:flex;flex-direction:column;gap:8px;}
 
 .market{
   border:1px solid #1e293b;
@@ -24,45 +17,48 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 }
 
 .blink{animation:blink 1s infinite;}
-@keyframes blink{
-  50%{background:#78350f;}
-}
+@keyframes blink{50%{background:#78350f;}}
 
 .price{color:#38bdf8;font-size:12px;}
 
-.signal{font-weight:bold;margin-top:4px;}
+.signal{font-weight:bold;}
 .buy-even{color:lime;}
 .buy-odd{color:red;}
 .wait{color:gray;}
 
-.win{font-size:12px;margin-top:3px;}
-
 .grid{
   display:grid;
   grid-template-columns:repeat(5,1fr);
-  gap:4px;
-  margin-top:6px;
+  gap:2px;
+  margin-top:4px;
 }
 
 .box{
-  padding:4px;
-  font-size:11px;
+  padding:2px;
+  font-size:9px;
   text-align:center;
-  border-radius:4px;
+  border-radius:3px;
   position:relative;
 }
 
+.tick{
+  display:grid;
+  grid-template-columns:repeat(50,1fr);
+  gap:1px;
+  margin-top:6px;
+  font-size:9px;
+}
+
+.e{color:lime;}
+.o{color:red;}
+
 .pointer{
   position:absolute;
-  top:-12px;
+  top:-10px;
   left:50%;
   transform:translateX(-50%);
   color:yellow;
-  animation:jump 0.3s ease;
-}
-
-@keyframes jump{
-  50%{transform:translate(-50%,-8px);}
+  font-size:10px;
 }
 </style>
 </head>
@@ -70,22 +66,44 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 <body>
 
 <div class="header">
-  <h3>Digit Analyzer PRO FINAL+</h3>
+  <b>Digit Analyzer PRO MAX</b>
+  <button onclick="tradeEnabled=!tradeEnabled">
+    Toggle Trading
+  </button>
 </div>
 
 <div class="container" id="markets"></div>
 
 <script>
 
+// 🔐 PUT YOUR TOKEN
+let API_TOKEN = "PUT_YOUR_TOKEN_HERE";
+
+// ⚙️ SETTINGS
+let tickSpeed = 1;
+let martingale = 2.3;
+let baseStake = 1;
+let currentStake = 1;
+let tradeEnabled = false;
+let contractId = null;
+
+// 🔊 SOUND
+let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function beep(){
+  let o=audioCtx.createOscillator();
+  o.connect(audioCtx.destination);
+  o.start();
+  o.stop(audioCtx.currentTime+0.1);
+}
+
+// 📊 MARKETS (18)
 const markets = [
-  // 5 Volatility
   {sym:"R_10", name:"Volatility 10 Index"},
   {sym:"R_25", name:"Volatility 25 Index"},
   {sym:"R_50", name:"Volatility 50 Index"},
   {sym:"R_75", name:"Volatility 75 Index"},
   {sym:"R_100", name:"Volatility 100 Index"},
 
-  // 8 Volatility 1s (UPDATED)
   {sym:"1HZ10V", name:"Volatility 10 (1s)"},
   {sym:"1HZ15V", name:"Volatility 15 (1s)"},
   {sym:"1HZ25V", name:"Volatility 25 (1s)"},
@@ -95,7 +113,6 @@ const markets = [
   {sym:"1HZ90V", name:"Volatility 90 (1s)"},
   {sym:"1HZ100V", name:"Volatility 100 (1s)"},
 
-  // 5 Jump
   {sym:"JD10", name:"Jump 10 Index"},
   {sym:"JD25", name:"Jump 25 Index"},
   {sym:"JD50", name:"Jump 50 Index"},
@@ -103,47 +120,38 @@ const markets = [
   {sym:"JD100", name:"Jump 100 Index"}
 ];
 
-let dataStore = {};
-let lastDigitMap = {};
-let lastPriceMap = {};
-let pipMap = {};
-let historyLoaded = {};
-let lastSignalState = {};
-
-let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-function beep(){
-  let osc = audioCtx.createOscillator();
-  osc.connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime + 0.1);
-}
+let dataStore={}, lastDigitMap={}, lastPriceMap={}, pipMap={}, historyLoaded={}, lastSignalState={};
 
 let ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
 
 ws.onopen = () => {
+
+  // 🔐 authorize
+  ws.send(JSON.stringify({authorize:API_TOKEN}));
+
   markets.forEach(m=>{
-    dataStore[m.sym] = [];
-    ws.send(JSON.stringify({ticks:m.sym, subscribe:1}));
+    dataStore[m.sym]=[];
+    ws.send(JSON.stringify({ticks:m.sym,subscribe:1}));
   });
 };
 
 ws.onmessage = (msg)=>{
   let data = JSON.parse(msg.data);
 
+  // 📈 LIVE TICK
   if(data.tick){
-    let sym = data.tick.symbol;
+    let sym=data.tick.symbol;
 
-    pipMap[sym] = data.tick.pip_size;
+    pipMap[sym]=data.tick.pip_size;
 
-    let price = parseFloat(data.tick.quote).toFixed(pipMap[sym]);
-    let digit = parseInt(price.slice(-1));
+    let price=parseFloat(data.tick.quote).toFixed(pipMap[sym]);
+    let digit=parseInt(price.slice(-1));
 
-    lastPriceMap[sym] = price;
-    lastDigitMap[sym] = digit;
+    lastPriceMap[sym]=price;
+    lastDigitMap[sym]=digit;
 
     if(!historyLoaded[sym]){
-      historyLoaded[sym] = true;
+      historyLoaded[sym]=true;
       ws.send(JSON.stringify({
         ticks_history:sym,
         count:1000,
@@ -153,115 +161,181 @@ ws.onmessage = (msg)=>{
       return;
     }
 
-    let arr = dataStore[sym];
+    let arr=dataStore[sym];
     arr.push(digit);
     if(arr.length>1000) arr.shift();
+
+    botLogic(sym,digit);
 
     render();
   }
 
+  // 📜 HISTORY
   if(data.history){
-    let sym = data.echo_req.ticks_history;
-    let pip = pipMap[sym] || 2;
+    let sym=data.echo_req.ticks_history;
+    let pip=pipMap[sym]||2;
 
-    dataStore[sym] = data.history.prices.map(p=>{
-      let f = parseFloat(p).toFixed(pip);
+    dataStore[sym]=data.history.prices.map(p=>{
+      let f=parseFloat(p).toFixed(pip);
       return parseInt(f.slice(-1));
     });
+  }
 
-    render();
+  // 💰 PROPOSAL
+  if(data.msg_type==="proposal"){
+    ws.send(JSON.stringify({
+      buy:data.proposal.id,
+      price:currentStake
+    }));
+  }
+
+  // 📊 BUY
+  if(data.msg_type==="buy"){
+    contractId=data.buy.contract_id;
+
+    ws.send(JSON.stringify({
+      proposal_open_contract:1,
+      contract_id:contractId,
+      subscribe:1
+    }));
+  }
+
+  // 📉 RESULT
+  if(data.msg_type==="proposal_open_contract"){
+    let c=data.proposal_open_contract;
+
+    if(c.is_sold){
+
+      if(c.profit>0){
+        currentStake=baseStake;
+      }else{
+        currentStake*=martingale;
+      }
+
+      contractId=null;
+    }
   }
 };
 
 function analyze(arr){
-  let counts = Array(10).fill(0);
+  let counts=Array(10).fill(0);
   arr.forEach(d=>counts[d]++);
 
-  let total = arr.length || 1;
+  let total=arr.length||1;
 
-  let perc = counts.map(c=> (c/total*100).toFixed(1));
+  let perc=counts.map(c=>(c/total*100).toFixed(1));
 
-  let even=0, odd=0;
-  counts.forEach((c,i)=> i%2==0 ? even+=c : odd+=c);
+  let even=0,odd=0;
+  counts.forEach((c,i)=>i%2==0?even+=c:odd+=c);
 
   even=(even/total*100).toFixed(1);
   odd=(odd/total*100).toFixed(1);
 
-  let sorted = [...perc].map(Number).sort((a,b)=>b-a);
+  let sorted=[...perc].map(Number).sort((a,b)=>b-a);
 
-  return {perc, sorted, even, odd};
+  return {perc,sorted,even,odd};
+}
+
+// 🤖 BOT
+let activeMarket=null, activeSignal=null, tickCounter=0;
+
+function botLogic(sym,digit){
+
+  let arr=dataStore[sym];
+  if(!arr || arr.length<100) return;
+
+  let {perc,even,odd}=analyze(arr);
+
+  let evenDom=even>odd && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
+  let oddDom=odd>even && perc.filter((p,i)=>i%2==0).every(p=>p<10);
+
+  if(evenDom || oddDom){
+    activeMarket=sym;
+    activeSignal=evenDom?"EVEN":"ODD";
+
+    if(!lastSignalState[sym]){
+      beep();
+      lastSignalState[sym]=true;
+    }
+  } else {
+    lastSignalState[sym]=false;
+  }
+
+  if(sym!==activeMarket) return;
+  if(!tradeEnabled) return;
+  if(contractId) return;
+
+  tickCounter++;
+  if(tickCounter % tickSpeed !==0) return;
+
+  ws.send(JSON.stringify({
+    proposal:1,
+    amount:currentStake,
+    basis:"stake",
+    contract_type: activeSignal==="EVEN" ? "DIGITEVEN":"DIGITODD",
+    currency:"USD",
+    duration:1,
+    duration_unit:"t",
+    symbol:sym
+  }));
 }
 
 function render(){
 
-  let container = document.getElementById("markets");
+  let container=document.getElementById("markets");
   container.innerHTML="";
 
   let priority=[];
 
   markets.forEach(m=>{
-    let arr = dataStore[m.sym];
+    let arr=dataStore[m.sym];
     if(!arr || arr.length<10) return;
 
-    let {perc, even, odd} = analyze(arr);
+    let {perc,even,odd}=analyze(arr);
 
-    let evenDom = even>odd && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
-    let oddDom = odd>even && perc.filter((p,i)=>i%2==0).every(p=>p<10);
+    let evenDom=even>odd && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
+    let oddDom=odd>even && perc.filter((p,i)=>i%2==0).every(p=>p<10);
 
-    if(evenDom || oddDom){
-      priority.unshift(m);
-    } else {
-      priority.push(m);
-    }
+    if(evenDom || oddDom) priority.unshift(m);
+    else priority.push(m);
   });
 
   priority.forEach(m=>{
 
-    let arr = dataStore[m.sym];
+    let arr=dataStore[m.sym];
     if(!arr) return;
 
-    let {perc, sorted, even, odd} = analyze(arr);
+    let {perc,sorted,even,odd}=analyze(arr);
+    let lastDigit=lastDigitMap[m.sym];
 
-    let lastDigit = lastDigitMap[m.sym];
-    let price = lastPriceMap[m.sym] || "--";
+    let ticks=arr.slice(-50).map(d=>
+      `<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`
+    ).join("");
 
-    let evenDom = even>odd && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
-    let oddDom = odd>even && perc.filter((p,i)=>i%2==0).every(p=>p<10);
+    let evenDom=even>odd && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
+    let oddDom=odd>even && perc.filter((p,i)=>i%2==0).every(p=>p<10);
 
     let signal="WAIT", cls="wait";
-
     if(evenDom){signal="BUY EVEN"; cls="buy-even";}
     if(oddDom){signal="BUY ODD"; cls="buy-odd";}
 
-    // 🔥 SOUND ONLY WHEN SIGNAL STARTS
-    if((evenDom || oddDom) && !lastSignalState[m.sym]){
-      beep();
-      lastSignalState[m.sym] = true;
-    }
-
-    if(!evenDom && !oddDom){
-      lastSignalState[m.sym] = false;
-    }
-
-    let div = document.createElement("div");
+    let div=document.createElement("div");
     div.className="market";
-
-    if(evenDom || oddDom) div.classList.add("blink");
+    if(evenDom||oddDom) div.classList.add("blink");
 
     div.innerHTML=`
-      <b>${m.name} (${arr.length}/1000)</b>
-      <div class="price">Price: ${price}</div>
-
+      <b>${m.name}</b>
       <div class="signal ${cls}">${signal}</div>
-      <div class="win">Even: ${even}% | Odd: ${odd}%</div>
+      <div>Even: ${even}% | Odd: ${odd}%</div>
 
       <div class="grid">
         ${[0,2,4,6,8].map(i=>box(i,perc,sorted,lastDigit)).join("")}
       </div>
-
       <div class="grid">
         ${[1,3,5,7,9].map(i=>box(i,perc,sorted,lastDigit)).join("")}
       </div>
+
+      <div class="tick">${ticks}</div>
     `;
 
     container.appendChild(div);
@@ -281,7 +355,7 @@ function box(i,perc,sorted,lastDigit){
   return `
     <div class="box" style="background:${color}">
       ${i}<br>${perc[i]}%
-      ${i===lastDigit ? '<div class="pointer">▲</div>' : ''}
+      ${i===lastDigit?'<div class="pointer">▲</div>':''}
     </div>
   `;
 }
