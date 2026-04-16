@@ -116,6 +116,12 @@ button, select{
 .buy-even{color:lime;}
 .buy-odd{color:red;}
 .wait{color:gray;}
+
+.price{
+  color:#38bdf8;
+  font-size:12px;
+  margin-top:2px;
+}
 </style>
 </head>
 
@@ -161,6 +167,7 @@ const markets = [
 
 let dataStore = {};
 let lastDigitMap = {};
+let lastPriceMap = {};
 let soundOn = true;
 
 document.getElementById("muteBtn").onclick = () => {
@@ -174,7 +181,6 @@ ws.onopen = () => {
   markets.forEach(m=>{
     dataStore[m.sym] = [];
 
-    // ✅ GET 1000 HISTORICAL TICKS
     ws.send(JSON.stringify({
       ticks_history: m.sym,
       count: 1000,
@@ -182,7 +188,6 @@ ws.onopen = () => {
       style: "ticks"
     }));
 
-    // ✅ LIVE SUBSCRIBE
     ws.send(JSON.stringify({
       ticks: m.sym,
       subscribe: 1
@@ -193,7 +198,6 @@ ws.onopen = () => {
 ws.onmessage = (msg)=>{
   let data = JSON.parse(msg.data);
 
-  // 🔥 LOAD HISTORY
   if(data.history){
     let sym = data.echo_req.ticks_history;
     dataStore[sym] = data.history.prices.map(p =>
@@ -202,12 +206,14 @@ ws.onmessage = (msg)=>{
     return;
   }
 
-  // 🔥 LIVE TICKS
   if(data.tick){
     let sym = data.tick.symbol;
-    let digit = parseInt(data.tick.quote.toString().slice(-1));
+
+    let price = parseFloat(data.tick.quote);
+    let digit = parseInt(price.toString().slice(-1));
 
     lastDigitMap[sym] = digit;
+    lastPriceMap[sym] = price.toFixed(2);
 
     let arr = dataStore[sym];
     arr.push(digit);
@@ -274,6 +280,7 @@ function render(){
 
     let {perc,even,odd} = analyze(arr);
     let lastDigit = lastDigitMap[m.sym];
+    let price = lastPriceMap[m.sym] || "--";
 
     let last50 = arr.slice(-50);
     while(last50.length < 50) last50.unshift(0);
@@ -304,6 +311,7 @@ function render(){
 
     marketDiv.innerHTML = `
       <b>${m.name} (${arr.length}/1000)</b>
+      <div class="price">Price: ${price}</div>
 
       <div class="signal ${signalClass}">
         ${signal}
