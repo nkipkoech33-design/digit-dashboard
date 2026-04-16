@@ -2,14 +2,14 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Digit Analyzer FINAL</title>
+<title>Digit Analyzer</title>
 
 <style>
 body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 .wrapper{display:flex;}
 
 .left{width:70%;padding:10px;display:flex;flex-direction:column;gap:8px;}
-.right{width:30%;border-left:1px solid #1e293b;padding:10px;background:#020617;}
+.right{width:30%;border-left:1px solid #1e293b;padding:10px;}
 
 .market{border:1px solid #1e293b;padding:6px;border-radius:6px;cursor:pointer;}
 .market.active{border:2px solid yellow;}
@@ -36,7 +36,7 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 .secondLeast{background:orange;}
 
 .digit{
-  font-size:36px;
+  font-size:42px;
   font-weight:bold;
 }
 
@@ -44,13 +44,13 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
   font-size:12px;
 }
 
-/* POINTER */
+/* POINTER INSIDE */
 .pointer{
   position:absolute;
-  top:3px;
+  top:4px;
   left:50%;
   transform:translateX(-50%);
-  font-size:16px;
+  font-size:18px;
   font-weight:bold;
 }
 .pointer.even{color:lime;}
@@ -64,9 +64,9 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 
 .repeat-count{
   position:absolute;
-  top:3px;
-  right:4px;
-  font-size:12px;
+  top:4px;
+  right:6px;
+  font-size:13px;
   font-weight:bold;
   color:yellow;
 }
@@ -87,71 +87,150 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 
 .e{color:lime;}
 .o{color:red;}
+
+.bot-box{border:1px solid #1e293b;padding:10px;border-radius:6px;}
+input,select{width:100%;margin:3px 0;}
+button{margin-top:5px;padding:5px;cursor:pointer;}
 </style>
 </head>
 
 <body>
 
 <div class="wrapper">
+
 <div class="left" id="markets"></div>
-<div class="right"></div>
+
+<div class="right">
+<div class="bot-box">
+
+<h3>DBot</h3>
+
+Direction:
+<select id="direction">
+<option value="DIGITEVEN">EVEN</option>
+<option value="DIGITODD">ODD</option>
+</select>
+
+Stake <input id="stake" value="1">
+Martingale <input id="martingale" value="2.3">
+Tick Speed <input id="speed" value="1">
+
+<div>Market: <span id="activeMarket">None</span></div>
+<div>Profit: <span id="profit">0</span></div>
+
+<button onclick="toggleBot()">Start / Stop</button>
+
+</div>
+</div>
+
 </div>
 
 <script>
 
-const markets=[
+let token="PUT_TOKEN";
+let ws=new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
+
+let markets=[
 "R_10","R_25","R_50","R_75","R_100",
 "1HZ10V","1HZ15V","1HZ25V","1HZ30V","1HZ50V",
 "1HZ75V","1HZ90V","1HZ100V",
 "JD10","JD25","JD50","JD75","JD100"
 ];
 
-let dataStore={};
-let lastPriceMap={};
+let store={},priceMap={},active=null;
 
-let ws=new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
+let bot=false,contract=null,profit=0,stake=1,tickCount=0;
 
 ws.onopen=()=>{
+ws.send(JSON.stringify({authorize:token}));
 markets.forEach(m=>{
-dataStore[m]=[];
+store[m]=[];
 ws.send(JSON.stringify({ticks:m,subscribe:1}));
 });
 };
 
 ws.onmessage=(msg)=>{
-let data=JSON.parse(msg.data);
+let d=JSON.parse(msg.data);
 
-if(data.tick){
-let sym=data.tick.symbol;
-let price=data.tick.quote.toString();
-let digit=parseInt(price.slice(-1));
+if(d.tick){
+let s=d.tick.symbol;
+let p=parseFloat(d.tick.quote).toFixed(2);
+let digit=parseInt(p.slice(-1));
 
-lastPriceMap[sym]=parseFloat(price).toFixed(2);
+priceMap[s]=p;
 
-let arr=dataStore[sym];
-arr.push(digit);
-if(arr.length>1000) arr.shift();
+if(!active) active=s;
 
+store[s].push(digit);
+if(store[s].length>1000) store[s].shift();
+
+runBot();
 render();
+}
+
+if(d.msg_type==="proposal"){
+ws.send(JSON.stringify({buy:d.proposal.id,price:stake}));
+}
+
+if(d.msg_type==="buy"){
+contract=d.buy.contract_id;
+ws.send(JSON.stringify({proposal_open_contract:1,contract_id:contract,subscribe:1}));
+}
+
+if(d.msg_type==="proposal_open_contract"){
+let c=d.proposal_open_contract;
+if(c.is_sold){
+profit+=c.profit;
+document.getElementById("profit").innerText=profit.toFixed(2);
+
+if(c.profit<0) stake*=parseFloat(document.getElementById("martingale").value);
+else stake=parseFloat(document.getElementById("stake").value);
+
+contract=null;
+}
 }
 };
 
-function getRepeat(arr){
-let last=arr[arr.length-1];
-let c=0;
+function repeat(arr){
+let last=arr[arr.length-1],c=0;
 for(let i=arr.length-1;i>=0;i--){
-if(arr[i]===last) c++;
-else break;
+if(arr[i]===last)c++;else break;
 }
 return c;
 }
 
+function runBot(){
+
+if(!bot || contract || !active) return;
+
+tickCount++;
+let speed=parseInt(document.getElementById("speed").value);
+if(tickCount % speed!==0) return;
+
+stake=parseFloat(document.getElementById("stake").value);
+
+ws.send(JSON.stringify({
+proposal:1,
+amount:stake,
+basis:"stake",
+contract_type:document.getElementById("direction").value,
+currency:"USD",
+duration:1,
+duration_unit:"t",
+symbol:active
+}));
+}
+
 function render(){
-let container=document.getElementById("markets");
-container.innerHTML="";
+
+document.getElementById("activeMarket").innerText=active;
+
+let wrap=document.getElementById("markets");
+wrap.innerHTML="";
 
 markets.forEach(m=>{
-let arr=dataStore[m];
+
+let arr=store[m];
 if(arr.length<20) return;
 
 let counts=Array(10).fill(0);
@@ -167,12 +246,8 @@ let second=sorted[1].i;
 let least=sorted[9].i;
 let secondLeast=sorted[8].i;
 
-let lastDigit=arr[arr.length-1];
-let repeat=getRepeat(arr);
-
-let ticks=arr.slice(-50).map(d=>
-`<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`
-).join("");
+let last=arr[arr.length-1];
+let rep=repeat(arr);
 
 function box(i){
 
@@ -182,11 +257,9 @@ else if(i===second) cls="second";
 else if(i===least) cls="least";
 else if(i===secondLeast) cls="secondLeast";
 
-let pointer=i===lastDigit
-?`<div class="pointer ${i%2==0?'even':'odd'}">▲</div>`:"";
-
-let repeatFx=(i===lastDigit && repeat>=2)?"repeat":"";
-let counter=(i===lastDigit && repeat>=2)?`<div class="repeat-count">x${repeat}</div>`:"";
+let pointer=i===last?`<div class="pointer ${i%2==0?'even':'odd'}">▲</div>`:"";
+let repeatFx=(i===last && rep>=2)?"repeat":"";
+let counter=(i===last && rep>=2)?`<div class="repeat-count">x${rep}</div>`:"";
 
 return `
 <div class="box ${cls} ${repeatFx}">
@@ -197,12 +270,15 @@ ${counter}
 </div>`;
 }
 
+let ticks=arr.slice(-50).map(d=>`<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("");
+
 let div=document.createElement("div");
-div.className="market";
+div.className="market "+(m===active?"active":"");
+div.onclick=()=>active=m;
 
 div.innerHTML=`
 <b>${m}</b>
-<div class="price">Price: ${lastPriceMap[m]}</div>
+<div class="price">${priceMap[m]}</div>
 
 <div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
 <div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
@@ -210,10 +286,12 @@ div.innerHTML=`
 <div class="tick">${ticks}</div>
 `;
 
-container.appendChild(div);
+wrap.appendChild(div);
 
 });
 }
+
+function toggleBot(){bot=!bot;}
 
 </script>
 
