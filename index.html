@@ -2,276 +2,240 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Live Digit Dashboard</title>
+<title>Deriv Digit Analyzer</title>
 
 <style>
-body{background:#0f172a;color:white;font-family:Arial;margin:0;}
+body{
+  background:#0f172a;
+  color:white;
+  font-family:Arial;
+  margin:0;
+}
 
-.container{display:flex;}
+.header{
+  padding:10px;
+  background:#020617;
+  display:flex;
+  justify-content:space-between;
+}
 
-.left{
-  width:50%;
+select{
+  padding:5px;
+}
+
+.container{
+  padding:10px;
   display:flex;
   flex-direction:column;
   gap:10px;
-  padding:10px;
 }
 
-.right{
-  width:50%;
-  border-left:2px solid #1e293b;
+.market{
+  border:1px solid #1e293b;
   padding:10px;
-}
-
-.card{
-  background:#1e293b;
-  padding:8px;
   border-radius:10px;
-  text-align:center;
+  background:#020617;
+  transition:0.3s;
+}
+
+.blink{
+  animation:blink 1s infinite;
 }
 
 @keyframes blink{
-  0%{background:#1e293b;}
-  50%{background:#ef4444;}
-  100%{background:#1e293b;}
+  0%{background:#020617;}
+  50%{background:#78350f;}
+  100%{background:#020617;}
 }
 
-.signal{animation:blink 0.7s infinite;}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:5px;
+  margin-top:5px;
+}
 
-.row{
-  display:flex;
-  justify-content:space-between;
-  margin:8px 0;
+.box{
+  background:#1e293b;
+  padding:5px;
+  text-align:center;
+  border-radius:5px;
   position:relative;
 }
 
-.digit{
-  width:42px;
-  height:42px;
-  border-radius:50%;
-  background:#334155;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  font-size:11px;
-  font-weight:bold;
-}
-
-.green{background:#22c55e;}
-.blue{background:#3b82f6;}
-.orange{background:#f97316;}
-.red{background:#ef4444;}
-
-.cursor{
+.pointer{
   position:absolute;
-  width:10px;
-  height:10px;
-  background:#22c55e;
-  border-radius:50%;
-  top:-6px;
-  transition:all 0.2s linear;
+  top:-10px;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:10px;
 }
 
-.stats{font-size:12px;}
-.stream{font-size:12px;margin-top:5px;letter-spacing:2px;}
+.tick{
+  font-family:monospace;
+  margin-top:5px;
+}
 
-.evenLetter{color:#22c55e;}
-.oddLetter{color:#ef4444;}
+.e{color:lime;}
+.o{color:red;}
+
+.win{
+  margin-top:5px;
+}
 </style>
 </head>
 
 <body>
 
-<div class="container">
-  <div class="left" id="app"></div>
-  <div class="right">
-    <h3>🤖 Trading Bot (Next)</h3>
-  </div>
+<div class="header">
+  <h3>Digit Analyzer</h3>
+  <select id="viewMode">
+    <option value="all">All Markets</option>
+    <option value="two">2 Markets Only</option>
+  </select>
 </div>
+
+<div class="container" id="markets"></div>
 
 <script>
 
-// 🔑 PUT YOUR NEW TOKEN HERE
-const TOKEN = "REPLACE_WITH_NEW_TOKEN";
-
-const symbols=[
-"R_10","R_25","R_50","R_75","R_100",
-"1HZ10V","1HZ25V","1HZ50V","1HZ75V","1HZ100V",
-"JD10","JD25","JD50","JD75","JD100"
+const symbols = [
+  "R_10","R_25","R_50","R_75","R_100",
+  "1HZ10V","1HZ25V","1HZ50V","1HZ75V","1HZ100V",
+  "JD10","JD25","JD50","JD75","JD100",
+  "JD200","JD300","JD400"
 ];
 
-const even=[0,2,4,6,8];
-const odd=[1,3,5,7,9];
+let dataStore = {};
+let ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
 
-let app=document.getElementById("app");
-let markets=[];
-let audioCtx=null;
-
-// SOUND
-document.body.addEventListener("click",()=>{
- if(!audioCtx){
-  audioCtx=new (window.AudioContext||window.webkitAudioContext)();
- }
-});
-
-function beep(){
- if(!audioCtx) return;
- let osc=audioCtx.createOscillator();
- let gain=audioCtx.createGain();
- osc.connect(gain);
- gain.connect(audioCtx.destination);
- osc.frequency.value=800;
- gain.gain.value=0.2;
- osc.start();
- osc.stop(audioCtx.currentTime+0.15);
-}
-
-// CREATE UI
-symbols.forEach((s,i)=>{
-
- let card=document.createElement("div");
- card.className="card";
-
- card.innerHTML=`
-  <h4>${s}</h4>
-  <div class="row" id="evenRow${i}">
-    <div class="cursor" id="cursor${i}"></div>
-  </div>
-  <div class="row" id="oddRow${i}"></div>
-  <div class="stats" id="s${i}"></div>
-  <div class="stream" id="stream${i}"></div>
- `;
-
- app.appendChild(card);
-
- createRow(i,"even");
- createRow(i,"odd");
-
- markets.push({symbol:s,ticks:[],stream:[],active:false});
-});
-
-function createRow(i,type){
- let row=document.getElementById(type+"Row"+i);
- let arr= type==="even"?even:odd;
-
- arr.forEach(d=>{
-  let el=document.createElement("div");
-  el.className="digit";
-  el.id=`m${i}d${d}`;
-  el.innerHTML=`${d}<br>0%`;
-  row.appendChild(el);
- });
-}
-
-// CONNECT TO DERIV
-const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
-
-ws.onopen = ()=>{
- ws.send(JSON.stringify({authorize:TOKEN}));
-
- symbols.forEach(sym=>{
-   ws.send(JSON.stringify({ticks:sym,subscribe:1}));
- });
+ws.onopen = () => {
+  symbols.forEach(s=>{
+    ws.send(JSON.stringify({ticks:s, subscribe:1}));
+    dataStore[s]=[];
+  });
 };
 
 ws.onmessage = (msg)=>{
- let data = JSON.parse(msg.data);
+  let data = JSON.parse(msg.data);
 
- if(data.tick){
-   let symbol = data.echo_req.ticks;
-   let digit = parseInt(data.tick.quote.toString().slice(-1));
-   updateMarket(symbol,digit);
- }
+  if(data.tick){
+    let sym = data.tick.symbol;
+    let digit = parseInt(data.tick.quote.toString().slice(-1));
+
+    let arr = dataStore[sym];
+    arr.push(digit);
+
+    if(arr.length>1000) arr.shift();
+
+    render();
+  }
 };
 
-// UPDATE
-function updateMarket(symbol,d){
+function analyze(arr){
+  let counts = Array(10).fill(0);
 
- let i = symbols.indexOf(symbol);
- if(i===-1) return;
+  arr.forEach(d=>counts[d]++);
 
- let m = markets[i];
+  let total = arr.length || 1;
 
- m.ticks.push(d);
- if(m.ticks.length>1000) m.ticks.shift();
+  let perc = counts.map(c=> (c/total*100).toFixed(1));
 
- let eo = d%2===0 
-   ? '<span class="evenLetter">E</span>' 
-   : '<span class="oddLetter">O</span>';
+  let even = 0, odd = 0;
+  counts.forEach((c,i)=>{
+    if(i%2==0) even+=c;
+    else odd+=c;
+  });
 
- m.stream.push(eo);
- if(m.stream.length>50) m.stream.shift();
+  even = (even/total*100).toFixed(1);
+  odd = (odd/total*100).toFixed(1);
 
- document.getElementById("stream"+i).innerHTML = m.stream.join("");
+  return {counts,perc,even,odd};
+}
 
- let counts=Array(10).fill(0);
- m.ticks.forEach(x=>counts[x]++);
+function render(){
 
- let total=m.ticks.length;
- let perc=counts.map(c=>c/total*100);
- let sorted=[...perc].sort((a,b)=>b-a);
+  let container = document.getElementById("markets");
+  container.innerHTML="";
 
- let evenSum=0, oddSum=0;
+  let mode = document.getElementById("viewMode").value;
+  let list = [...symbols];
 
- perc.forEach((p,x)=>{
-  let el=document.getElementById(`m${i}d${x}`);
-  el.className="digit";
-  el.innerHTML=`${x}<br>${p.toFixed(1)}%`;
+  if(mode==="two") list = list.slice(0,2);
 
-  if(p===sorted[0]) el.classList.add("green");
-  else if(p===sorted[1]) el.classList.add("blue");
-  else if(p===sorted[sorted.length-1]) el.classList.add("red");
-  else if(p===sorted[sorted.length-2]) el.classList.add("orange");
+  list.forEach(sym=>{
 
-  if(x%2===0) evenSum+=p;
-  else oddSum+=p;
- });
+    let arr = dataStore[sym];
+    if(!arr || arr.length<10) return;
 
- let cursor=document.getElementById("cursor"+i);
- let target=document.getElementById(`m${i}d${d}`);
- let row=target.parentElement;
+    let {counts,perc,even,odd} = analyze(arr);
 
- let rect=target.getBoundingClientRect();
- let parent=row.getBoundingClientRect();
+    let last50 = arr.slice(-50).map(d=> d%2==0 ? "E":"O").join("");
 
- if(d%2===0){
-  document.getElementById("evenRow"+i).appendChild(cursor);
- }else{
-  document.getElementById("oddRow"+i).appendChild(cursor);
- }
+    let marketDiv = document.createElement("div");
+    marketDiv.className="market";
 
- cursor.style.left=(rect.left-parent.left+20)+"px";
+    // DOMINANCE LOGIC
+    let evenDom = even > odd && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
+    let oddDom = odd > even && perc.filter((p,i)=>i%2==0).every(p=>p<10);
 
- let evenStrong = evenSum>oddSum && [1,3,5,7,9].every(x=>perc[x]<10);
- let oddStrong  = oddSum>evenSum && [0,2,4,6,8].every(x=>perc[x]<10);
+    if(evenDom || oddDom){
+      marketDiv.classList.add("blink");
+      beep();
+    }
 
- let card=document.getElementsByClassName("card")[i];
+    marketDiv.innerHTML = `
+      <b>${sym}</b>
 
- if(evenStrong || oddStrong){
+      <div class="win">
+        Even: ${even}% | Odd: ${odd}%
+      </div>
 
-  if(!m.active){
-   beep();
-   m.active=true;
-  }
+      <div class="grid">
+        ${[0,2,4,6,8].map(i=>box(i,perc)).join("")}
+      </div>
 
-  card.classList.add("signal");
-  app.prepend(card);
+      <div class="grid">
+        ${[1,3,5,7,9].map(i=>box(i,perc)).join("")}
+      </div>
 
-  document.getElementById("s"+i).innerHTML=
-    `E:${evenSum.toFixed(1)}% | O:${oddSum.toFixed(1)}%<br>
-     🚨 ${evenStrong?"STRONG EVEN":"STRONG ODD"}`;
+      <div class="tick">
+        ${last50.split("").map(c=> 
+          c==="E" ? `<span class="e">E</span>` : `<span class="o">O</span>`
+        ).join("")}
+      </div>
+    `;
 
- }else{
+    container.appendChild(marketDiv);
+  });
+}
 
-  card.classList.remove("signal");
-  m.active=false;
+function box(i,perc){
 
-  document.getElementById("s"+i).innerHTML=
-    `E:${evenSum.toFixed(1)}% | O:${oddSum.toFixed(1)}%`;
+  let p = parseFloat(perc[i]);
 
- }
+  let color = "#1e293b";
 
+  let sorted = [...perc].map(Number).sort((a,b)=>b-a);
+
+  if(p===sorted[0]) color="green";
+  else if(p===sorted[1]) color="blue";
+  else if(p===sorted[sorted.length-1]) color="red";
+  else if(p===sorted[sorted.length-2]) color="orange";
+
+  return `
+    <div class="box" style="background:${color}">
+      ${i}<br>${perc[i]}%
+    </div>
+  `;
+}
+
+function beep(){
+  let ctx = new AudioContext();
+  let osc = ctx.createOscillator();
+  osc.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.1);
 }
 
 </script>
