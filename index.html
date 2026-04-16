@@ -2,46 +2,27 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Digit Analyzer PRO ELITE</title>
+<title>Digit Analyzer PRO STABLE</title>
 
 <style>
 body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 .wrapper{display:flex;}
 
-.left{
-  width:70%;
-  padding:10px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
+.left{width:70%;padding:10px;display:flex;flex-direction:column;gap:8px;}
+.right{width:30%;border-left:1px solid #1e293b;padding:10px;background:#020617;}
 
-.right{
-  width:30%;
-  border-left:1px solid #1e293b;
-  padding:10px;
-  background:#020617;
-}
-
-.market{
-  border:1px solid #1e293b;
-  padding:6px;
-  border-radius:6px;
-}
+.market{border:1px solid #1e293b;padding:6px;border-radius:6px;}
 
 .price{color:#38bdf8;font-size:11px;}
 
-.grid{
-  display:grid;
-  grid-template-columns:repeat(5,auto);
-  gap:4px;
-  margin-top:5px;
-}
+.winrate{font-size:11px;margin-top:2px;}
+
+.grid{display:grid;grid-template-columns:repeat(5,auto);gap:4px;margin-top:5px;}
 
 .box{
   width:2.5cm;
   height:2.5cm;
-  font-size:11px;
+  font-size:12px;
   text-align:center;
   border-radius:4px;
   position:relative;
@@ -69,22 +50,10 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 .e{color:lime;}
 .o{color:red;}
 
-.bot-box{
-  border:1px solid #1e293b;
-  padding:10px;
-  border-radius:6px;
-}
+.bot-box{border:1px solid #1e293b;padding:10px;border-radius:6px;}
 
-input,select{
-  width:100%;
-  margin:3px 0;
-}
-
-button{
-  margin-top:5px;
-  padding:5px;
-  cursor:pointer;
-}
+input,select{width:100%;margin:3px 0;}
+button{margin-top:5px;padding:5px;cursor:pointer;}
 </style>
 </head>
 
@@ -101,24 +70,21 @@ button{
 
 <div id="botControls">
 
-<div>
-Mode:
+<div>Mode:
 <select id="mode">
-  <option value="AUTO">AUTO</option>
-  <option value="MANUAL">MANUAL</option>
+<option value="AUTO">AUTO</option>
+<option value="MANUAL">MANUAL</option>
 </select>
 </div>
 
-<div>
-Market:
+<div>Market:
 <select id="manualMarket"></select>
 </div>
 
-<div>
-Direction:
+<div>Direction:
 <select id="manualSignal">
-  <option value="EVEN">EVEN</option>
-  <option value="ODD">ODD</option>
+<option value="EVEN">EVEN</option>
+<option value="ODD">ODD</option>
 </select>
 </div>
 
@@ -145,7 +111,6 @@ let API_TOKEN="PUT_YOUR_TOKEN_HERE";
 
 let currentStake=1, profit=0;
 let tradeEnabled=false, contractId=null;
-
 let activeMarket=null, activeSignal=null;
 let tickCounter=0;
 
@@ -170,15 +135,14 @@ const markets=[
 {sym:"JD100",name:"Jump 100 Index"}
 ];
 
-// populate dropdown
 window.onload=()=>{
-  let sel=document.getElementById("manualMarket");
-  markets.forEach(m=>{
-    let o=document.createElement("option");
-    o.value=m.sym;
-    o.text=m.name;
-    sel.appendChild(o);
-  });
+let sel=document.getElementById("manualMarket");
+markets.forEach(m=>{
+let o=document.createElement("option");
+o.value=m.sym;
+o.text=m.name;
+sel.appendChild(o);
+});
 };
 
 let dataStore={},lastPriceMap={},pipMap={},historyLoaded={};
@@ -186,11 +150,11 @@ let dataStore={},lastPriceMap={},pipMap={},historyLoaded={};
 let ws=new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
 
 ws.onopen=()=>{
-  ws.send(JSON.stringify({authorize:API_TOKEN}));
-  markets.forEach(m=>{
-    dataStore[m.sym]=[];
-    ws.send(JSON.stringify({ticks:m.sym,subscribe:1}));
-  });
+ws.send(JSON.stringify({authorize:API_TOKEN}));
+markets.forEach(m=>{
+dataStore[m.sym]=[];
+ws.send(JSON.stringify({ticks:m.sym,subscribe:1}));
+});
 };
 
 ws.onmessage=(msg)=>{
@@ -243,6 +207,7 @@ subscribe:1
 
 if(data.msg_type==="proposal_open_contract"){
 let c=data.proposal_open_contract;
+
 if(c.is_sold){
 profit+=c.profit;
 
@@ -266,16 +231,18 @@ contractId=null;
 function analyze(arr){
 let counts=Array(10).fill(0);
 arr.forEach(d=>counts[d]++);
+
 let total=arr.length||1;
+
 let perc=counts.map(c=>(c/total*100).toFixed(1));
 
 let even=0,odd=0;
 counts.forEach((c,i)=>i%2==0?even+=c:odd+=c);
 
-even=(even/total*100).toFixed(1);
-odd=(odd/total*100).toFixed(1);
+let evenPct=(even/total*100).toFixed(1);
+let oddPct=(odd/total*100).toFixed(1);
 
-return {perc,even,odd};
+return {perc,evenPct,oddPct};
 }
 
 function botLogic(sym){
@@ -286,13 +253,14 @@ let tradeMarket=null;
 let tradeSignal=null;
 
 if(mode==="AUTO"){
+
 let arr=dataStore[sym];
 if(!arr || arr.length<100) return;
 
-let {perc,even,odd}=analyze(arr);
+let {perc,evenPct,oddPct}=analyze(arr);
 
-let evenDom=even>odd && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
-let oddDom=odd>even && perc.filter((p,i)=>i%2==0).every(p=>p<10);
+let evenDom=evenPct>oddPct && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
+let oddDom=oddPct>evenPct && perc.filter((p,i)=>i%2==0).every(p=>p<10);
 
 if(evenDom||oddDom){
 activeMarket=sym;
@@ -342,8 +310,11 @@ markets.forEach(m=>{
 let arr=dataStore[m.sym];
 if(!arr || arr.length<10) return;
 
-let {perc}=analyze(arr);
+let {perc,evenPct,oddPct}=analyze(arr);
 let lastDigit=arr[arr.length-1];
+
+let values=perc.map(Number);
+let sorted=[...values].sort((a,b)=>b-a);
 
 let ticks=arr.slice(-50).map(d=>
 `<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`
@@ -355,13 +326,14 @@ div.innerHTML=`
 <div class="market">
 <b>${m.name}</b>
 <div class="price">Price: ${lastPriceMap[m.sym]||"--"}</div>
+<div class="winrate">Even: ${evenPct}% | Odd: ${oddPct}%</div>
 
 <div class="grid">
-${[0,2,4,6,8].map(i=>box(i,perc,lastDigit)).join("")}
+${[0,2,4,6,8].map(i=>box(i,perc,sorted,lastDigit)).join("")}
 </div>
 
 <div class="grid">
-${[1,3,5,7,9].map(i=>box(i,perc,lastDigit)).join("")}
+${[1,3,5,7,9].map(i=>box(i,perc,sorted,lastDigit)).join("")}
 </div>
 
 <div class="tick">${ticks}</div>
@@ -372,15 +344,26 @@ container.appendChild(div);
 });
 }
 
-function box(i,perc,lastDigit){
+function box(i,perc,sorted,lastDigit){
+
+let p=parseFloat(perc[i]);
+let color="#1e293b";
+
+if(p===sorted[0]) color="green";
+else if(p===sorted[1]) color="blue";
+else if(p===sorted[sorted.length-1]) color="red";
+else if(p===sorted[sorted.length-2]) color="orange";
+
 return `
-<div class="box">
-${i}<br>${perc[i]}%
+<div class="box" style="background:${color}">
+<div>${i}</div>
+<div>${perc[i]}%</div>
 ${i===lastDigit?'<div class="pointer">▲</div>':''}
 </div>`;
 }
 
 function toggleTrade(){tradeEnabled=!tradeEnabled;}
+
 function togglePanel(){
 let el=document.getElementById("botControls");
 el.style.display=el.style.display==="none"?"block":"none";
