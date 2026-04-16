@@ -30,16 +30,12 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
   align-items:center;
 }
 
-/* 🔥 ONLY CHANGE: BIGGER DIGITS */
 .digit{
   font-size:34px;
   font-weight:bold;
-  line-height:1;
 }
 
-.percent{
-  font-size:11px;
-}
+.percent{font-size:11px;}
 
 .pointer{
   position:absolute;
@@ -77,12 +73,6 @@ button{margin-top:5px;padding:5px;cursor:pointer;}
 <div class="bot-box">
 <h3>DBot ⚙️</h3>
 
-Mode:
-<select id="mode">
-<option value="AUTO">AUTO</option>
-<option value="MANUAL">MANUAL</option>
-</select>
-
 Direction:
 <select id="manualSignal">
 <option value="EVEN">EVEN</option>
@@ -117,7 +107,7 @@ let API_TOKEN="PUT_YOUR_TOKEN_HERE";
 
 let currentStake=1, profit=0;
 let tradeEnabled=false, contractId=null;
-let activeMarket=null, activeSignal=null;
+let activeMarket=null;
 let tickCounter=0;
 
 let lossStreak=0;
@@ -144,6 +134,11 @@ const markets=[
 {sym:"JD100",name:"Jump 100 Index"}
 ];
 
+function getMarketName(sym){
+let m=markets.find(x=>x.sym===sym);
+return m?m.name:sym;
+}
+
 let dataStore={},lastPriceMap={},pipMap={},historyLoaded={};
 
 let ws=new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
@@ -168,7 +163,6 @@ let digit=parseInt(price.slice(-1));
 
 lastPriceMap[sym]=price;
 
-/* 🔥 FIX: set default active market so bot runs */
 if(!activeMarket) activeMarket=sym;
 
 if(!historyLoaded[sym]){
@@ -181,7 +175,7 @@ let arr=dataStore[sym];
 arr.push(digit);
 if(arr.length>1000) arr.shift();
 
-botLogic(sym);
+botLogic();
 render();
 }
 
@@ -244,33 +238,18 @@ document.getElementById("cooldownStatus").innerText="OFF";
 }
 }
 
-function analyze(arr){
-let counts=Array(10).fill(0);
-arr.forEach(d=>counts[d]++);
-
-let total=arr.length||1;
-let perc=counts.map(c=>(c/total*100).toFixed(1));
-
-let even=0,odd=0;
-counts.forEach((c,i)=>i%2==0?even+=c:odd+=c);
-
-return {perc,evenPct:(even/total*100).toFixed(1),oddPct:(odd/total*100).toFixed(1)};
-}
-
-function botLogic(sym){
+function botLogic(){
 
 if(cooldownActive) return;
 
-let tradeMarket=activeMarket;
-let tradeSignal=document.getElementById("manualSignal").value;
-
-if(!tradeMarket || !tradeEnabled || contractId) return;
+if(!activeMarket || !tradeEnabled || contractId) return;
 
 let speed=parseInt(document.getElementById("speed").value);
 
 tickCounter++;
 if(tickCounter % speed !==0) return;
 
+let tradeSignal=document.getElementById("manualSignal").value;
 currentStake=parseFloat(document.getElementById("stake").value);
 
 ws.send(JSON.stringify({
@@ -281,14 +260,14 @@ contract_type:tradeSignal==="EVEN"?"DIGITEVEN":"DIGITODD",
 currency:"USD",
 duration:1,
 duration_unit:"t",
-symbol:tradeMarket
+symbol:activeMarket
 }));
 }
 
 function render(){
 
 document.getElementById("botProfit").innerText=profit.toFixed(2);
-document.getElementById("activeMarket").innerText=activeMarket||"None";
+document.getElementById("activeMarket").innerText=getMarketName(activeMarket);
 document.getElementById("lossStreak").innerText=lossStreak;
 
 let container=document.getElementById("markets");
@@ -298,11 +277,7 @@ markets.forEach(m=>{
 let arr=dataStore[m.sym];
 if(!arr || arr.length<10) return;
 
-let {perc,evenPct,oddPct}=analyze(arr);
 let lastDigit=arr[arr.length-1];
-
-let values=perc.map(Number);
-let sorted=[...values].sort((a,b)=>b-a);
 
 let ticks=arr.slice(-50).map(d=>
 `<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`
@@ -316,39 +291,11 @@ div.onclick=()=>{activeMarket=m.sym};
 div.innerHTML=`
 <b>${m.name}</b>
 <div class="price">Price: ${lastPriceMap[m.sym]||"--"}</div>
-<div class="winrate">Even: ${evenPct}% | Odd: ${oddPct}%</div>
-
-<div class="grid">
-${[0,2,4,6,8].map(i=>box(i,perc,sorted,lastDigit)).join("")}
-</div>
-
-<div class="grid">
-${[1,3,5,7,9].map(i=>box(i,perc,sorted,lastDigit)).join("")}
-</div>
-
 <div class="tick">${ticks}</div>
 `;
 
 container.appendChild(div);
 });
-}
-
-function box(i,perc,sorted,lastDigit){
-
-let p=parseFloat(perc[i]);
-let color="#1e293b";
-
-if(p===sorted[0]) color="green";
-else if(p===sorted[1]) color="blue";
-else if(p===sorted[sorted.length-1]) color="red";
-else if(p===sorted[sorted.length-2]) color="orange";
-
-return `
-<div class="box" style="background:${color}">
-<div class="digit">${i}</div>
-<div class="percent">${perc[i]}%</div>
-${i===lastDigit?'<div class="pointer">▲</div>':''}
-</div>`;
 }
 
 function toggleTrade(){tradeEnabled=!tradeEnabled;}
