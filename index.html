@@ -15,7 +15,6 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 .market.active{border:2px solid yellow;}
 
 .price{color:#38bdf8;font-size:11px;}
-.winrate{font-size:11px;}
 
 .grid{display:grid;grid-template-columns:repeat(5,auto);gap:4px;margin-top:5px;}
 
@@ -35,14 +34,38 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
   font-weight:bold;
 }
 
-.percent{font-size:11px;}
-
+/* POINTER */
 .pointer{
   position:absolute;
-  top:-10px;
+  top:3px;
   left:50%;
   transform:translateX(-50%);
+  font-size:16px;
+  font-weight:bold;
+}
+.pointer.even{color:lime;}
+.pointer.odd{color:red;}
+
+/* 🔥 REPEAT COUNTER */
+.repeat-count{
+  position:absolute;
+  top:3px;
+  right:4px;
+  font-size:12px;
+  font-weight:bold;
   color:yellow;
+}
+
+/* 🔥 REPEAT EFFECT */
+.repeat{
+  animation: pulse 0.4s infinite;
+  box-shadow: 0 0 15px 4px yellow;
+}
+
+@keyframes pulse{
+  0%{transform:scale(1);}
+  50%{transform:scale(1.08);}
+  100%{transform:scale(1);}
 }
 
 .tick{
@@ -238,6 +261,16 @@ document.getElementById("cooldownStatus").innerText="OFF";
 }
 }
 
+function getRepeatCount(arr){
+let last=arr[arr.length-1];
+let count=0;
+for(let i=arr.length-1;i>=0;i--){
+if(arr[i]===last) count++;
+else break;
+}
+return count;
+}
+
 function botLogic(){
 
 if(cooldownActive) return;
@@ -278,6 +311,7 @@ let arr=dataStore[m.sym];
 if(!arr || arr.length<10) return;
 
 let lastDigit=arr[arr.length-1];
+let repeatCount=getRepeatCount(arr);
 
 let ticks=arr.slice(-50).map(d=>
 `<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`
@@ -291,11 +325,43 @@ div.onclick=()=>{activeMarket=m.sym};
 div.innerHTML=`
 <b>${m.name}</b>
 <div class="price">Price: ${lastPriceMap[m.sym]||"--"}</div>
+
+<div class="grid">
+${[0,2,4,6,8].map(i=>box(i,lastDigit,repeatCount)).join("")}
+</div>
+
+<div class="grid">
+${[1,3,5,7,9].map(i=>box(i,lastDigit,repeatCount)).join("")}
+</div>
+
 <div class="tick">${ticks}</div>
 `;
 
 container.appendChild(div);
 });
+}
+
+function box(i,lastDigit,repeatCount){
+
+let pointer="";
+let repeatClass="";
+let counter="";
+
+if(i===lastDigit){
+pointer=`<div class="pointer ${i%2==0?'even':'odd'}">▲</div>`;
+
+if(repeatCount>=2){
+repeatClass="repeat";
+counter=`<div class="repeat-count">x${repeatCount}</div>`;
+}
+}
+
+return `
+<div class="box ${repeatClass}">
+${pointer}
+${counter}
+<div class="digit">${i}</div>
+</div>`;
 }
 
 function toggleTrade(){tradeEnabled=!tradeEnabled;}
