@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Deriv Digit Analyzer PRO</title>
+<title>Deriv Digit Analyzer PRO+</title>
 
 <style>
 body{background:#0f172a;color:white;font-family:Arial;margin:0;}
@@ -32,13 +32,6 @@ button, select{padding:5px;cursor:pointer;}
   background:#020617;
 }
 
-.blink{animation:blink 1s infinite;}
-@keyframes blink{
-  0%{background:#020617;}
-  50%{background:#78350f;}
-  100%{background:#020617;}
-}
-
 /* POINTER */
 .pointer{
   position:absolute;
@@ -50,9 +43,7 @@ button, select{padding:5px;cursor:pointer;}
   animation:jump 0.3s ease;
 }
 @keyframes jump{
-  0%{transform:translate(-50%,0);}
   50%{transform:translate(-50%,-8px);}
-  100%{transform:translate(-50%,0);}
 }
 
 .grid{
@@ -75,7 +66,7 @@ button, select{padding:5px;cursor:pointer;}
   font-family:monospace;
   margin-top:6px;
   display:grid;
-  grid-template-columns:repeat(50, 1fr);
+  grid-template-columns:repeat(50,1fr);
   gap:2px;
 }
 
@@ -83,30 +74,29 @@ button, select{padding:5px;cursor:pointer;}
 .e{color:lime;}
 .o{color:red;}
 
-.win{margin-top:5px;font-size:12px;}
+.price{font-size:13px;margin-top:2px;}
+.up{color:lime;}
+.down{color:red;}
+.flat{color:gray;}
 
-.signal{margin-top:5px;font-weight:bold;}
-.buy-even{color:lime;}
-.buy-odd{color:red;}
-.wait{color:gray;}
+.speed{font-size:11px;margin-top:3px;}
+.fast{color:lime;}
+.normal{color:orange;}
+.slow{color:red;}
 
-.price{color:#38bdf8;font-size:12px;margin-top:2px;}
+.zone{
+  margin-top:4px;
+  font-size:12px;
+  color:#facc15;
+  font-weight:bold;
+}
 </style>
 </head>
 
 <body>
 
 <div class="header">
-  <h3>Digit Analyzer PRO</h3>
-
-  <div class="controls">
-    <select id="viewMode">
-      <option value="all">All Markets</option>
-      <option value="two">2 Markets Only</option>
-    </select>
-
-    <button id="muteBtn">🔊 Sound ON</button>
-  </div>
+  <h3>Digit Analyzer PRO+</h3>
 </div>
 
 <div class="container" id="markets"></div>
@@ -119,30 +109,18 @@ const markets = [
   {sym:"R_50", name:"Volatility 50 Index"},
   {sym:"R_75", name:"Volatility 75 Index"},
   {sym:"R_100", name:"Volatility 100 Index"},
-  {sym:"1HZ10V", name:"Volatility 10 (1s) Index"},
-  {sym:"1HZ25V", name:"Volatility 25 (1s) Index"},
-  {sym:"1HZ50V", name:"Volatility 50 (1s) Index"},
-  {sym:"1HZ75V", name:"Volatility 75 (1s) Index"},
-  {sym:"1HZ100V", name:"Volatility 100 (1s) Index"},
   {sym:"JD10", name:"Jump 10 Index"},
   {sym:"JD25", name:"Jump 25 Index"},
   {sym:"JD50", name:"Jump 50 Index"},
   {sym:"JD75", name:"Jump 75 Index"},
-  {sym:"JD100", name:"Jump 100 Index"},
-  {sym:"JD200", name:"Jump 200 Index"},
-  {sym:"JD300", name:"Jump 300 Index"},
-  {sym:"JD400", name:"Jump 400 Index"}
+  {sym:"JD100", name:"Jump 100 Index"}
 ];
 
 let dataStore = {};
 let lastDigitMap = {};
 let lastPriceMap = {};
-let soundOn = true;
-
-document.getElementById("muteBtn").onclick = () => {
-  soundOn = !soundOn;
-  document.getElementById("muteBtn").innerText = soundOn ? "🔊 Sound ON" : "🔇 Muted";
-};
+let prevPriceMap = {};
+let tickTimeMap = {};
 
 let ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
 
@@ -170,8 +148,8 @@ ws.onmessage = (msg)=>{
   if(data.history){
     let sym = data.echo_req.ticks_history;
     dataStore[sym] = data.history.prices.map(p=>{
-      let formatted = parseFloat(p).toFixed(2);
-      return parseInt(formatted.slice(-1));
+      let s = p.toString();
+      return parseInt(s[s.length-1]);
     });
     return;
   }
@@ -179,18 +157,28 @@ ws.onmessage = (msg)=>{
   if(data.tick){
     let sym = data.tick.symbol;
 
-    let price = parseFloat(data.tick.quote).toFixed(2);
-    let digit = parseInt(price.slice(-1)); // ✅ MATCHED DIGIT
+    let raw = data.tick.quote;
+    let decimals = data.tick.pip_size;
 
+    let price = parseFloat(raw).toFixed(decimals);
+    let digit = parseInt(price[price.length-1]);
+
+    prevPriceMap[sym] = lastPriceMap[sym];
     lastPriceMap[sym] = price;
+
     lastDigitMap[sym] = digit;
+
+    // tick speed
+    let now = Date.now();
+    let prev = tickTimeMap[sym] || now;
+    tickTimeMap[sym] = now;
+    let speed = 1000 / (now - prev);
 
     let arr = dataStore[sym];
     arr.push(digit);
-
     if(arr.length>1000) arr.shift();
 
-    render();
+    render(sym, speed);
   }
 };
 
@@ -199,7 +187,6 @@ function analyze(arr){
   arr.forEach(d=>counts[d]++);
 
   let total = arr.length || 1;
-
   let perc = counts.map(c=> (c/total*100).toFixed(1));
 
   let even=0, odd=0;
@@ -216,30 +203,59 @@ function render(){
   let container = document.getElementById("markets");
   container.innerHTML="";
 
-  let list = [...markets];
-
-  list.forEach(m=>{
+  markets.forEach(m=>{
 
     let arr = dataStore[m.sym];
     if(!arr || arr.length<10) return;
 
     let {perc,even,odd} = analyze(arr);
-    let lastDigit = lastDigitMap[m.sym];
+
     let price = lastPriceMap[m.sym] || "--";
+    let prev = prevPriceMap[m.sym];
+
+    let directionClass="flat";
+    if(prev){
+      if(price>prev) directionClass="up";
+      else if(price<prev) directionClass="down";
+    }
+
+    // speed classification
+    let speedClass="normal";
+    let now = Date.now();
+    let last = tickTimeMap[m.sym] || now;
+    let speed = 1000 / (now - last);
+
+    if(speed>2) speedClass="fast";
+    else if(speed<1) speedClass="slow";
+
+    // manipulation detection
+    let evenDom = even>odd && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
+    let oddDom = odd>even && perc.filter((p,i)=>i%2==0).every(p=>p<10);
+
+    let zone = (evenDom || oddDom);
 
     let marketDiv = document.createElement("div");
     marketDiv.className="market";
 
     marketDiv.innerHTML = `
-      <b>${m.name} (${arr.length}/1000)</b>
-      <div class="price">Price: ${price}</div>
+      <b>${m.name}</b>
+
+      <div class="price ${directionClass}">
+        Price: ${price}
+      </div>
+
+      <div class="speed ${speedClass}">
+        Speed: ${speedClass.toUpperCase()}
+      </div>
+
+      ${zone ? `<div class="zone">⚠️ MANIPULATION ZONE</div>` : ""}
 
       <div class="grid">
-        ${[0,2,4,6,8].map(i=>box(i,perc,lastDigit)).join("")}
+        ${[0,2,4,6,8].map(i=>box(i,perc,lastDigitMap[m.sym])).join("")}
       </div>
 
       <div class="grid">
-        ${[1,3,5,7,9].map(i=>box(i,perc,lastDigit)).join("")}
+        ${[1,3,5,7,9].map(i=>box(i,perc,lastDigitMap[m.sym])).join("")}
       </div>
     `;
 
