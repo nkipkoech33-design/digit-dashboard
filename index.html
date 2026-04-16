@@ -42,7 +42,6 @@ button, select{
   padding:8px;
   border-radius:8px;
   background:#020617;
-  transition:0.3s;
 }
 
 .blink{
@@ -55,7 +54,7 @@ button, select{
   100%{background:#020617;}
 }
 
-/* POINTER JUMP */
+/* POINTER */
 .pointer{
   position:absolute;
   top:-12px;
@@ -109,7 +108,6 @@ button, select{
   font-size:12px;
 }
 
-/* SIGNAL */
 .signal{
   margin-top:5px;
   font-weight:bold;
@@ -118,7 +116,6 @@ button, select{
 .buy-even{color:lime;}
 .buy-odd{color:red;}
 .wait{color:gray;}
-
 </style>
 </head>
 
@@ -175,14 +172,37 @@ let ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
 
 ws.onopen = () => {
   markets.forEach(m=>{
-    ws.send(JSON.stringify({ticks:m.sym, subscribe:1}));
-    dataStore[m.sym]=[];
+    dataStore[m.sym] = [];
+
+    // ✅ GET 1000 HISTORICAL TICKS
+    ws.send(JSON.stringify({
+      ticks_history: m.sym,
+      count: 1000,
+      end: "latest",
+      style: "ticks"
+    }));
+
+    // ✅ LIVE SUBSCRIBE
+    ws.send(JSON.stringify({
+      ticks: m.sym,
+      subscribe: 1
+    }));
   });
 };
 
 ws.onmessage = (msg)=>{
   let data = JSON.parse(msg.data);
 
+  // 🔥 LOAD HISTORY
+  if(data.history){
+    let sym = data.echo_req.ticks_history;
+    dataStore[sym] = data.history.prices.map(p =>
+      parseInt(p.toString().slice(-1))
+    );
+    return;
+  }
+
+  // 🔥 LIVE TICKS
   if(data.tick){
     let sym = data.tick.symbol;
     let digit = parseInt(data.tick.quote.toString().slice(-1));
@@ -241,7 +261,7 @@ function render(){
     let oddDom = odd > even && perc.filter((p,i)=>i%2==0).every(p=>p<10);
 
     if(evenDom || oddDom){
-      priority.unshift(m); // move to top
+      priority.unshift(m);
     } else {
       priority.push(m);
     }
@@ -258,9 +278,6 @@ function render(){
     let last50 = arr.slice(-50);
     while(last50.length < 50) last50.unshift(0);
 
-    let marketDiv = document.createElement("div");
-    marketDiv.className="market";
-
     let evenDom = even > odd && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
     let oddDom = odd > even && perc.filter((p,i)=>i%2==0).every(p=>p<10);
 
@@ -270,19 +287,23 @@ function render(){
     if(evenDom){
       signal = "BUY EVEN";
       signalClass = "buy-even";
-      marketDiv.classList.add("blink");
-      if(soundOn) beep();
     }
 
     if(oddDom){
       signal = "BUY ODD";
       signalClass = "buy-odd";
+    }
+
+    let marketDiv = document.createElement("div");
+    marketDiv.className="market";
+
+    if(evenDom || oddDom){
       marketDiv.classList.add("blink");
       if(soundOn) beep();
     }
 
     marketDiv.innerHTML = `
-      <b>${m.name}</b>
+      <b>${m.name} (${arr.length}/1000)</b>
 
       <div class="signal ${signalClass}">
         ${signal}
