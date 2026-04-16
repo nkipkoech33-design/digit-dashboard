@@ -21,7 +21,7 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 .box{
   width:2.5cm;
   height:2.5cm;
-  border-radius:4px;
+  border-radius:6px;
   position:relative;
   display:flex;
   flex-direction:column;
@@ -29,9 +29,19 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
   align-items:center;
 }
 
+/* COLORS */
+.most{background:green;}
+.second{background:blue;}
+.least{background:red;}
+.secondLeast{background:orange;}
+
 .digit{
-  font-size:34px;
+  font-size:36px;
   font-weight:bold;
+}
+
+.percent{
+  font-size:12px;
 }
 
 /* POINTER */
@@ -46,7 +56,12 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 .pointer.even{color:lime;}
 .pointer.odd{color:red;}
 
-/* 🔥 REPEAT COUNTER */
+/* REPEAT */
+.repeat{
+  animation:pulse 0.4s infinite;
+  box-shadow:0 0 15px 4px yellow;
+}
+
 .repeat-count{
   position:absolute;
   top:3px;
@@ -56,16 +71,10 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
   color:yellow;
 }
 
-/* 🔥 REPEAT EFFECT */
-.repeat{
-  animation: pulse 0.4s infinite;
-  box-shadow: 0 0 15px 4px yellow;
-}
-
 @keyframes pulse{
-  0%{transform:scale(1);}
-  50%{transform:scale(1.08);}
-  100%{transform:scale(1);}
+0%{transform:scale(1);}
+50%{transform:scale(1.08);}
+100%{transform:scale(1);}
 }
 
 .tick{
@@ -78,99 +87,34 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 
 .e{color:lime;}
 .o{color:red;}
-
-.bot-box{border:1px solid #1e293b;padding:10px;border-radius:6px;}
-input,select{width:100%;margin:3px 0;}
-button{margin-top:5px;padding:5px;cursor:pointer;}
 </style>
 </head>
 
 <body>
 
 <div class="wrapper">
-
 <div class="left" id="markets"></div>
-
-<div class="right">
-
-<div class="bot-box">
-<h3>DBot ⚙️</h3>
-
-Direction:
-<select id="manualSignal">
-<option value="EVEN">EVEN</option>
-<option value="ODD">ODD</option>
-</select>
-
-Stake <input id="stake" value="1">
-Martingale <input id="martingale" value="2.3">
-Take Profit <input id="tp" value="10">
-Stop Loss <input id="sl" value="-10">
-Tick Speed <input id="speed" value="1">
-
-Max Loss Streak <input id="maxLoss" value="3">
-Cooldown (sec) <input id="cooldown" value="10">
-
-<div>Active Market: <span id="activeMarket">None</span></div>
-<div>Profit: <span id="botProfit">0</span></div>
-<div>Loss Streak: <span id="lossStreak">0</span></div>
-<div>Cooldown: <span id="cooldownStatus">OFF</span></div>
-
-<button onclick="toggleTrade()">Start / Stop</button>
-
-</div>
-
-</div>
-
+<div class="right"></div>
 </div>
 
 <script>
 
-let API_TOKEN="PUT_YOUR_TOKEN_HERE";
-
-let currentStake=1, profit=0;
-let tradeEnabled=false, contractId=null;
-let activeMarket=null;
-let tickCounter=0;
-
-let lossStreak=0;
-let cooldownActive=false;
-
 const markets=[
-{sym:"R_10",name:"Volatility 10 Index"},
-{sym:"R_25",name:"Volatility 25 Index"},
-{sym:"R_50",name:"Volatility 50 Index"},
-{sym:"R_75",name:"Volatility 75 Index"},
-{sym:"R_100",name:"Volatility 100 Index"},
-{sym:"1HZ10V",name:"Volatility 10 (1s)"},
-{sym:"1HZ15V",name:"Volatility 15 (1s)"},
-{sym:"1HZ25V",name:"Volatility 25 (1s)"},
-{sym:"1HZ30V",name:"Volatility 30 (1s)"},
-{sym:"1HZ50V",name:"Volatility 50 (1s)"},
-{sym:"1HZ75V",name:"Volatility 75 (1s)"},
-{sym:"1HZ90V",name:"Volatility 90 (1s)"},
-{sym:"1HZ100V",name:"Volatility 100 (1s)"},
-{sym:"JD10",name:"Jump 10 Index"},
-{sym:"JD25",name:"Jump 25 Index"},
-{sym:"JD50",name:"Jump 50 Index"},
-{sym:"JD75",name:"Jump 75 Index"},
-{sym:"JD100",name:"Jump 100 Index"}
+"R_10","R_25","R_50","R_75","R_100",
+"1HZ10V","1HZ15V","1HZ25V","1HZ30V","1HZ50V",
+"1HZ75V","1HZ90V","1HZ100V",
+"JD10","JD25","JD50","JD75","JD100"
 ];
 
-function getMarketName(sym){
-let m=markets.find(x=>x.sym===sym);
-return m?m.name:sym;
-}
-
-let dataStore={},lastPriceMap={},pipMap={},historyLoaded={};
+let dataStore={};
+let lastPriceMap={};
 
 let ws=new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
 
 ws.onopen=()=>{
-ws.send(JSON.stringify({authorize:API_TOKEN}));
 markets.forEach(m=>{
-dataStore[m.sym]=[];
-ws.send(JSON.stringify({ticks:m.sym,subscribe:1}));
+dataStore[m]=[];
+ws.send(JSON.stringify({ticks:m,subscribe:1}));
 });
 };
 
@@ -179,192 +123,97 @@ let data=JSON.parse(msg.data);
 
 if(data.tick){
 let sym=data.tick.symbol;
-
-pipMap[sym]=data.tick.pip_size;
-let price=parseFloat(data.tick.quote).toFixed(pipMap[sym]);
+let price=data.tick.quote.toString();
 let digit=parseInt(price.slice(-1));
 
-lastPriceMap[sym]=price;
-
-if(!activeMarket) activeMarket=sym;
-
-if(!historyLoaded[sym]){
-historyLoaded[sym]=true;
-ws.send(JSON.stringify({ticks_history:sym,count:1000,end:"latest",style:"ticks"}));
-return;
-}
+lastPriceMap[sym]=parseFloat(price).toFixed(2);
 
 let arr=dataStore[sym];
 arr.push(digit);
 if(arr.length>1000) arr.shift();
 
-botLogic();
 render();
-}
-
-if(data.history){
-let sym=data.echo_req.ticks_history;
-let pip=pipMap[sym]||2;
-dataStore[sym]=data.history.prices.map(p=>{
-let f=parseFloat(p).toFixed(pip);
-return parseInt(f.slice(-1));
-});
-}
-
-if(data.msg_type==="proposal"){
-ws.send(JSON.stringify({buy:data.proposal.id,price:currentStake}));
-}
-
-if(data.msg_type==="buy"){
-contractId=data.buy.contract_id;
-
-ws.send(JSON.stringify({
-proposal_open_contract:1,
-contract_id:contractId,
-subscribe:1
-}));
-}
-
-if(data.msg_type==="proposal_open_contract"){
-let c=data.proposal_open_contract;
-
-if(c.is_sold){
-profit+=c.profit;
-
-if(c.profit>0){
-lossStreak=0;
-currentStake=parseFloat(document.getElementById("stake").value);
-}else{
-lossStreak++;
-currentStake*=parseFloat(document.getElementById("martingale").value);
-}
-
-handleCooldown();
-contractId=null;
-}
 }
 };
 
-function handleCooldown(){
-let maxLoss=parseInt(document.getElementById("maxLoss").value);
-let cooldownTime=parseInt(document.getElementById("cooldown").value)*1000;
-
-if(lossStreak>=maxLoss && !cooldownActive){
-cooldownActive=true;
-document.getElementById("cooldownStatus").innerText="ACTIVE";
-
-setTimeout(()=>{
-cooldownActive=false;
-lossStreak=0;
-document.getElementById("cooldownStatus").innerText="OFF";
-}, cooldownTime);
-}
-}
-
-function getRepeatCount(arr){
+function getRepeat(arr){
 let last=arr[arr.length-1];
-let count=0;
+let c=0;
 for(let i=arr.length-1;i>=0;i--){
-if(arr[i]===last) count++;
+if(arr[i]===last) c++;
 else break;
 }
-return count;
-}
-
-function botLogic(){
-
-if(cooldownActive) return;
-
-if(!activeMarket || !tradeEnabled || contractId) return;
-
-let speed=parseInt(document.getElementById("speed").value);
-
-tickCounter++;
-if(tickCounter % speed !==0) return;
-
-let tradeSignal=document.getElementById("manualSignal").value;
-currentStake=parseFloat(document.getElementById("stake").value);
-
-ws.send(JSON.stringify({
-proposal:1,
-amount:currentStake,
-basis:"stake",
-contract_type:tradeSignal==="EVEN"?"DIGITEVEN":"DIGITODD",
-currency:"USD",
-duration:1,
-duration_unit:"t",
-symbol:activeMarket
-}));
+return c;
 }
 
 function render(){
-
-document.getElementById("botProfit").innerText=profit.toFixed(2);
-document.getElementById("activeMarket").innerText=getMarketName(activeMarket);
-document.getElementById("lossStreak").innerText=lossStreak;
-
 let container=document.getElementById("markets");
 container.innerHTML="";
 
 markets.forEach(m=>{
-let arr=dataStore[m.sym];
-if(!arr || arr.length<10) return;
+let arr=dataStore[m];
+if(arr.length<20) return;
+
+let counts=Array(10).fill(0);
+arr.forEach(d=>counts[d]++);
+
+let total=arr.length;
+let perc=counts.map(c=>((c/total)*100).toFixed(1));
+
+let sorted=[...counts].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
+
+let most=sorted[0].i;
+let second=sorted[1].i;
+let least=sorted[9].i;
+let secondLeast=sorted[8].i;
 
 let lastDigit=arr[arr.length-1];
-let repeatCount=getRepeatCount(arr);
+let repeat=getRepeat(arr);
 
 let ticks=arr.slice(-50).map(d=>
 `<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`
 ).join("");
 
-let div=document.createElement("div");
+function box(i){
 
-div.className="market "+(m.sym===activeMarket?"active":"");
-div.onclick=()=>{activeMarket=m.sym};
+let cls="";
+if(i===most) cls="most";
+else if(i===second) cls="second";
+else if(i===least) cls="least";
+else if(i===secondLeast) cls="secondLeast";
+
+let pointer=i===lastDigit
+?`<div class="pointer ${i%2==0?'even':'odd'}">▲</div>`:"";
+
+let repeatFx=(i===lastDigit && repeat>=2)?"repeat":"";
+let counter=(i===lastDigit && repeat>=2)?`<div class="repeat-count">x${repeat}</div>`:"";
+
+return `
+<div class="box ${cls} ${repeatFx}">
+${pointer}
+${counter}
+<div class="digit">${i}</div>
+<div class="percent">${perc[i]}%</div>
+</div>`;
+}
+
+let div=document.createElement("div");
+div.className="market";
 
 div.innerHTML=`
-<b>${m.name}</b>
-<div class="price">Price: ${lastPriceMap[m.sym]||"--"}</div>
+<b>${m}</b>
+<div class="price">Price: ${lastPriceMap[m]}</div>
 
-<div class="grid">
-${[0,2,4,6,8].map(i=>box(i,lastDigit,repeatCount)).join("")}
-</div>
-
-<div class="grid">
-${[1,3,5,7,9].map(i=>box(i,lastDigit,repeatCount)).join("")}
-</div>
+<div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
+<div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
 
 <div class="tick">${ticks}</div>
 `;
 
 container.appendChild(div);
+
 });
 }
-
-function box(i,lastDigit,repeatCount){
-
-let pointer="";
-let repeatClass="";
-let counter="";
-
-if(i===lastDigit){
-pointer=`<div class="pointer ${i%2==0?'even':'odd'}">▲</div>`;
-
-if(repeatCount>=2){
-repeatClass="repeat";
-counter=`<div class="repeat-count">x${repeatCount}</div>`;
-}
-}
-
-return `
-<div class="box ${repeatClass}">
-${pointer}
-${counter}
-<div class="digit">${i}</div>
-</div>`;
-}
-
-function toggleTrade(){tradeEnabled=!tradeEnabled;}
 
 </script>
 
