@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Deriv Digit Analyzer</title>
+<title>Deriv Digit Analyzer PRO</title>
 
 <style>
 body{
@@ -43,7 +43,6 @@ button, select{
   border-radius:8px;
   background:#020617;
   transition:0.3s;
-  position:relative;
 }
 
 .blink{
@@ -54,6 +53,23 @@ button, select{
   0%{background:#020617;}
   50%{background:#78350f;}
   100%{background:#020617;}
+}
+
+/* POINTER JUMP */
+.pointer{
+  position:absolute;
+  top:-12px;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:12px;
+  color:yellow;
+  animation:jump 0.3s ease;
+}
+
+@keyframes jump{
+  0%{transform:translate(-50%,0);}
+  50%{transform:translate(-50%,-8px);}
+  100%{transform:translate(-50%,0);}
 }
 
 .grid{
@@ -72,17 +88,6 @@ button, select{
   position:relative;
 }
 
-/* POINTER */
-.pointer{
-  position:absolute;
-  top:-12px;
-  left:50%;
-  transform:translateX(-50%);
-  font-size:12px;
-  color:yellow;
-}
-
-/* TICKS */
 .tick{
   font-family:monospace;
   margin-top:6px;
@@ -103,13 +108,24 @@ button, select{
   margin-top:5px;
   font-size:12px;
 }
+
+/* SIGNAL */
+.signal{
+  margin-top:5px;
+  font-weight:bold;
+}
+
+.buy-even{color:lime;}
+.buy-odd{color:red;}
+.wait{color:gray;}
+
 </style>
 </head>
 
 <body>
 
 <div class="header">
-  <h3>Digit Analyzer</h3>
+  <h3>Digit Analyzer PRO</h3>
 
   <div class="controls">
     <select id="viewMode">
@@ -213,7 +229,25 @@ function render(){
 
   if(mode==="two") list = list.slice(0,2);
 
+  let priority = [];
+
   list.forEach(m=>{
+    let arr = dataStore[m.sym];
+    if(!arr || arr.length<10) return;
+
+    let {perc,even,odd} = analyze(arr);
+
+    let evenDom = even > odd && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
+    let oddDom = odd > even && perc.filter((p,i)=>i%2==0).every(p=>p<10);
+
+    if(evenDom || oddDom){
+      priority.unshift(m); // move to top
+    } else {
+      priority.push(m);
+    }
+  });
+
+  priority.forEach(m=>{
 
     let arr = dataStore[m.sym];
     if(!arr || arr.length<10) return;
@@ -230,13 +264,29 @@ function render(){
     let evenDom = even > odd && perc.filter((p,i)=>i%2!=0).every(p=>p<10);
     let oddDom = odd > even && perc.filter((p,i)=>i%2==0).every(p=>p<10);
 
-    if(evenDom || oddDom){
+    let signal = "WAIT";
+    let signalClass = "wait";
+
+    if(evenDom){
+      signal = "BUY EVEN";
+      signalClass = "buy-even";
+      marketDiv.classList.add("blink");
+      if(soundOn) beep();
+    }
+
+    if(oddDom){
+      signal = "BUY ODD";
+      signalClass = "buy-odd";
       marketDiv.classList.add("blink");
       if(soundOn) beep();
     }
 
     marketDiv.innerHTML = `
       <b>${m.name}</b>
+
+      <div class="signal ${signalClass}">
+        ${signal}
+      </div>
 
       <div class="win">
         Even: ${even}% | Odd: ${odd}%
