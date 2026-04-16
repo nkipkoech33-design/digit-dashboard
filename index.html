@@ -2,16 +2,13 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Digit Analyzer + DBot</title>
+<title>Digit Analyzer PRO FINAL</title>
 
 <style>
 body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 
-.wrapper{
-  display:flex;
-}
+.wrapper{display:flex;}
 
-/* LEFT SIDE */
 .left{
   width:70%;
   padding:10px;
@@ -20,7 +17,6 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
   gap:8px;
 }
 
-/* RIGHT SIDE (BOT PANEL) */
 .right{
   width:30%;
   border-left:1px solid #1e293b;
@@ -28,31 +24,34 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
   background:#020617;
 }
 
-/* MARKET */
 .market{
   border:1px solid #1e293b;
   padding:6px;
   border-radius:6px;
 }
 
-.blink{animation:blink 1s infinite;}
-@keyframes blink{50%{background:#78350f;}}
+.price{
+  color:#38bdf8;
+  font-size:11px;
+}
 
-/* SMALLER BOXES */
 .grid{
   display:grid;
-  grid-template-columns:repeat(5,1fr);
-  gap:2px;
-  margin-top:3px;
+  grid-template-columns:repeat(5,auto);
+  gap:3px;
+  margin-top:4px;
 }
 
 .box{
-  padding:1px;
-  font-size:8px;
-  height:28px;
+  width:2.5cm;
+  height:1cm;
+  font-size:9px;
   text-align:center;
   border-radius:3px;
   position:relative;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
 }
 
 .pointer{
@@ -60,23 +59,21 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
   top:-8px;
   left:50%;
   transform:translateX(-50%);
-  font-size:9px;
   color:yellow;
+  font-size:10px;
 }
 
-/* TICKS */
 .tick{
   display:grid;
   grid-template-columns:repeat(50,1fr);
   gap:1px;
   margin-top:5px;
-  font-size:8px;
+  font-size:9px;
 }
 
 .e{color:lime;}
 .o{color:red;}
 
-/* BOT PANEL */
 .bot-box{
   border:1px solid #1e293b;
   padding:10px;
@@ -95,45 +92,46 @@ button{
 
 <div class="wrapper">
 
-  <div class="left" id="markets"></div>
+<div class="left" id="markets"></div>
 
-  <div class="right">
-    <div class="bot-box">
-      <h3>DBot Panel</h3>
+<div class="right">
+  <div class="bot-box">
+    <h3>DBot Panel</h3>
 
-      <div>Market: <span id="botMarket">-</span></div>
-      <div>Signal: <span id="botSignal">-</span></div>
-      <div>Stake: <span id="botStake">1</span></div>
-      <div>Profit: <span id="botProfit">0</span></div>
+    <div>Market: <span id="botMarket">-</span></div>
+    <div>Signal: <span id="botSignal">-</span></div>
+    <div>Stake: <span id="botStake">1</span></div>
+    <div>Profit: <span id="botProfit">0</span></div>
 
-      <div>Tick Speed:
-        <input type="number" value="1" id="speed" min="1" style="width:50px">
-      </div>
-
-      <button onclick="toggleTrade()">Toggle Trading</button>
+    <div>Tick Speed:
+      <input type="number" id="speed" value="1" min="1" style="width:50px">
     </div>
+
+    <button onclick="toggleTrade()">Toggle Trading</button>
   </div>
+</div>
 
 </div>
 
 <script>
 
-// SETTINGS
-let API_TOKEN="PUT_YOUR_TOKEN_HERE";
+let API_TOKEN = "PUT_YOUR_TOKEN_HERE";
 
-let tickSpeed=1;
-let martingale=2.3;
-let baseStake=1;
-let currentStake=1;
-let profit=0;
+let martingale = 2.3;
+let baseStake = 1;
+let currentStake = 1;
+let profit = 0;
 
-let tradeEnabled=false;
-let contractId=null;
+let tradeEnabled = false;
+let contractId = null;
 
-let activeMarket=null;
-let activeSignal=null;
+let activeMarket = null;
+let activeSignal = null;
 
-const markets=[
+let tickSpeed = 1;
+let tickCounter = 0;
+
+const markets = [
   {sym:"R_10", name:"Volatility 10 Index"},
   {sym:"R_25", name:"Volatility 25 Index"},
   {sym:"R_50", name:"Volatility 50 Index"},
@@ -156,11 +154,11 @@ const markets=[
   {sym:"JD100", name:"Jump 100 Index"}
 ];
 
-let dataStore={}, lastDigitMap={}, pipMap={}, historyLoaded={};
+let dataStore={}, lastDigitMap={}, lastPriceMap={}, pipMap={}, historyLoaded={};
 
-let ws=new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
+let ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
 
-ws.onopen=()=>{
+ws.onopen = ()=>{
   ws.send(JSON.stringify({authorize:API_TOKEN}));
 
   markets.forEach(m=>{
@@ -169,29 +167,36 @@ ws.onopen=()=>{
   });
 };
 
-ws.onmessage=(msg)=>{
-  let data=JSON.parse(msg.data);
+ws.onmessage = (msg)=>{
+  let data = JSON.parse(msg.data);
 
   if(data.tick){
-    let sym=data.tick.symbol;
+    let sym = data.tick.symbol;
 
-    pipMap[sym]=data.tick.pip_size;
+    pipMap[sym] = data.tick.pip_size;
 
-    let price=parseFloat(data.tick.quote).toFixed(pipMap[sym]);
-    let digit=parseInt(price.slice(-1));
+    let price = parseFloat(data.tick.quote).toFixed(pipMap[sym]);
+    let digit = parseInt(price.slice(-1));
+
+    lastPriceMap[sym] = price;
+    lastDigitMap[sym] = digit;
 
     if(!historyLoaded[sym]){
       historyLoaded[sym]=true;
-      ws.send(JSON.stringify({ticks_history:sym,count:1000,end:"latest",style:"ticks"}));
+      ws.send(JSON.stringify({
+        ticks_history:sym,
+        count:1000,
+        end:"latest",
+        style:"ticks"
+      }));
       return;
     }
 
-    let arr=dataStore[sym];
+    let arr = dataStore[sym];
     arr.push(digit);
     if(arr.length>1000) arr.shift();
 
     botLogic(sym,digit);
-
     render();
   }
 
@@ -230,7 +235,6 @@ ws.onmessage=(msg)=>{
         profit+=c.profit;
         currentStake*=martingale;
       }
-
       contractId=null;
     }
   }
@@ -251,9 +255,6 @@ function analyze(arr){
 
   return {perc,even,odd};
 }
-
-// BOT LOGIC
-let tickCounter=0;
 
 function botLogic(sym,digit){
 
@@ -317,6 +318,7 @@ function render(){
 
     div.innerHTML=`
       <b>${m.name}</b>
+      <div class="price">Price: ${lastPriceMap[m.sym] || "--"}</div>
 
       <div class="grid">
         ${[0,2,4,6,8].map(i=>box(i,perc,lastDigit)).join("")}
