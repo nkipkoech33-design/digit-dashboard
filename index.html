@@ -17,7 +17,7 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 .price{text-align:center;font-size:22px;color:#38bdf8;font-weight:bold;}
 .win{text-align:center;font-size:12px;}
 
-/* NEW: strength + confidence row */
+/* metrics row */
 .metrics{
     display:flex;
     justify-content:space-between;
@@ -134,7 +134,6 @@ text-align:center;
 .buy-even{color:lime;}
 .buy-odd{color:red;}
 
-/* minor responsive */
 @media(max-width:1200px){
     .left{width:100%;}
     .right{display:none;}
@@ -237,26 +236,45 @@ if(arr[i]===last)c++;else break;
 return c;
 }
 
-// Helper: compute strength + confidence metrics
+// Compute signal strength (higher = stronger)
+// Based on even-odd % difference, and also penalize if opposing digits are close to threshold 10%
+function computeSignalStrength(evenP, oddP, perc, signalType) {
+    if (!signalType) return 0;
+    let diff = Math.abs(evenP - oddP);
+    let strengthRaw = diff;
+    if (signalType === "BUY EVEN") {
+        const oddDigits = [1,3,5,7,9];
+        let maxOpposing = Math.max(...oddDigits.map(d => parseFloat(perc[d])));
+        let distanceTo10 = Math.max(0, 10 - maxOpposing);
+        // combine: diff contributes up to 70%, distanceTo10 up to 30%
+        let composite = (diff * 0.7) + (distanceTo10 * 3);
+        return Math.min(100, composite);
+    } 
+    else if (signalType === "BUY ODD") {
+        const evenDigits = [0,2,4,6,8];
+        let maxOpposing = Math.max(...evenDigits.map(d => parseFloat(perc[d])));
+        let distanceTo10 = Math.max(0, 10 - maxOpposing);
+        let composite = (diff * 0.7) + (distanceTo10 * 3);
+        return Math.min(100, composite);
+    }
+    return strengthRaw;
+}
+
+// Helper: compute strength + confidence metrics for display
 function computeStrengthAndConfidence(evenP, oddP, perc, signalType) {
     let strengthRaw = Math.abs(evenP - oddP);
     let strength = strengthRaw.toFixed(1);
     
-    // confidence calculation: only meaningful when signal active
-    let confidence = null;
     let confidencePercent = "—";
     
     if (signalType === "BUY EVEN") {
-        // opposing digits are odd digits 1,3,5,7,9
         const oddDigits = [1,3,5,7,9];
         let oddPercs = oddDigits.map(d => parseFloat(perc[d]));
         let maxOpposing = Math.max(...oddPercs);
-        // margin to 10% threshold, clamp 0-100%
         let margin = 10 - maxOpposing;
         let rawConf = (margin / 10) * 100;
         rawConf = Math.min(100, Math.max(0, rawConf));
-        confidence = rawConf.toFixed(0);
-        confidencePercent = `${confidence}%`;
+        confidencePercent = `${rawConf.toFixed(0)}%`;
     } 
     else if (signalType === "BUY ODD") {
         const evenDigits = [0,2,4,6,8];
@@ -265,8 +283,7 @@ function computeStrengthAndConfidence(evenP, oddP, perc, signalType) {
         let margin = 10 - maxOpposing;
         let rawConf = (margin / 10) * 100;
         rawConf = Math.min(100, Math.max(0, rawConf));
-        confidence = rawConf.toFixed(0);
-        confidencePercent = `${confidence}%`;
+        confidencePercent = `${rawConf.toFixed(0)}%`;
     }
     else {
         confidencePercent = "⚡ wait";
@@ -275,95 +292,127 @@ function computeStrengthAndConfidence(evenP, oddP, perc, signalType) {
     return { strength, strengthRaw, confidencePercent };
 }
 
+// Get signal info for a market: { isActive, signalType, signalStrength }
+function getSignalInfo(sym) {
+    let arr = store[sym];
+    if (!arr || arr.length < 1000) return { isActive: false, signalType: null, signalStrength: 0 };
+    
+    let counts = Array(10).fill(0);
+    arr.forEach(d => counts[d]++);
+    let total = arr.length;
+    let perc = counts.map(c => (c/total)*100);
+    
+    let evenSum = counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
+    let oddSum = counts[1]+counts[3]+counts[5]+counts[7]+counts[9];
+    let evenP = (evenSum/total)*100;
+    let oddP = (oddSum/total)*100;
+    
+    let signalType = null;
+    if(evenP > oddP && [1,3,5,7,9].every(i => perc[i] < 10)) {
+        signalType = "BUY EVEN";
+    }
+    else if(oddP > evenP && [0,2,4,6,8].every(i => perc[i] < 10)) {
+        signalType = "BUY ODD";
+    }
+    
+    let isActive = signalType !== null;
+    let signalStrength = 0;
+    if (isActive) {
+        signalStrength = computeSignalStrength(evenP, oddP, perc, signalType);
+    }
+    return { isActive, signalType, signalStrength, evenP, oddP, perc, counts, total };
+}
+
 function render(){
-
-let wrap=document.getElementById("markets");
-wrap.innerHTML="";
-
-let sorted=[...markets].sort((a,b)=>{
-return (checkSignal(b.sym)?1:0)-(checkSignal(a.sym)?1:0);
-});
-
-sorted.forEach(m=>{
-
-let arr=store[m.sym];
-if(!arr || arr.length<1000) return;
-
-let counts=Array(10).fill(0);
-arr.forEach(d=>counts[d]++);
-
-let total=arr.length;
-let perc=counts.map(c=>((c/total)*100).toFixed(1));
-
-let evenSum=counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
-let oddSum=counts[1]+counts[3]+counts[5]+counts[7]+counts[9];
-
-let evenP=((evenSum/total)*100);
-let oddP=((oddSum/total)*100);
-
-let evenPDisplay=evenP.toFixed(1);
-let oddPDisplay=oddP.toFixed(1);
-
-/* SIGNAL */
-let signal="";
-let isSignal=false;
-
-if(evenP>oddP && [1,3,5,7,9].every(i=>perc[i]<10)){
-signal="BUY EVEN";isSignal=true;
-}
-else if(oddP>evenP && [0,2,4,6,8].every(i=>perc[i]<10)){
-signal="BUY ODD";isSignal=true;
-}
-
-// play audio only on NEW signal (avoid spam? keep original behavior)
-if(isSignal) audio.play();
-
-/* ************** NEW: STRENGTH + CONFIDENCE **************** */
-const { strength, strengthRaw, confidencePercent } = computeStrengthAndConfidence(evenP, oddP, perc, signal);
-
-// Create strength bar width (max diff = 100%)
-let barWidth = Math.min(100, strengthRaw);
-let barFillStyle = `width: ${barWidth}%;`;
-
-/* COLORS */
-let sortedDigits=[...counts].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
-let most=sortedDigits[0].i;
-let second=sortedDigits[1].i;
-let least=sortedDigits[9].i;
-let secondLeast=sortedDigits[8].i;
-
-let last=arr[arr.length-1];
-let rep=repeat(arr);
-
-function box(i){
-let cls="";
-if(i===most) cls="most";
-else if(i===second) cls="second";
-else if(i===least) cls="least";
-else if(i===secondLeast) cls="secondLeast";
-
-let pointer=i===last?`<div class="pointer ${i%2==0?'even':'odd'}">●</div>`:"";
-let flash=(lastDigitMap[m.sym]===i)?"flash":"";
-let repeatFx=(i===last && rep>=2)?"repeat":"";
-let counter=(i===last && rep>=2)?`<div class="repeat-count">x${rep}</div>`:"";
-
-return `<div class="box ${cls} ${flash} ${repeatFx}">
+    let wrap = document.getElementById("markets");
+    wrap.innerHTML = "";
+    
+    // Build array with market objects + precomputed signal info
+    let marketItems = [];
+    markets.forEach(m => {
+        let arr = store[m.sym];
+        if (!arr || arr.length < 1000) return;
+        let info = getSignalInfo(m.sym);
+        marketItems.push({
+            market: m,
+            arr: arr,
+            info: info
+        });
+    });
+    
+    // Sort: first by signal active (true top), then by signalStrength descending, then by name
+    marketItems.sort((a,b) => {
+        if (a.info.isActive !== b.info.isActive) {
+            return a.info.isActive ? -1 : 1;
+        }
+        if (a.info.isActive && b.info.isActive) {
+            // both active: stronger signal first
+            return b.info.signalStrength - a.info.signalStrength;
+        }
+        // both inactive: keep original order or sort by name for consistency
+        return a.market.name.localeCompare(b.market.name);
+    });
+    
+    // Render each market
+    marketItems.forEach(({ market, arr, info }) => {
+        let m = market;
+        let counts = info.counts;
+        let total = arr.length;
+        let perc = info.perc.map(p => p.toFixed(1));
+        let evenP = info.evenP;
+        let oddP = info.oddP;
+        let evenPDisplay = evenP.toFixed(1);
+        let oddPDisplay = oddP.toFixed(1);
+        
+        let signalType = info.signalType;
+        let isSignal = info.isActive;
+        
+        // Play audio only if new signal (but original plays each render if active, keep same)
+        if(isSignal) audio.play();
+        
+        // Compute display strength/confidence
+        const { strength, strengthRaw, confidencePercent } = computeStrengthAndConfidence(evenP, oddP, perc, signalType);
+        let barWidth = Math.min(100, parseFloat(strengthRaw));
+        let barFillStyle = `width: ${barWidth}%;`;
+        
+        // color coding for digits
+        let sortedDigits = [...counts].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
+        let most = sortedDigits[0].i;
+        let second = sortedDigits[1].i;
+        let least = sortedDigits[9].i;
+        let secondLeast = sortedDigits[8].i;
+        
+        let last = arr[arr.length-1];
+        let rep = repeat(arr);
+        
+        function box(i){
+            let cls="";
+            if(i===most) cls="most";
+            else if(i===second) cls="second";
+            else if(i===least) cls="least";
+            else if(i===secondLeast) cls="secondLeast";
+            
+            let pointer = (i===last) ? `<div class="pointer ${i%2==0?'even':'odd'}">●</div>` : "";
+            let flash = (lastDigitMap[m.sym]===i) ? "flash" : "";
+            let repeatFx = (i===last && rep>=2) ? "repeat" : "";
+            let counter = (i===last && rep>=2) ? `<div class="repeat-count">x${rep}</div>` : "";
+            
+            return `<div class="box ${cls} ${flash} ${repeatFx}">
 ${pointer}${counter}
 <div class="digit">${i}</div>
 <div class="percent">${perc[i]}%</div>
 </div>`;
-}
-
-let ticks=arr.slice(-50).map(d=>`<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("");
-
-let div=document.createElement("div");
-div.className="market "+(isSignal?"signal":"");
-div.innerHTML=`
+        }
+        
+        let ticks = arr.slice(-50).map(d => `<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("");
+        
+        let div = document.createElement("div");
+        div.className = "market " + (isSignal ? "signal" : "");
+        div.innerHTML = `
 <b>${m.name}</b>
 <div class="price">${priceMap[m.sym]}</div>
 <div class="win">🎲 EVEN ${evenPDisplay}% | ODD ${oddPDisplay}%</div>
 
-<!-- STRENGTH + CONFIDENCE UI (ADDED) -->
 <div class="metrics">
     <div class="metric-item">
         <span class="metric-label">💪 STRENGTH</span>
@@ -377,41 +426,13 @@ div.innerHTML=`
     </div>
 </div>
 
-${isSignal?`<div class="signal-text ${signal==='BUY EVEN'?'buy-even':'buy-odd'}">🚀 ${signal} (strength ${strength}% | conf ${confidencePercent})</div>`:""}
+${isSignal?`<div class="signal-text ${signalType==='BUY EVEN'?'buy-even':'buy-odd'}">🚀 ${signalType} (strength ${strength}% | conf ${confidencePercent})</div>`:""}
 <div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
 <div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
 <div class="tick">${ticks}</div>
 `;
-
-wrap.appendChild(div);
-
-});
-}
-
-function checkSignal(sym){
-let arr=store[sym];
-if(!arr || arr.length<1000) return false;
-
-let counts=Array(10).fill(0);
-arr.forEach(d=>counts[d]++);
-
-let total=arr.length;
-
-let even=[0,2,4,6,8];
-let odd=[1,3,5,7,9];
-
-let evenSum=even.reduce((s,i)=>s+counts[i],0);
-let oddSum=odd.reduce((s,i)=>s+counts[i],0);
-
-let evenP=(evenSum/total)*100;
-let oddP=(oddSum/total)*100;
-
-let percLocal=counts.map(c=>(c/total)*100);
-
-if(evenP>oddP && odd.every(i=>percLocal[i]<10)) return true;
-if(oddP>evenP && even.every(i=>percLocal[i]<10)) return true;
-
-return false;
+        wrap.appendChild(div);
+    });
 }
 </script>
 </body>
