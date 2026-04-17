@@ -17,18 +17,17 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 .price{color:#38bdf8;font-size:11px;}
 .win{font-size:12px;}
 
-/* ✅ FIXED SPACING */
 .grid{
 display:grid;
 grid-template-columns:repeat(5, 2.5cm);
 gap:10px;
 margin-top:10px;
-justify-content:start;
+justify-content:center;
 }
 
 .box{
-width:2cm;
-height:3.5cm;
+width:2.5cm;
+height:2.5cm;
 border-radius:6px;
 display:flex;
 flex-direction:column;
@@ -47,22 +46,43 @@ border:1px solid #1e293b;
 .digit{font-size:48px;font-weight:bold;}
 .percent{font-size:13px;}
 
-/* ✅ BIGGER POINTER */
+/* POINTER (PULSING) */
 .pointer{
 position:absolute;
 top:50%;
 left:50%;
 transform:translate(-50%,-50%);
-font-size:45px;
+font-size:42px;
 font-weight:bold;
-opacity:1.5;
+opacity:1;
 text-shadow:0 0 10px black, 0 0 15px black;
 z-index:10;
+animation:pulsePointer 0.6s infinite;
 }
 .pointer.even{color:lime;}
 .pointer.odd{color:red;}
 
-.repeat{animation:pulse 0.4s infinite;box-shadow:0 0 20px yellow;}
+@keyframes pulsePointer{
+0%{transform:translate(-50%,-50%) scale(1);}
+50%{transform:translate(-50%,-50%) scale(1.25);}
+100%{transform:translate(-50%,-50%) scale(1);}
+}
+
+/* 🔥 FLASH EFFECT */
+.flash{
+animation:flashBox 0.25s;
+}
+
+@keyframes flashBox{
+0%{box-shadow:0 0 25px white;}
+100%{box-shadow:none;}
+}
+
+/* REPEAT */
+.repeat{
+animation:pulse 0.4s infinite;
+box-shadow:0 0 20px yellow;
+}
 
 .repeat-count{
 position:absolute;
@@ -82,8 +102,9 @@ color:yellow;
 .tick{
 display:grid;
 grid-template-columns:repeat(50,1fr);
-margin-top:6px;
+margin-top:10px;
 font-size:10px;
+justify-content:center;
 }
 .e{color:lime;}
 .o{color:red;}
@@ -155,6 +176,9 @@ let ws=new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
 let store={},priceMap={},pipMap={},historyLoaded={};
 let active=null;
 
+/* TRACK LAST DIGIT PER MARKET */
+let lastDigitMap={};
+
 ws.onopen=()=>{
 ws.send(JSON.stringify({authorize:token}));
 
@@ -197,6 +221,9 @@ priceMap[s]=price;
 if(!active) active=s;
 
 if(!historyLoaded[s]) return;
+
+/* STORE LAST DIGIT */
+lastDigitMap[s]=digit;
 
 store[s].push(digit);
 if(store[s].length>1000) store[s].shift();
@@ -256,12 +283,15 @@ else if(i===second) cls="second";
 else if(i===least) cls="least";
 else if(i===secondLeast) cls="secondLeast";
 
+/* FLASH ONLY WHEN HIT */
+let flash = (lastDigitMap[m.sym]===i) ? "flash" : "";
+
 let pointer=i===last?`<div class="pointer ${i%2==0?'even':'odd'}">●</div>`:"";
 let repeatFx=(i===last && rep>=2)?"repeat":"";
 let counter=(i===last && rep>=2)?`<div class="repeat-count">x${rep}</div>`:"";
 
 return `
-<div class="box ${cls} ${repeatFx}">
+<div class="box ${cls} ${repeatFx} ${flash}">
 ${pointer}
 ${counter}
 <div class="digit">${i}</div>
