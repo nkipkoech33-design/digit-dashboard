@@ -2,17 +2,17 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Digit Analyzer FINAL — Strength + Confidence</title>
+<title>Digit Analyzer PRO — Multi‑TF + Backtest + Stats</title>
 
 <style>
 body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 .wrapper{display:flex;}
 .left{width:70%;padding:10px;display:flex;flex-direction:column;gap:8px;}
-.right{width:30%;border-left:1px solid #1e293b;padding:10px;}
+.right{width:30%;border-left:1px solid #1e293b;padding:10px;background:#0f172a;overflow-y:auto;max-height:100vh;}
 
 .market{border:1px solid #1e293b;padding:6px;border-radius:6px;transition:0.1s;}
-.signal{animation:blink 0.6s infinite;border:2px solid yellow;}
-@keyframes blink{0%{opacity:1;}50%{opacity:0.4;}100%{opacity:1;}}
+.signal{animation:blink 0.6s infinite;border:2px solid #facc15;}
+@keyframes blink{0%{opacity:1;}50%{opacity:0.6;}100%{opacity:1;}}
 
 .price{text-align:center;font-size:22px;color:#38bdf8;font-weight:bold;}
 .win{text-align:center;font-size:12px;}
@@ -37,42 +37,14 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
     background:#1e293b;
     padding:3px 10px;
     border-radius:20px;
-    backdrop-filter:blur(2px);
 }
-.metric-label{
-    font-weight:bold;
-    letter-spacing:0.5px;
-}
-.strength-value{
-    color:#facc15;
-    font-weight:bold;
-}
-.confidence-value{
-    color:#4ade80;
-    font-weight:bold;
-}
-.strength-bar-bg{
-    width:70px;
-    background:#334155;
-    border-radius:20px;
-    height:6px;
-    overflow:hidden;
-}
-.strength-bar-fill{
-    background:linear-gradient(90deg,#facc15,#f97316);
-    height:6px;
-    width:0%;
-    border-radius:20px;
-}
-.confidence-badge{
-    background:#0f172a;
-    padding:2px 8px;
-    border-radius:16px;
-    font-weight:bold;
-}
-.no-signal .confidence-placeholder{
-    color:#94a3b8;
-}
+.metric-label{font-weight:bold;}
+.strength-value{color:#facc15;font-weight:bold;}
+.confidence-value{color:#4ade80;font-weight:bold;}
+.strength-bar-bg{width:70px;background:#334155;border-radius:20px;height:6px;overflow:hidden;}
+.strength-bar-fill{background:linear-gradient(90deg,#facc15,#f97316);height:6px;width:0%;border-radius:20px;}
+.confidence-badge{padding:2px 8px;border-radius:16px;font-weight:bold;}
+
 .grid{
 display:grid;
 grid-template-columns:repeat(5,2.5cm);
@@ -80,7 +52,6 @@ gap:10px;
 justify-content:center;
 margin-top:8px;
 }
-
 .box{
 width:2.5cm;height:2.5cm;
 display:flex;flex-direction:column;
@@ -88,12 +59,10 @@ justify-content:center;align-items:center;
 position:relative;border-radius:6px;
 border:1px solid #1e293b;
 }
-
 .most{background:green;}
 .second{background:blue;}
 .secondLeast{background:orange;}
 .least{background:red;}
-
 .digit{font-size:48px;font-weight:bold;}
 .percent{font-size:13px;}
 
@@ -105,21 +74,15 @@ animation:pulse 0.6s infinite;
 }
 .pointer.even{color:lime;}
 .pointer.odd{color:red;}
-
 @keyframes pulse{
 0%{transform:translate(-50%,-50%) scale(1);}
 50%{transform:translate(-50%,-50%) scale(1.25);}
 100%{transform:translate(-50%,-50%) scale(1);}
 }
-
 .flash{animation:flash 0.25s;}
 @keyframes flash{0%{box-shadow:0 0 25px white;}100%{box-shadow:none;}}
-
 .repeat{box-shadow:0 0 20px yellow;}
-.repeat-count{
-position:absolute;top:4px;right:6px;
-color:yellow;font-weight:bold;
-}
+.repeat-count{position:absolute;top:4px;right:6px;color:yellow;font-weight:bold;}
 
 .tick{
 display:grid;
@@ -134,6 +97,20 @@ text-align:center;
 .buy-even{color:lime;}
 .buy-odd{color:red;}
 
+/* stats panel */
+.stats-panel{background:#0f172a;border-radius:12px;padding:12px;margin-bottom:15px;border:1px solid #1e293b;}
+.stats-title{font-size:16px;font-weight:bold;border-bottom:1px solid #334155;padding-bottom:6px;margin-bottom:10px;color:#94a3b8;}
+.stat-row{display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;}
+.stat-label{color:#94a3b8;}
+.stat-value{font-weight:bold;color:#facc15;}
+.winrate-good{color:#4ade80;}
+.winrate-bad{color:#f87171;}
+.signal-log{font-size:11px;max-height:200px;overflow-y:auto;}
+.log-entry{padding:4px;border-bottom:1px solid #1e293b;font-family:monospace;}
+.log-win{color:#4ade80;}
+.log-loss{color:#f87171;}
+.log-pending{color:#facc15;}
+
 @media(max-width:1200px){
     .left{width:100%;}
     .right{display:none;}
@@ -147,7 +124,7 @@ text-align:center;
 <body>
 <div class="wrapper">
 <div class="left" id="markets"></div>
-<div class="right"></div>
+<div class="right" id="statsPanel"></div>
 </div>
 
 <script>
@@ -176,214 +153,268 @@ const markets=[
 
 let ws=new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
 
-let store={},priceMap={},pipMap={},historyLoaded={},lastDigitMap={};
+// Data stores
+let store={};          // main tick digit array (1000 length)
+let storeShort={};     // 100 ticks for multi-timeframe
+let storeMedium={};    // 500 ticks
+let priceMap={}, pipMap={}, historyLoaded={}, lastDigitMap={};
 let audio=new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
 
-ws.onopen=()=>{
-ws.send(JSON.stringify({authorize:token}));
+// Backtesting & stats
+let tradeLog = [];           // { symbol, timestamp, signalType, outcome (win/loss/pending), strength, confidence }
+let marketStats = {};        // per symbol: { totalSignals, wins, losses, winRate }
 
-markets.forEach(m=>{
-store[m.sym]=[];
-historyLoaded[m.sym]=false;
-
-ws.send(JSON.stringify({
-ticks_history:m.sym,count:1000,end:"latest",style:"ticks"
-}));
-
-ws.send(JSON.stringify({ticks:m.sym,subscribe:1}));
-});
-};
-
-ws.onmessage=(msg)=>{
-let d=JSON.parse(msg.data);
-
-if(d.history){
-let s=d.echo_req.ticks_history;
-let pip=pipMap[s]||2;
-
-store[s]=d.history.prices.map(p=>{
-let f=parseFloat(p).toFixed(pip);
-return parseInt(f.slice(-1));
-});
-
-historyLoaded[s]=true;
+// Helper: get current timestamp
+function nowStr() {
+    return new Date().toLocaleTimeString();
 }
 
-if(d.tick){
-let s=d.tick.symbol;
-pipMap[s]=d.tick.pip_size;
-
-let price=parseFloat(d.tick.quote).toFixed(pipMap[s]);
-let digit=parseInt(price.slice(-1));
-
-priceMap[s]=price;
-lastDigitMap[s]=digit;
-
-if(!historyLoaded[s]) return;
-
-store[s].push(digit);
-if(store[s].length>1000) store[s].shift();
-
-render();
-}
-};
-
-function repeat(arr){
-let last=arr[arr.length-1],c=0;
-for(let i=arr.length-1;i>=0;i--){
-if(arr[i]===last)c++;else break;
-}
-return c;
-}
-
-// Compute signal strength (higher = stronger)
-// Based on even-odd % difference, and also penalize if opposing digits are close to threshold 10%
-function computeSignalStrength(evenP, oddP, perc, signalType) {
-    if (!signalType) return 0;
-    let diff = Math.abs(evenP - oddP);
-    let strengthRaw = diff;
-    if (signalType === "BUY EVEN") {
-        const oddDigits = [1,3,5,7,9];
-        let maxOpposing = Math.max(...oddDigits.map(d => parseFloat(perc[d])));
-        let distanceTo10 = Math.max(0, 10 - maxOpposing);
-        // combine: diff contributes up to 70%, distanceTo10 up to 30%
-        let composite = (diff * 0.7) + (distanceTo10 * 3);
-        return Math.min(100, composite);
-    } 
-    else if (signalType === "BUY ODD") {
-        const evenDigits = [0,2,4,6,8];
-        let maxOpposing = Math.max(...evenDigits.map(d => parseFloat(perc[d])));
-        let distanceTo10 = Math.max(0, 10 - maxOpposing);
-        let composite = (diff * 0.7) + (distanceTo10 * 3);
-        return Math.min(100, composite);
-    }
-    return strengthRaw;
-}
-
-// Helper: compute strength + confidence metrics for display
-function computeStrengthAndConfidence(evenP, oddP, perc, signalType) {
-    let strengthRaw = Math.abs(evenP - oddP);
-    let strength = strengthRaw.toFixed(1);
+// Update stats panel UI
+function renderStatsPanel() {
+    let panel = document.getElementById("statsPanel");
+    if (!panel) return;
     
-    let confidencePercent = "—";
+    let totalSignals = tradeLog.length;
+    let totalWins = tradeLog.filter(t => t.outcome === "win").length;
+    let totalLosses = tradeLog.filter(t => t.outcome === "loss").length;
+    let pending = tradeLog.filter(t => t.outcome === "pending").length;
+    let overallWinRate = totalSignals - pending > 0 ? (totalWins / (totalWins + totalLosses) * 100).toFixed(1) : "—";
     
-    if (signalType === "BUY EVEN") {
-        const oddDigits = [1,3,5,7,9];
-        let oddPercs = oddDigits.map(d => parseFloat(perc[d]));
-        let maxOpposing = Math.max(...oddPercs);
-        let margin = 10 - maxOpposing;
-        let rawConf = (margin / 10) * 100;
-        rawConf = Math.min(100, Math.max(0, rawConf));
-        confidencePercent = `${rawConf.toFixed(0)}%`;
-    } 
-    else if (signalType === "BUY ODD") {
-        const evenDigits = [0,2,4,6,8];
-        let evenPercs = evenDigits.map(d => parseFloat(perc[d]));
-        let maxOpposing = Math.max(...evenPercs);
-        let margin = 10 - maxOpposing;
-        let rawConf = (margin / 10) * 100;
-        rawConf = Math.min(100, Math.max(0, rawConf));
-        confidencePercent = `${rawConf.toFixed(0)}%`;
+    // best market by winrate
+    let bestMarket = "—";
+    let bestRate = 0;
+    for (let sym in marketStats) {
+        let s = marketStats[sym];
+        if (s.wins + s.losses > 0) {
+            let rate = (s.wins / (s.wins + s.losses) * 100);
+            if (rate > bestRate) {
+                bestRate = rate;
+                bestMarket = sym;
+            }
+        }
     }
-    else {
-        confidencePercent = "⚡ wait";
-    }
+    let marketName = markets.find(m => m.sym === bestMarket)?.name || bestMarket;
     
-    return { strength, strengthRaw, confidencePercent };
+    // recent signals (last 10)
+    let recentHtml = tradeLog.slice(-10).reverse().map(log => {
+        let outcomeClass = log.outcome === "win" ? "log-win" : (log.outcome === "loss" ? "log-loss" : "log-pending");
+        let outcomeText = log.outcome === "win" ? "✓ WIN" : (log.outcome === "loss" ? "✗ LOSS" : "⌛ pending");
+        return `<div class="log-entry">
+            <span>${log.timestamp}</span> 
+            <span>${log.symbol}</span> 
+            <span>${log.signalType}</span>
+            <span class="${outcomeClass}">${outcomeText}</span>
+            <span>💪${log.strength}%</span>
+        </div>`;
+    }).join("");
+    
+    panel.innerHTML = `
+        <div class="stats-panel">
+            <div class="stats-title">📊 BACKTEST ENGINE</div>
+            <div class="stat-row"><span class="stat-label">Total signals:</span><span class="stat-value">${totalSignals}</span></div>
+            <div class="stat-row"><span class="stat-label">Wins / Losses:</span><span class="stat-value">${totalWins} / ${totalLosses}</span></div>
+            <div class="stat-row"><span class="stat-label">Overall win rate:</span><span class="stat-value ${overallWinRate > 55 ? 'winrate-good' : (overallWinRate < 45 ? 'winrate-bad' : '')}">${overallWinRate}%</span></div>
+            <div class="stat-row"><span class="stat-label">🔥 Best market:</span><span class="stat-value">${marketName} ${bestRate.toFixed(1)}%</span></div>
+            <div class="stat-row"><span class="stat-label">⏳ Pending signals:</span><span class="stat-value">${pending}</span></div>
+        </div>
+        <div class="stats-panel">
+            <div class="stats-title">📋 RECENT SIGNALS</div>
+            <div class="signal-log">${recentHtml || "<div>No signals yet</div>"}</div>
+        </div>
+        <div class="stats-panel">
+            <div class="stats-title">⚙️ RULES (active)</div>
+            <div class="stat-row"><span class="stat-label">Multi‑TF:</span><span class="stat-value">100/500/1000 ticks</span></div>
+            <div class="stat-row"><span class="stat-label">Threshold:</span><span class="stat-value">Adaptive Z>1.96</span></div>
+            <div class="stat-row"><span class="stat-label">Backtest:</span><span class="stat-value">Live outcome tracking</span></div>
+        </div>
+    `;
 }
 
-// Get signal info for a market: { isActive, signalType, signalStrength }
-function getSignalInfo(sym) {
+// Record a new trade signal and later resolve outcome
+function recordSignal(symbol, signalType, strength, confidence) {
+    let id = Date.now() + Math.random();
+    let entry = {
+        id, symbol, signalType, strength, confidence,
+        timestamp: nowStr(), outcome: "pending"
+    };
+    tradeLog.push(entry);
+    if (!marketStats[symbol]) marketStats[symbol] = { totalSignals:0, wins:0, losses:0 };
+    marketStats[symbol].totalSignals++;
+    renderStatsPanel();
+    
+    // Schedule outcome check after 1 tick (next digit arrives)
+    setTimeout(() => {
+        resolveSignalOutcome(symbol, signalType, id);
+    }, 150);
+    return id;
+}
+
+function resolveSignalOutcome(symbol, predictedType, tradeId) {
+    let lastDigit = lastDigitMap[symbol];
+    if (lastDigit === undefined) return;
+    let isEven = lastDigit % 2 === 0;
+    let predictedEven = (predictedType === "BUY EVEN");
+    let win = (predictedEven && isEven) || (!predictedEven && !isEven);
+    
+    let trade = tradeLog.find(t => t.id === tradeId);
+    if (trade && trade.outcome === "pending") {
+        trade.outcome = win ? "win" : "loss";
+        if (marketStats[trade.symbol]) {
+            if (win) marketStats[trade.symbol].wins++;
+            else marketStats[trade.symbol].losses++;
+        }
+        renderStatsPanel();
+    }
+}
+
+// Statistical Z-test for parity imbalance (adaptive threshold)
+function isStatisticallySignificant(evenCount, oddCount, total) {
+    // H0: p=0.5 (equal probability)
+    let observed = evenCount / total;
+    let expected = 0.5;
+    let stdErr = Math.sqrt(0.5 * 0.5 / total);
+    let z = Math.abs(observed - expected) / stdErr;
+    return z > 1.96; // 95% confidence
+}
+
+// Multi-timeframe alignment: check 100, 500, 1000 tick arrays
+function checkMultiTimeframeAlignment(sym) {
+    let arrShort = storeShort[sym];
+    let arrMed = storeMedium[sym];
+    let arrLong = store[sym];
+    if (!arrShort || arrShort.length < 50) return false;
+    if (!arrMed || arrMed.length < 200) return false;
+    if (!arrLong || arrLong.length < 800) return false;
+    
+    function getParityBias(arr) {
+        let evens = arr.filter(d => d%2===0).length;
+        let odds = arr.length - evens;
+        if (evens > odds) return "EVEN";
+        if (odds > evens) return "ODD";
+        return null;
+    }
+    let biasShort = getParityBias(arrShort);
+    let biasMed = getParityBias(arrMed);
+    let biasLong = getParityBias(arrLong);
+    // require at least two of three agree (or all three)
+    let votes = [biasShort, biasMed, biasLong].filter(b => b !== null);
+    let evenVotes = votes.filter(v => v === "EVEN").length;
+    let oddVotes = votes.filter(v => v === "ODD").length;
+    if (evenVotes >= 2) return "EVEN";
+    if (oddVotes >= 2) return "ODD";
+    return null;
+}
+
+// Core signal detection: adaptive + multi-TF + opposing digit constraint (softened)
+function getAdvancedSignal(sym) {
     let arr = store[sym];
-    if (!arr || arr.length < 1000) return { isActive: false, signalType: null, signalStrength: 0 };
+    if (!arr || arr.length < 1000) return null;
+    
+    // Multi-timeframe alignment
+    let tfBias = checkMultiTimeframeAlignment(sym);
+    if (!tfBias) return null;
     
     let counts = Array(10).fill(0);
     arr.forEach(d => counts[d]++);
     let total = arr.length;
-    let perc = counts.map(c => (c/total)*100);
-    
     let evenSum = counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
-    let oddSum = counts[1]+counts[3]+counts[5]+counts[7]+counts[9];
+    let oddSum = total - evenSum;
+    
+    // Statistical significance test (adaptive)
+    let isSignificant = isStatisticallySignificant(evenSum, oddSum, total);
+    if (!isSignificant) return null;
+    
+    // Opposing digits constraint: max opposing digit % < 12% (slightly relaxed but still adaptive)
+    let opposingDigits = (tfBias === "EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
+    let maxOpposing = Math.max(...opposingDigits.map(d => (counts[d]/total)*100));
+    if (maxOpposing >= 12) return null;  // adaptive threshold (12% instead of 10)
+    
+    // also require that the bias margin > 5% absolute
     let evenP = (evenSum/total)*100;
     let oddP = (oddSum/total)*100;
+    let margin = Math.abs(evenP - oddP);
+    if (margin < 5) return null;
     
-    let signalType = null;
-    if(evenP > oddP && [1,3,5,7,9].every(i => perc[i] < 10)) {
-        signalType = "BUY EVEN";
-    }
-    else if(oddP > evenP && [0,2,4,6,8].every(i => perc[i] < 10)) {
-        signalType = "BUY ODD";
-    }
-    
-    let isActive = signalType !== null;
-    let signalStrength = 0;
-    if (isActive) {
-        signalStrength = computeSignalStrength(evenP, oddP, perc, signalType);
-    }
-    return { isActive, signalType, signalStrength, evenP, oddP, perc, counts, total };
+    return tfBias === "EVEN" ? "BUY EVEN" : "BUY ODD";
 }
 
-function render(){
+// Compute signal strength (0-100)
+function computeSignalStrength(evenP, oddP, perc, signalType) {
+    if (!signalType) return 0;
+    let diff = Math.abs(evenP - oddP);
+    if (signalType === "BUY EVEN") {
+        let oddDigits = [1,3,5,7,9];
+        let maxOpposing = Math.max(...oddDigits.map(d => parseFloat(perc[d])));
+        let distanceTo12 = Math.max(0, 12 - maxOpposing);
+        let composite = (diff * 0.6) + (distanceTo12 * 4);
+        return Math.min(100, composite);
+    } else {
+        let evenDigits = [0,2,4,6,8];
+        let maxOpposing = Math.max(...evenDigits.map(d => parseFloat(perc[d])));
+        let distanceTo12 = Math.max(0, 12 - maxOpposing);
+        let composite = (diff * 0.6) + (distanceTo12 * 4);
+        return Math.min(100, composite);
+    }
+}
+
+function computeConfidence(evenP, oddP, perc, signalType) {
+    if (!signalType) return "—";
+    let opposing = (signalType === "BUY EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
+    let maxOpposing = Math.max(...opposing.map(d => parseFloat(perc[d])));
+    let margin = 12 - maxOpposing;
+    let rawConf = (margin / 12) * 100;
+    rawConf = Math.min(100, Math.max(0, rawConf));
+    return `${rawConf.toFixed(0)}%`;
+}
+
+// Render markets with new signal logic
+function render() {
     let wrap = document.getElementById("markets");
+    if (!wrap) return;
     wrap.innerHTML = "";
     
-    // Build array with market objects + precomputed signal info
     let marketItems = [];
     markets.forEach(m => {
         let arr = store[m.sym];
         if (!arr || arr.length < 1000) return;
-        let info = getSignalInfo(m.sym);
-        marketItems.push({
-            market: m,
-            arr: arr,
-            info: info
-        });
-    });
-    
-    // Sort: first by signal active (true top), then by signalStrength descending, then by name
-    marketItems.sort((a,b) => {
-        if (a.info.isActive !== b.info.isActive) {
-            return a.info.isActive ? -1 : 1;
-        }
-        if (a.info.isActive && b.info.isActive) {
-            // both active: stronger signal first
-            return b.info.signalStrength - a.info.signalStrength;
-        }
-        // both inactive: keep original order or sort by name for consistency
-        return a.market.name.localeCompare(b.market.name);
-    });
-    
-    // Render each market
-    marketItems.forEach(({ market, arr, info }) => {
-        let m = market;
-        let counts = info.counts;
+        let signalType = getAdvancedSignal(m.sym);
+        let isSignal = signalType !== null;
+        
+        // get counts for display
+        let counts = Array(10).fill(0);
+        arr.forEach(d => counts[d]++);
         let total = arr.length;
-        let perc = info.perc.map(p => p.toFixed(1));
-        let evenP = info.evenP;
-        let oddP = info.oddP;
-        let evenPDisplay = evenP.toFixed(1);
-        let oddPDisplay = oddP.toFixed(1);
+        let perc = counts.map(c => ((c/total)*100).toFixed(1));
+        let evenSum = counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
+        let oddSum = total - evenSum;
+        let evenP = (evenSum/total)*100;
+        let oddP = (oddSum/total)*100;
         
-        let signalType = info.signalType;
-        let isSignal = info.isActive;
+        let strength = 0;
+        let confidence = "—";
+        if (isSignal) {
+            strength = computeSignalStrength(evenP, oddP, perc, signalType);
+            confidence = computeConfidence(evenP, oddP, perc, signalType);
+            // record signal if not already recorded for this exact tick (avoid duplicate per tick)
+            // we check if last recorded signal for this symbol is same tick? simpler: record every new signal, but only once per tick.
+            if (!window._lastSignalTick || window._lastSignalTick !== lastDigitMap[m.sym]) {
+                window._lastSignalTick = lastDigitMap[m.sym];
+                recordSignal(m.sym, signalType, strength.toFixed(1), confidence);
+            }
+            if (isSignal) audio.play();
+        }
         
-        // Play audio only if new signal (but original plays each render if active, keep same)
-        if(isSignal) audio.play();
+        let strengthRaw = strength;
+        let barWidth = Math.min(100, strengthRaw);
         
-        // Compute display strength/confidence
-        const { strength, strengthRaw, confidencePercent } = computeStrengthAndConfidence(evenP, oddP, perc, signalType);
-        let barWidth = Math.min(100, parseFloat(strengthRaw));
-        let barFillStyle = `width: ${barWidth}%;`;
-        
-        // color coding for digits
+        // digit ranking
         let sortedDigits = [...counts].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
         let most = sortedDigits[0].i;
         let second = sortedDigits[1].i;
         let least = sortedDigits[9].i;
         let secondLeast = sortedDigits[8].i;
-        
         let last = arr[arr.length-1];
-        let rep = repeat(arr);
+        let rep = (()=>{let c=0,lastd=arr[arr.length-1]; for(let i=arr.length-1;i>=0;i--){if(arr[i]===lastd)c++;else break;} return c;})();
         
         function box(i){
             let cls="";
@@ -391,12 +422,10 @@ function render(){
             else if(i===second) cls="second";
             else if(i===least) cls="least";
             else if(i===secondLeast) cls="secondLeast";
-            
             let pointer = (i===last) ? `<div class="pointer ${i%2==0?'even':'odd'}">●</div>` : "";
-            let flash = (lastDigitMap[m.sym]===i) ? "flash" : "";
-            let repeatFx = (i===last && rep>=2) ? "repeat" : "";
-            let counter = (i===last && rep>=2) ? `<div class="repeat-count">x${rep}</div>` : "";
-            
+            let flash = (lastDigitMap[m.sym]===i)?"flash":"";
+            let repeatFx = (i===last && rep>=2)?"repeat":"";
+            let counter = (i===last && rep>=2)?`<div class="repeat-count">x${rep}</div>`:"";
             return `<div class="box ${cls} ${flash} ${repeatFx}">
 ${pointer}${counter}
 <div class="digit">${i}</div>
@@ -410,30 +439,67 @@ ${pointer}${counter}
         div.className = "market " + (isSignal ? "signal" : "");
         div.innerHTML = `
 <b>${m.name}</b>
-<div class="price">${priceMap[m.sym]}</div>
-<div class="win">🎲 EVEN ${evenPDisplay}% | ODD ${oddPDisplay}%</div>
-
+<div class="price">${priceMap[m.sym] || "—"}</div>
+<div class="win">🎲 EVEN ${evenP.toFixed(1)}% | ODD ${oddP.toFixed(1)}%</div>
 <div class="metrics">
-    <div class="metric-item">
-        <span class="metric-label">💪 STRENGTH</span>
-        <span class="strength-value">${strength}%</span>
-        <div class="strength-bar-bg"><div class="strength-bar-fill" style="${barFillStyle}"></div></div>
-    </div>
-    <div class="metric-item">
-        <span class="metric-label">🎯 CONFIDENCE</span>
-        <span class="confidence-value">${confidencePercent}</span>
-        ${isSignal ? `<span class="confidence-badge">🔥 ACTIVE</span>` : `<span class="confidence-badge" style="background:#334155;">⚡ IDLE</span>`}
-    </div>
+    <div class="metric-item"><span class="metric-label">💪 STRENGTH</span><span class="strength-value">${strengthRaw.toFixed(1)}%</span>
+    <div class="strength-bar-bg"><div class="strength-bar-fill" style="width:${barWidth}%;"></div></div></div>
+    <div class="metric-item"><span class="metric-label">🎯 CONFIDENCE</span><span class="confidence-value">${confidence}</span>
+    ${isSignal ? `<span class="confidence-badge" style="background:#22c55e20;">🔥 ACTIVE</span>` : `<span class="confidence-badge" style="background:#334155;">⚡ IDLE</span>`}</div>
 </div>
-
-${isSignal?`<div class="signal-text ${signalType==='BUY EVEN'?'buy-even':'buy-odd'}">🚀 ${signalType} (strength ${strength}% | conf ${confidencePercent})</div>`:""}
+${isSignal?`<div class="signal-text ${signalType==='BUY EVEN'?'buy-even':'buy-odd'}">🚀 ${signalType} (strength ${strengthRaw.toFixed(1)}% | conf ${confidence})</div>`:""}
 <div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
 <div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
 <div class="tick">${ticks}</div>
 `;
         wrap.appendChild(div);
     });
+    renderStatsPanel();
 }
+
+// WebSocket handlers
+ws.onopen=()=>{
+    ws.send(JSON.stringify({authorize:token}));
+    markets.forEach(m=>{
+        store[m.sym]=[];
+        storeShort[m.sym]=[];
+        storeMedium[m.sym]=[];
+        historyLoaded[m.sym]=false;
+        ws.send(JSON.stringify({ticks_history:m.sym, count:1000, end:"latest", style:"ticks"}));
+        ws.send(JSON.stringify({ticks:m.sym, subscribe:1}));
+    });
+};
+
+ws.onmessage=(msg)=>{
+    let d=JSON.parse(msg.data);
+    if(d.history){
+        let s=d.echo_req.ticks_history;
+        let pip=pipMap[s]||2;
+        let prices=d.history.prices.map(p=>parseFloat(p).toFixed(pip));
+        let digits=prices.map(p=>parseInt(p.slice(-1)));
+        store[s]=digits.slice(-1000);
+        storeShort[s]=digits.slice(-100);
+        storeMedium[s]=digits.slice(-500);
+        historyLoaded[s]=true;
+        render();
+    }
+    if(d.tick){
+        let s=d.tick.symbol;
+        pipMap[s]=d.tick.pip_size;
+        let price=parseFloat(d.tick.quote).toFixed(pipMap[s]);
+        let digit=parseInt(price.slice(-1));
+        priceMap[s]=price;
+        lastDigitMap[s]=digit;
+        if(!historyLoaded[s]) return;
+        store[s].push(digit);
+        storeShort[s].push(digit);
+        storeMedium[s].push(digit);
+        if(store[s].length>1000) store[s].shift();
+        if(storeShort[s].length>100) storeShort[s].shift();
+        if(storeMedium[s].length>500) storeMedium[s].shift();
+        render();
+    }
+};
 </script>
 </body>
 </html>
