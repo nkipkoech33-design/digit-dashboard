@@ -77,26 +77,16 @@ text-align:center;
 .signal-text{text-align:center;font-weight:bold;}
 .buy-even{color:lime;}
 .buy-odd{color:red;}
-
-/* NEW */
-.signal-meta{
-text-align:center;
-font-size:11px;
-opacity:0.9;
-margin-top:2px;
-}
 </style>
 </head>
 
 <body>
-
 <div class="wrapper">
 <div class="left" id="markets"></div>
 <div class="right"></div>
 </div>
 
 <script>
-
 let token="PUT_TOKEN_HERE";
 
 const markets=[
@@ -123,7 +113,6 @@ const markets=[
 let ws=new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
 
 let store={},priceMap={},pipMap={},historyLoaded={},lastDigitMap={};
-let signalStack=[];
 let audio=new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
 
 ws.onopen=()=>{
@@ -188,10 +177,92 @@ function render(){
 let wrap=document.getElementById("markets");
 wrap.innerHTML="";
 
-markets.forEach(m=>{
+let sorted=[...markets].sort((a,b)=>{
+return (checkSignal(b.sym)?1:0)-(checkSignal(a.sym)?1:0);
+});
+
+sorted.forEach(m=>{
 
 let arr=store[m.sym];
 if(!arr || arr.length<1000) return;
+
+let counts=Array(10).fill(0);
+arr.forEach(d=>counts[d]++);
+
+let total=arr.length;
+let perc=counts.map(c=>((c/total)*100).toFixed(1));
+
+let evenSum=counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
+let oddSum=counts[1]+counts[3]+counts[5]+counts[7]+counts[9];
+
+let evenP=((evenSum/total)*100).toFixed(1);
+let oddP=((oddSum/total)*100).toFixed(1);
+
+/* SIGNAL */
+let signal="";
+let isSignal=false;
+
+if(evenP>oddP && [1,3,5,7,9].every(i=>perc[i]<10)){
+signal="BUY EVEN";isSignal=true;
+}
+else if(oddP>evenP && [0,2,4,6,8].every(i=>perc[i]<10)){
+signal="BUY ODD";isSignal=true;
+}
+
+if(isSignal) audio.play();
+
+/* COLORS */
+let sortedDigits=[...counts].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
+let most=sortedDigits[0].i;
+let second=sortedDigits[1].i;
+let least=sortedDigits[9].i;
+let secondLeast=sortedDigits[8].i;
+
+let last=arr[arr.length-1];
+let rep=repeat(arr);
+
+function box(i){
+let cls="";
+if(i===most) cls="most";
+else if(i===second) cls="second";
+else if(i===least) cls="least";
+else if(i===secondLeast) cls="secondLeast";
+
+let pointer=i===last?`<div class="pointer ${i%2==0?'even':'odd'}">●</div>`:"";
+let flash=(lastDigitMap[m.sym]===i)?"flash":"";
+let repeatFx=(i===last && rep>=2)?"repeat":"";
+let counter=(i===last && rep>=2)?`<div class="repeat-count">x${rep}</div>`:"";
+
+return `<div class="box ${cls} ${flash} ${repeatFx}">
+${pointer}${counter}
+<div class="digit">${i}</div>
+<div class="percent">${perc[i]}%</div>
+</div>`;
+}
+
+let ticks=arr.slice(-50).map(d=>`<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("");
+
+let div=document.createElement("div");
+div.className="market "+(isSignal?"signal":"");
+
+div.innerHTML=`
+<b>${m.name}</b>
+<div class="price">${priceMap[m.sym]}</div>
+<div class="win">EVEN ${evenP}% | ODD ${oddP}%</div>
+${isSignal?`<div class="signal-text ${signal==='BUY EVEN'?'buy-even':'buy-odd'}">${signal}</div>`:""}
+<div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
+<div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
+<div class="tick">${ticks}</div>
+`;
+
+wrap.appendChild(div);
+
+});
+}
+
+function checkSignal(sym){
+let arr=store[sym];
+if(!arr || arr.length<1000) return false;
 
 let counts=Array(10).fill(0);
 arr.forEach(d=>counts[d]++);
@@ -207,86 +278,11 @@ let oddSum=odd.reduce((s,i)=>s+counts[i],0);
 let evenP=(evenSum/total)*100;
 let oddP=(oddSum/total)*100;
 
-/* SIGNAL */
-let signal="";
-let isSignal=false;
+if(evenP>oddP && odd.every(i=>(counts[i]/total)*100<10)) return true;
+if(oddP>evenP && even.every(i=>(counts[i]/total)*100<10)) return true;
 
-if(evenP>oddP && odd.every(i=>(counts[i]/total)*100<10)){
-signal="BUY EVEN";isSignal=true;
+return false;
 }
-else if(oddP>evenP && even.every(i=>(counts[i]/total)*100<10)){
-signal="BUY ODD";isSignal=true;
-}
-
-/* STRENGTH + CONFIDENCE */
-let strength=Math.abs(evenP-oddP).toFixed(1);
-
-let confidence=isSignal
-? Math.min(100, strength + 40).toFixed(1)
-: 0;
-
-if(isSignal) audio.play();
-
-let sortedDigits=[...counts].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
-let most=sortedDigits[0].i;
-let second=sortedDigits[1].i;
-let least=sortedDigits[9].i;
-let secondLeast=sortedDigits[8].i;
-
-let last=arr[arr.length-1];
-let rep=repeat(arr);
-
-function box(i){
-
-let cls="";
-if(i===most) cls="most";
-else if(i===second) cls="second";
-else if(i===least) cls="least";
-else if(i===secondLeast) cls="secondLeast";
-
-let pointer=i===last?`<div class="pointer ${i%2==0?'even':'odd'}">●</div>`:"";
-let flash=(lastDigitMap[m.sym]===i)?"flash":"";
-let repeatFx=(i===last && rep>=2)?"repeat":"";
-let counter=(i===last && rep>=2)?`<div class="repeat-count">x${rep}</div>`:"";
-
-return `<div class="box ${cls} ${flash} ${repeatFx}">
-${pointer}${counter}
-<div class="digit">${i}</div>
-<div class="percent">${(counts[i]/total*100).toFixed(1)}%</div>
-</div>`;
-}
-
-let ticks=arr.slice(-50).map(d=>`<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("");
-
-let div=document.createElement("div");
-div.className="market "+(isSignal?"signal":"");
-
-div.innerHTML=`
-<b>${m.name}</b>
-<div class="price">${priceMap[m.sym]}</div>
-<div class="win">EVEN ${evenP.toFixed(1)}% | ODD ${oddP.toFixed(1)}%</div>
-
-${isSignal?`
-<div class="signal-text ${signal==='BUY EVEN'?'buy-even':'buy-odd'}">
-${signal}
-</div>
-<div class="signal-meta">
-Strength: ${strength}% | Confidence: ${confidence}%
-</div>
-`:""}
-
-<div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
-<div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
-
-<div class="tick">${ticks}</div>
-`;
-
-wrap.appendChild(div);
-
-});
-}
-
 </script>
-
 </body>
 </html>
