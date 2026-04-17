@@ -17,14 +17,15 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 .price{color:#38bdf8;font-size:11px;}
 .win{font-size:12px;}
 
+/* ✅ FIXED SPACING */
 .grid{
 display:grid;
 grid-template-columns:repeat(5, 2.5cm);
-gap:6px;
-margin-top:6px;
+gap:10px;
+margin-top:10px;
+justify-content:start;
 }
 
-/* BOX */
 .box{
 width:2.5cm;
 height:2.5cm;
@@ -43,33 +44,25 @@ border:1px solid #1e293b;
 .secondLeast{background:orange;}
 .least{background:red;}
 
-.digit{
-font-size:48px;
-font-weight:bold;
-}
+.digit{font-size:48px;font-weight:bold;}
+.percent{font-size:13px;}
 
-.percent{
-font-size:13px;
-}
-
-/* POINTER INSIDE CENTER */
+/* ✅ BIGGER POINTER */
 .pointer{
 position:absolute;
 top:50%;
 left:50%;
 transform:translate(-50%,-50%);
-font-size:28px;
+font-size:42px;
 font-weight:bold;
-opacity:0.8;
+opacity:1;
+text-shadow:0 0 10px black, 0 0 15px black;
+z-index:10;
 }
 .pointer.even{color:lime;}
 .pointer.odd{color:red;}
 
-/* REPEAT */
-.repeat{
-animation:pulse 0.4s infinite;
-box-shadow:0 0 20px yellow;
-}
+.repeat{animation:pulse 0.4s infinite;box-shadow:0 0 20px yellow;}
 
 .repeat-count{
 position:absolute;
@@ -86,7 +79,6 @@ color:yellow;
 100%{transform:scale(1);}
 }
 
-/* TICKS */
 .tick{
 display:grid;
 grid-template-columns:repeat(50,1fr);
@@ -280,7 +272,8 @@ ${counter}
 let ticks=arr.slice(-50).map(d=>`<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("");
 
 let div=document.createElement("div");
-div.className="market";
+div.className="market "+(m.sym===active?"active":"");
+div.onclick=()=>active=m.sym;
 
 div.innerHTML=`
 <b>${m.name}</b>
