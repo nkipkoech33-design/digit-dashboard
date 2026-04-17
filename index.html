@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Digit Analyzer PRO — Auto dBot + Multi‑TF + Backtest</title>
+<title>Digit Analyzer PRO — Full Auto dBot with Stake, Martingale, SL/TP</title>
 
 <style>
 body{background:#0f172a;color:white;font-family:Arial;margin:0;}
@@ -121,6 +121,9 @@ text-align:center;
 .bot-running{color:#4ade80;}
 .bot-stopped{color:#f87171;}
 .bot-trade-log{font-size:11px;max-height:120px;overflow-y:auto;margin-top:8px;border-top:1px solid #334155;padding-top:6px;}
+.config-input{background:#1e293b;border:1px solid #334155;color:white;padding:4px 8px;border-radius:12px;width:80px;}
+.config-label{font-size:12px;margin-right:4px;}
+.balance{font-weight:bold;font-size:14px;margin-top:6px;}
 </style>
 </head>
 
@@ -131,169 +134,169 @@ text-align:center;
 </div>
 
 <script>
-let token="PUT_TOKEN_HERE";
-
-const markets=[
-{sym:"R_10",name:"Volatility 10 Index"},
-{sym:"R_25",name:"Volatility 25 Index"},
-{sym:"R_50",name:"Volatility 50 Index"},
-{sym:"R_75",name:"Volatility 75 Index"},
-{sym:"R_100",name:"Volatility 100 Index"},
-{sym:"1HZ10V",name:"Volatility 10 (1s)"},
-{sym:"1HZ15V",name:"Volatility 15 (1s)"},
-{sym:"1HZ25V",name:"Volatility 25 (1s)"},
-{sym:"1HZ30V",name:"Volatility 30 (1s)"},
-{sym:"1HZ50V",name:"Volatility 50 (1s)"},
-{sym:"1HZ75V",name:"Volatility 75 (1s)"},
-{sym:"1HZ90V",name:"Volatility 90 (1s)"},
-{sym:"1HZ100V",name:"Volatility 100 (1s)"},
-{sym:"JD10",name:"Jump 10 Index"},
-{sym:"JD25",name:"Jump 25 Index"},
-{sym:"JD50",name:"Jump 50 Index"},
-{sym:"JD75",name:"Jump 75 Index"},
-{sym:"JD100",name:"Jump 100 Index"}
-];
-
-let ws=new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
+// Default token placeholder – user can connect later
+let token = "PUT_TOKEN_HERE";
+let ws = null;
 
 // Data stores
-let store={};          // main tick digit array (1000 length)
-let storeShort={};     // 100 ticks for multi-timeframe
-let storeMedium={};    // 500 ticks
-let priceMap={}, pipMap={}, historyLoaded={}, lastDigitMap={};
+let store={}, storeShort={}, storeMedium={}, priceMap={}, pipMap={}, historyLoaded={}, lastDigitMap={};
 let audio=new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
 
-// Backtesting & stats
-let tradeLog = [];        // manual signal log
-let marketStats = {};     // per symbol
+// Backtesting & stats (manual signals)
+let tradeLog = [];
+let marketStats = {};
 
-// ---------- dBot variables ----------
+// ---------- Bot configuration ----------
 let botRunning = false;
-let botInterval = null;       // setInterval handle
-let tradeEveryNTicks = 1;     // default: every tick
-let tickCounter = 0;          // global tick counter for speed control
-let botTradeLog = [];         // store bot trades { timestamp, symbol, signalType, outcome, strength, confidence, price }
-let botTotalTrades = 0, botWins = 0, botLosses = 0;
+let tradeEveryNTicks = 1;
+let globalTickCounter = 0;
 
-// Helper: current timestamp
-function nowStr() {
-    return new Date().toLocaleTimeString();
+// Bot strategy settings
+let baseStake = 10;          // virtual currency
+let martingaleMultiplier = 2.0;
+let stopLossBalance = 50;    // stop if balance < this
+let takeProfitBalance = 500;  // stop if balance >= this
+let currentStake = baseStake;
+let virtualBalance = 100;     // starting balance
+let consecutiveLosses = 0;
+let lastTradeOutcome = null;
+
+// Bot trade log and active market
+let botTradeLog = [];
+let botTotalTrades = 0, botWins = 0, botLosses = 0;
+let currentBotMarket = null;
+let currentBotTradeType = null;
+
+// Helper: update bot UI elements
+function updateBotUI() {
+    let balanceSpan = document.getElementById("botBalance");
+    if (balanceSpan) balanceSpan.innerText = virtualBalance.toFixed(2);
+    let stakeSpan = document.getElementById("currentStakeSpan");
+    if (stakeSpan) stakeSpan.innerText = currentStake.toFixed(2);
+    let marketInfo = document.getElementById("botMarketInfo");
+    if (marketInfo) marketInfo.innerText = currentBotMarket ? `${currentBotMarket.name} (${currentBotTradeType || '—'})` : "— waiting for signal —";
 }
 
-// Update stats panel (includes bot panel)
-function renderStatsPanel() {
-    let panel = document.getElementById("statsPanel");
-    if (!panel) return;
+// Reset bot strategy (called after stop loss or take profit)
+function resetBotStrategy() {
+    currentStake = baseStake;
+    consecutiveLosses = 0;
+    updateBotUI();
+}
+
+// Apply martingale after loss
+function applyMartingale() {
+    if (!botRunning) return;
+    consecutiveLosses++;
+    currentStake = baseStake * Math.pow(martingaleMultiplier, consecutiveLosses);
+    // Cap stake to avoid infinite growth (optional)
+    if (currentStake > virtualBalance) currentStake = virtualBalance;
+    updateBotUI();
+}
+
+// Reset martingale after win
+function resetMartingale() {
+    consecutiveLosses = 0;
+    currentStake = baseStake;
+    updateBotUI();
+}
+
+// Execute a bot trade with current stake
+function executeBotTradeWithStake(marketObj, signalType, strength) {
+    if (!botRunning) return false;
+    if (virtualBalance <= 0) {
+        stopBotWithMessage("Balance zero! Bot stopped.");
+        return false;
+    }
+    if (currentStake > virtualBalance) {
+        stopBotWithMessage("Stake exceeds balance! Bot stopped.");
+        return false;
+    }
+    // Check stop loss / take profit before trade
+    if (virtualBalance < stopLossBalance) {
+        stopBotWithMessage(`Stop loss reached (balance ${virtualBalance.toFixed(2)} < ${stopLossBalance}). Bot stopped.`);
+        return false;
+    }
+    if (virtualBalance >= takeProfitBalance) {
+        stopBotWithMessage(`Take profit reached (balance ${virtualBalance.toFixed(2)} >= ${takeProfitBalance}). Bot stopped.`);
+        return false;
+    }
     
-    let totalSignals = tradeLog.length;
-    let totalWins = tradeLog.filter(t => t.outcome === "win").length;
-    let totalLosses = tradeLog.filter(t => t.outcome === "loss").length;
-    let pending = tradeLog.filter(t => t.outcome === "pending").length;
-    let overallWinRate = totalSignals - pending > 0 ? (totalWins / (totalWins + totalLosses) * 100).toFixed(1) : "—";
+    let tradeId = Date.now() + Math.random();
+    let price = priceMap[marketObj.sym] || "—";
+    let tradeEntry = {
+        id: tradeId,
+        symbol: marketObj.sym,
+        signalType: signalType,
+        stake: currentStake,
+        strength: strength.toFixed(1),
+        timestamp: new Date().toLocaleTimeString(),
+        outcome: "pending",
+        price: price
+    };
+    botTradeLog.push(tradeEntry);
+    botTotalTrades++;
     
-    // best market by winrate
-    let bestMarket = "—";
-    let bestRate = 0;
-    for (let sym in marketStats) {
-        let s = marketStats[sym];
-        if (s.wins + s.losses > 0) {
-            let rate = (s.wins / (s.wins + s.losses) * 100);
-            if (rate > bestRate) {
-                bestRate = rate;
-                bestMarket = sym;
+    // Deduct stake from virtual balance (risk)
+    virtualBalance -= currentStake;
+    updateBotUI();
+    renderStatsPanel();
+    
+    // Schedule outcome resolution after 1 tick
+    setTimeout(() => {
+        let lastDigit = lastDigitMap[marketObj.sym];
+        if (lastDigit === undefined) return;
+        let isEven = lastDigit % 2 === 0;
+        let predictedEven = (signalType === "BUY EVEN");
+        let win = (predictedEven && isEven) || (!predictedEven && !isEven);
+        
+        let trade = botTradeLog.find(t => t.id === tradeId);
+        if (trade && trade.outcome === "pending") {
+            trade.outcome = win ? "win" : "loss";
+            if (win) {
+                let winAmount = currentStake * 0.95; // 95% payout (typical)
+                virtualBalance += currentStake + winAmount;
+                botWins++;
+                resetMartingale();
+                lastTradeOutcome = "win";
+            } else {
+                botLosses++;
+                applyMartingale();  // increase next stake
+                lastTradeOutcome = "loss";
+            }
+            updateBotUI();
+            renderStatsPanel();
+            
+            // After trade, check again for stop loss/take profit
+            if (virtualBalance < stopLossBalance) {
+                stopBotWithMessage(`Stop loss triggered after trade (balance ${virtualBalance.toFixed(2)}).`);
+            } else if (virtualBalance >= takeProfitBalance) {
+                stopBotWithMessage(`Take profit achieved (balance ${virtualBalance.toFixed(2)}). Bot stopped.`);
             }
         }
-    }
-    let marketName = markets.find(m => m.sym === bestMarket)?.name || bestMarket;
-    
-    // recent signals (last 10)
-    let recentHtml = tradeLog.slice(-10).reverse().map(log => {
-        let outcomeClass = log.outcome === "win" ? "log-win" : (log.outcome === "loss" ? "log-loss" : "log-pending");
-        let outcomeText = log.outcome === "win" ? "✓ WIN" : (log.outcome === "loss" ? "✗ LOSS" : "⌛ pending");
-        return `<div class="log-entry">
-            <span>${log.timestamp}</span> 
-            <span>${log.symbol}</span> 
-            <span>${log.signalType}</span>
-            <span class="${outcomeClass}">${outcomeText}</span>
-            <span>💪${log.strength}%</span>
-        </div>`;
-    }).join("");
-    
-    // bot recent trades
-    let botRecentHtml = botTradeLog.slice(-8).reverse().map(t => {
-        let outcomeClass = t.outcome === "win" ? "log-win" : "log-loss";
-        let outcomeText = t.outcome === "win" ? "WIN" : "LOSS";
-        return `<div class="log-entry">
-            <span>${t.timestamp}</span> 
-            <span>${t.symbol}</span> 
-            <span>${t.signalType}</span>
-            <span class="${outcomeClass}">${outcomeText}</span>
-            <span>${t.strength}%</span>
-        </div>`;
-    }).join("");
-    let botWinRate = botTotalTrades > 0 ? (botWins / botTotalTrades * 100).toFixed(1) : "0.0";
-    
-    panel.innerHTML = `
-        <div class="stats-panel">
-            <div class="stats-title">📊 BACKTEST ENGINE</div>
-            <div class="stat-row"><span class="stat-label">Total signals:</span><span class="stat-value">${totalSignals}</span></div>
-            <div class="stat-row"><span class="stat-label">Wins / Losses:</span><span class="stat-value">${totalWins} / ${totalLosses}</span></div>
-            <div class="stat-row"><span class="stat-label">Overall win rate:</span><span class="stat-value ${overallWinRate > 55 ? 'winrate-good' : (overallWinRate < 45 ? 'winrate-bad' : '')}">${overallWinRate}%</span></div>
-            <div class="stat-row"><span class="stat-label">🔥 Best market:</span><span class="stat-value">${marketName} ${bestRate.toFixed(1)}%</span></div>
-            <div class="stat-row"><span class="stat-label">⏳ Pending signals:</span><span class="stat-value">${pending}</span></div>
-        </div>
-        <div class="stats-panel">
-            <div class="stats-title">📋 RECENT SIGNALS</div>
-            <div class="signal-log">${recentHtml || "<div>No signals yet</div>"}</div>
-        </div>
-        <div class="stats-panel">
-            <div class="stats-title">⚙️ RULES (active)</div>
-            <div class="stat-row"><span class="stat-label">Multi‑TF:</span><span class="stat-value">100/500/1000 ticks</span></div>
-            <div class="stat-row"><span class="stat-label">Threshold:</span><span class="stat-value">Adaptive Z>1.96</span></div>
-            <div class="stat-row"><span class="stat-label">Backtest:</span><span class="stat-value">Live outcome tracking</span></div>
-        </div>
-        
-        <!-- dBot Panel -->
-        <div class="bot-panel">
-            <div class="stats-title">🤖 AUTO dBOT</div>
-            <div class="bot-controls">
-                <button id="startBotBtn" class="bot-btn">▶ START BOT</button>
-                <button id="stopBotBtn" class="bot-btn stop">⏹ STOP</button>
-                <select id="botSpeedSelect" class="speed-select">
-                    <option value="1">⚡ Every 1 tick</option>
-                    <option value="2">🕒 Every 2 ticks</option>
-                    <option value="3">⏲ Every 3 ticks</option>
-                    <option value="5">🐢 Every 5 ticks</option>
-                    <option value="10">🐌 Every 10 ticks</option>
-                </select>
-                <span id="botStatusText" class="bot-status bot-stopped">● Stopped</span>
-            </div>
-            <div class="stat-row"><span class="stat-label">Bot trades:</span><span class="stat-value">${botTotalTrades}</span></div>
-            <div class="stat-row"><span class="stat-label">Bot wins/losses:</span><span class="stat-value">${botWins}/${botLosses}</span></div>
-            <div class="stat-row"><span class="stat-label">Bot win rate:</span><span class="stat-value ${botWinRate > 55 ? 'winrate-good' : (botWinRate < 45 ? 'winrate-bad' : '')}">${botWinRate}%</span></div>
-            <div class="stats-title" style="margin-top:8px;">📈 BOT TRADE LOG</div>
-            <div class="bot-trade-log">${botRecentHtml || "<div>No bot trades yet</div>"}</div>
-        </div>
-    `;
-    
-    // attach event listeners after DOM update
-    document.getElementById("startBotBtn")?.addEventListener("click", startBot);
-    document.getElementById("stopBotBtn")?.addEventListener("click", stopBot);
-    document.getElementById("botSpeedSelect")?.addEventListener("change", (e) => {
-        tradeEveryNTicks = parseInt(e.target.value);
-        if (botRunning) {
-            // restart interval with new speed
-            restartBotInterval();
-        }
-    });
+    }, 150);
+    return true;
 }
 
-// Bot core: trade the strongest active signal market
-function executeBotTrade() {
-    if (!botRunning) return;
-    
-    // find all markets with active signal, pick the strongest one (highest signal strength)
-    let activeMarkets = [];
+function stopBotWithMessage(msg) {
+    if (botRunning) {
+        botRunning = false;
+        if (ws && ws.readyState === WebSocket.OPEN && token !== "PUT_TOKEN_HERE") {
+            // optional: send notification
+        }
+        let statusSpan = document.getElementById("botStatusText");
+        if (statusSpan) {
+            statusSpan.innerHTML = `● Stopped: ${msg}`;
+            statusSpan.className = "bot-status bot-stopped";
+        }
+        renderStatsPanel();
+        updateBotUI();
+    }
+}
+
+// Find strongest active signal market
+function getStrongestSignalMarket() {
+    let active = [];
     for (let m of markets) {
         let arr = store[m.sym];
         if (!arr || arr.length < 1000) continue;
@@ -308,111 +311,97 @@ function executeBotTrade() {
             let oddP = (oddSum/total)*100;
             let perc = counts.map(c => (c/total)*100);
             let strength = computeSignalStrength(evenP, oddP, perc, signalType);
-            activeMarkets.push({ sym: m.sym, name: m.name, signalType, strength });
+            active.push({ sym: m.sym, name: m.name, signalType, strength });
         }
     }
-    if (activeMarkets.length === 0) return;
+    if (active.length === 0) return null;
+    active.sort((a,b) => b.strength - a.strength);
+    return active[0];
+}
+
+// Tick-based bot trigger
+function onTickReceived() {
+    if (!botRunning) return;
+    globalTickCounter++;
+    if (globalTickCounter % tradeEveryNTicks !== 0) return;
     
-    // sort by strength descending
-    activeMarkets.sort((a,b) => b.strength - a.strength);
-    let best = activeMarkets[0];
-    let price = priceMap[best.sym] || "—";
-    
-    // record bot trade (will resolve outcome after 1 tick)
-    let tradeId = Date.now() + Math.random();
-    let botTradeEntry = {
-        id: tradeId,
-        symbol: best.sym,
-        signalType: best.signalType,
-        strength: best.strength.toFixed(1),
-        confidence: "auto",
-        timestamp: nowStr(),
-        outcome: "pending",
-        price: price
+    let best = getStrongestSignalMarket();
+    if (!best) return;
+    // Update current market info
+    currentBotMarket = best;
+    currentBotTradeType = best.signalType;
+    updateBotUI();
+    // Execute trade
+    executeBotTradeWithStake(best, best.signalType, best.strength);
+}
+
+// ---------- Account connection ----------
+function connectAccount() {
+    let tokenInput = document.getElementById("apiTokenInput").value.trim();
+    if (!tokenInput) {
+        alert("Please enter your Binary.com API token");
+        return;
+    }
+    token = tokenInput;
+    if (ws) ws.close();
+    ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
+    ws.onopen = () => {
+        ws.send(JSON.stringify({authorize: token}));
+        markets.forEach(m => {
+            store[m.sym] = [];
+            storeShort[m.sym] = [];
+            storeMedium[m.sym] = [];
+            historyLoaded[m.sym] = false;
+            ws.send(JSON.stringify({ticks_history: m.sym, count:1000, end:"latest", style:"ticks"}));
+            ws.send(JSON.stringify({ticks: m.sym, subscribe:1}));
+        });
+        document.getElementById("connStatus").innerHTML = "✅ Connected";
     };
-    botTradeLog.push(botTradeEntry);
-    botTotalTrades++;
-    renderStatsPanel();
-    
-    // schedule outcome resolution
-    setTimeout(() => {
-        resolveBotTradeOutcome(best.sym, best.signalType, tradeId);
-    }, 150);
+    ws.onmessage = handleWebSocketMessage;
+    ws.onerror = () => { document.getElementById("connStatus").innerHTML = "❌ Connection error"; };
 }
 
-function resolveBotTradeOutcome(symbol, predictedType, tradeId) {
-    let lastDigit = lastDigitMap[symbol];
-    if (lastDigit === undefined) return;
-    let isEven = lastDigit % 2 === 0;
-    let predictedEven = (predictedType === "BUY EVEN");
-    let win = (predictedEven && isEven) || (!predictedEven && !isEven);
-    
-    let trade = botTradeLog.find(t => t.id === tradeId);
-    if (trade && trade.outcome === "pending") {
-        trade.outcome = win ? "win" : "loss";
-        if (win) botWins++;
-        else botLosses++;
-        renderStatsPanel();
+function handleWebSocketMessage(msg) {
+    let d = JSON.parse(msg.data);
+    if (d.error) {
+        console.warn(d.error);
+        if (d.error.code === "AuthorizationFailed") document.getElementById("connStatus").innerHTML = "❌ Invalid token";
+        return;
+    }
+    if (d.authorize) {
+        document.getElementById("connStatus").innerHTML = "✅ Authorized";
+    }
+    if (d.history) {
+        let s = d.echo_req.ticks_history;
+        let pip = pipMap[s] || 2;
+        let prices = d.history.prices.map(p => parseFloat(p).toFixed(pip));
+        let digits = prices.map(p => parseInt(p.slice(-1)));
+        store[s] = digits.slice(-1000);
+        storeShort[s] = digits.slice(-100);
+        storeMedium[s] = digits.slice(-500);
+        historyLoaded[s] = true;
+        render();
+    }
+    if (d.tick) {
+        let s = d.tick.symbol;
+        pipMap[s] = d.tick.pip_size;
+        let price = parseFloat(d.tick.quote).toFixed(pipMap[s]);
+        let digit = parseInt(price.slice(-1));
+        priceMap[s] = price;
+        lastDigitMap[s] = digit;
+        if (!historyLoaded[s]) return;
+        store[s].push(digit);
+        storeShort[s].push(digit);
+        storeMedium[s].push(digit);
+        if (store[s].length > 1000) store[s].shift();
+        if (storeShort[s].length > 100) storeShort[s].shift();
+        if (storeMedium[s].length > 500) storeMedium[s].shift();
+        render();
+        onTickReceived();
     }
 }
 
-// Helper: restart bot interval (after speed change)
-function restartBotInterval() {
-    if (botInterval) clearInterval(botInterval);
-    if (botRunning) {
-        botInterval = setInterval(() => {
-            tickCounter++;
-            if (tickCounter % tradeEveryNTicks === 0) {
-                executeBotTrade();
-            }
-        }, 1000); // every second we check tick count? Actually we want to trade per real tick arrival.
-        // Better approach: trigger on each real tick instead of fixed interval.
-        // We'll use a tick-based trigger: every time a new tick arrives, increment counter and maybe trade.
-        // Let's implement a separate mechanism: we'll hook into the tick event.
-    }
-}
-
-// Tick-based bot trigger (more accurate)
-let botTickTrigger = null;
-function setupTickTrigger() {
-    // override or augment the existing tick handler? We'll add a function that gets called on each tick.
-    // We'll store original onmessage wrapper but we already have one. We'll patch inside the tick processing.
-    // For simplicity, we'll add a call inside the render() function after new digit arrives.
-    // But better: inside the websocket tick handling we call a function.
-    // We'll modify the ws.onmessage section (below) to call onTickReceived.
-}
-
-function onTickReceived(symbol) {
-    if (!botRunning) return;
-    // increment global tick counter (per symbol? use global counter for all markets)
-    if (typeof window.globalTickCounter === 'undefined') window.globalTickCounter = 0;
-    window.globalTickCounter++;
-    if (window.globalTickCounter % tradeEveryNTicks === 0) {
-        executeBotTrade();
-    }
-}
-
-// start bot
-function startBot() {
-    if (botRunning) return;
-    botRunning = true;
-    window.globalTickCounter = 0;
-    document.getElementById("botStatusText").innerHTML = "● Running (tick mode)";
-    document.getElementById("botStatusText").className = "bot-status bot-running";
-    renderStatsPanel();
-}
-
-function stopBot() {
-    if (!botRunning) return;
-    botRunning = false;
-    if (botInterval) clearInterval(botInterval);
-    botInterval = null;
-    document.getElementById("botStatusText").innerHTML = "● Stopped";
-    document.getElementById("botStatusText").className = "bot-status bot-stopped";
-    renderStatsPanel();
-}
-
-// ---------- Signal detection logic (advanced) ----------
+// ---------- Signal detection (identical to previous advanced logic) ----------
 function isStatisticallySignificant(evenCount, oddCount, total) {
     let observed = evenCount / total;
     let expected = 0.5;
@@ -420,7 +409,6 @@ function isStatisticallySignificant(evenCount, oddCount, total) {
     let z = Math.abs(observed - expected) / stdErr;
     return z > 1.96;
 }
-
 function checkMultiTimeframeAlignment(sym) {
     let arrShort = storeShort[sym];
     let arrMed = storeMedium[sym];
@@ -428,7 +416,6 @@ function checkMultiTimeframeAlignment(sym) {
     if (!arrShort || arrShort.length < 50) return null;
     if (!arrMed || arrMed.length < 200) return null;
     if (!arrLong || arrLong.length < 800) return null;
-    
     function getParityBias(arr) {
         let evens = arr.filter(d => d%2===0).length;
         let odds = arr.length - evens;
@@ -446,13 +433,11 @@ function checkMultiTimeframeAlignment(sym) {
     if (oddVotes >= 2) return "ODD";
     return null;
 }
-
 function getAdvancedSignal(sym) {
     let arr = store[sym];
     if (!arr || arr.length < 1000) return null;
     let tfBias = checkMultiTimeframeAlignment(sym);
     if (!tfBias) return null;
-    
     let counts = Array(10).fill(0);
     arr.forEach(d => counts[d]++);
     let total = arr.length;
@@ -460,19 +445,15 @@ function getAdvancedSignal(sym) {
     let oddSum = total - evenSum;
     let isSignificant = isStatisticallySignificant(evenSum, oddSum, total);
     if (!isSignificant) return null;
-    
     let opposingDigits = (tfBias === "EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
     let maxOpposing = Math.max(...opposingDigits.map(d => (counts[d]/total)*100));
     if (maxOpposing >= 12) return null;
-    
     let evenP = (evenSum/total)*100;
     let oddP = (oddSum/total)*100;
     let margin = Math.abs(evenP - oddP);
     if (margin < 5) return null;
-    
     return tfBias === "EVEN" ? "BUY EVEN" : "BUY ODD";
 }
-
 function computeSignalStrength(evenP, oddP, perc, signalType) {
     if (!signalType) return 0;
     let diff = Math.abs(evenP - oddP);
@@ -490,7 +471,6 @@ function computeSignalStrength(evenP, oddP, perc, signalType) {
         return Math.min(100, composite);
     }
 }
-
 function computeConfidence(evenP, oddP, perc, signalType) {
     if (!signalType) return "—";
     let opposing = (signalType === "BUY EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
@@ -500,10 +480,8 @@ function computeConfidence(evenP, oddP, perc, signalType) {
     rawConf = Math.min(100, Math.max(0, rawConf));
     return `${rawConf.toFixed(0)}%`;
 }
-
-// Record manual signal
 function recordSignal(symbol, signalType, strength, confidence) {
-    let entry = { id: Date.now()+Math.random(), symbol, signalType, strength, confidence, timestamp: nowStr(), outcome: "pending" };
+    let entry = { id: Date.now()+Math.random(), symbol, signalType, strength, confidence, timestamp: new Date().toLocaleTimeString(), outcome: "pending" };
     tradeLog.push(entry);
     if (!marketStats[symbol]) marketStats[symbol] = { totalSignals:0, wins:0, losses:0 };
     marketStats[symbol].totalSignals++;
@@ -523,10 +501,9 @@ function recordSignal(symbol, signalType, strength, confidence) {
             }
         }
     }, 150);
-    return entry.id;
 }
 
-// ---------- Render markets (identical to before, uses new signal) ----------
+// ---------- Render markets (same as before, using advanced signal) ----------
 function render() {
     let wrap = document.getElementById("markets");
     if (!wrap) return;
@@ -587,53 +564,116 @@ ${isSignal?`<div class="signal-text ${signalType==='BUY EVEN'?'buy-even':'buy-od
     renderStatsPanel();
 }
 
-// WebSocket handlers (patch to call onTickReceived)
-let originalOnMessage = null;
-ws.onopen=()=>{
-    ws.send(JSON.stringify({authorize:token}));
-    markets.forEach(m=>{
-        store[m.sym]=[]; storeShort[m.sym]=[]; storeMedium[m.sym]=[];
-        historyLoaded[m.sym]=false;
-        ws.send(JSON.stringify({ticks_history:m.sym, count:1000, end:"latest", style:"ticks"}));
-        ws.send(JSON.stringify({ticks:m.sym, subscribe:1}));
+// Render right panel with all bot controls and stats
+function renderStatsPanel() {
+    let panel = document.getElementById("statsPanel");
+    if (!panel) return;
+    let totalSignals = tradeLog.length;
+    let totalWins = tradeLog.filter(t => t.outcome === "win").length;
+    let totalLosses = tradeLog.filter(t => t.outcome === "loss").length;
+    let pending = tradeLog.filter(t => t.outcome === "pending").length;
+    let overallWinRate = totalSignals - pending > 0 ? (totalWins / (totalWins + totalLosses) * 100).toFixed(1) : "—";
+    let recentHtml = tradeLog.slice(-10).reverse().map(log => `<div class="log-entry"><span>${log.timestamp}</span> <span>${log.symbol}</span> <span>${log.signalType}</span><span class="${log.outcome==='win'?'log-win':(log.outcome==='loss'?'log-loss':'log-pending')}">${log.outcome==='win'?'✓ WIN':(log.outcome==='loss'?'✗ LOSS':'⌛ pending')}</span><span>💪${log.strength}%</span></div>`).join("");
+    let botRecentHtml = botTradeLog.slice(-8).reverse().map(t => `<div class="log-entry"><span>${t.timestamp}</span> <span>${t.symbol}</span> <span>${t.signalType}</span><span class="${t.outcome==='win'?'log-win':'log-loss'}">${t.outcome==='win'?'WIN':'LOSS'}</span><span>$${t.stake.toFixed(2)}</span></div>`).join("");
+    let botWinRate = botTotalTrades > 0 ? (botWins / botTotalTrades * 100).toFixed(1) : "0.0";
+    
+    panel.innerHTML = `
+        <div class="stats-panel">
+            <div class="stats-title">🔌 ACCOUNT</div>
+            <div class="stat-row"><input type="text" id="apiTokenInput" placeholder="Enter API token" style="width:100%;background:#1e293b;border:1px solid #334155;color:white;padding:6px;border-radius:8px;"></div>
+            <div class="stat-row"><button id="connectBtn" class="bot-btn" style="background:#22c55e;">Connect</button> <span id="connStatus" style="margin-left:8px;">⚪ Not connected</span></div>
+        </div>
+        <div class="stats-panel">
+            <div class="stats-title">📊 BACKTEST ENGINE</div>
+            <div class="stat-row"><span class="stat-label">Total signals:</span><span class="stat-value">${totalSignals}</span></div>
+            <div class="stat-row"><span class="stat-label">Wins / Losses:</span><span class="stat-value">${totalWins} / ${totalLosses}</span></div>
+            <div class="stat-row"><span class="stat-label">Win rate:</span><span class="stat-value">${overallWinRate}%</span></div>
+        </div>
+        <div class="stats-panel">
+            <div class="stats-title">⚙️ RULES (active)</div>
+            <div class="stat-row"><span class="stat-label">Multi‑TF:</span><span class="stat-value">100/500/1000 ticks</span></div>
+            <div class="stat-row"><span class="stat-label">Threshold:</span><span class="stat-value">Adaptive Z>1.96</span></div>
+            <div class="stat-row"><span class="stat-label">Opposing max:</span><span class="stat-value"><12%</span></div>
+        </div>
+        
+        <div class="bot-panel">
+            <div class="stats-title">🤖 AUTO dBOT</div>
+            <div class="stat-row"><span class="stat-label">Market / Trade:</span><span class="stat-value" id="botMarketInfo">—</span></div>
+            <div class="stat-row"><span class="stat-label">💰 Balance:</span><span class="stat-value" id="botBalance">${virtualBalance.toFixed(2)}</span></div>
+            <div class="stat-row"><span class="stat-label">Current Stake:</span><span class="stat-value" id="currentStakeSpan">${currentStake.toFixed(2)}</span></div>
+            <div class="stat-row"><span class="config-label">Base Stake:</span><input type="number" id="baseStakeInput" class="config-input" value="${baseStake}" step="1"></div>
+            <div class="stat-row"><span class="config-label">Martingale x:</span><input type="number" id="martingaleInput" class="config-input" value="${martingaleMultiplier}" step="0.1"></div>
+            <div class="stat-row"><span class="config-label">Stop Loss (bal <):</span><input type="number" id="stopLossInput" class="config-input" value="${stopLossBalance}" step="10"></div>
+            <div class="stat-row"><span class="config-label">Take Profit (bal ≥):</span><input type="number" id="takeProfitInput" class="config-input" value="${takeProfitBalance}" step="50"></div>
+            <div class="bot-controls">
+                <select id="botSpeedSelect" class="speed-select">
+                    <option value="1">⚡ Every 1 tick</option>
+                    <option value="2">🕒 Every 2 ticks</option>
+                    <option value="3">⏲ Every 3 ticks</option>
+                    <option value="5">🐢 Every 5 ticks</option>
+                    <option value="10">🐌 Every 10 ticks</option>
+                </select>
+                <button id="startBotBtn" class="bot-btn">▶ START BOT</button>
+                <button id="stopBotBtn" class="bot-btn stop">⏹ STOP</button>
+                <span id="botStatusText" class="bot-status bot-stopped">● Stopped</span>
+            </div>
+            <div class="stat-row"><span class="stat-label">Bot trades:</span><span class="stat-value">${botTotalTrades}</span></div>
+            <div class="stat-row"><span class="stat-label">Bot wins/losses:</span><span class="stat-value">${botWins}/${botLosses}</span></div>
+            <div class="stat-row"><span class="stat-label">Bot win rate:</span><span class="stat-value ${botWinRate>55?'winrate-good':(botWinRate<45?'winrate-bad':'')}">${botWinRate}%</span></div>
+            <div class="stats-title" style="margin-top:8px;">📈 BOT TRADE LOG</div>
+            <div class="bot-trade-log">${botRecentHtml || "<div>No bot trades yet</div>"}</div>
+        </div>
+        <div class="stats-panel">
+            <div class="stats-title">📋 RECENT SIGNALS</div>
+            <div class="signal-log">${recentHtml || "<div>No signals yet</div>"}</div>
+        </div>
+    `;
+    // attach event listeners
+    document.getElementById("connectBtn")?.addEventListener("click", connectAccount);
+    document.getElementById("startBotBtn")?.addEventListener("click", () => {
+        if (!token || token === "PUT_TOKEN_HERE") { alert("Please connect your account first"); return; }
+        if (botRunning) return;
+        // load settings
+        baseStake = parseFloat(document.getElementById("baseStakeInput").value);
+        martingaleMultiplier = parseFloat(document.getElementById("martingaleInput").value);
+        stopLossBalance = parseFloat(document.getElementById("stopLossInput").value);
+        takeProfitBalance = parseFloat(document.getElementById("takeProfitInput").value);
+        if (isNaN(baseStake) || baseStake <= 0) baseStake = 10;
+        if (isNaN(martingaleMultiplier) || martingaleMultiplier < 1) martingaleMultiplier = 2;
+        if (isNaN(stopLossBalance)) stopLossBalance = 50;
+        if (isNaN(takeProfitBalance)) takeProfitBalance = 500;
+        currentStake = baseStake;
+        consecutiveLosses = 0;
+        virtualBalance = 100; // reset balance on start (optional)
+        botTotalTrades = 0; botWins = 0; botLosses = 0; botTradeLog = [];
+        globalTickCounter = 0;
+        botRunning = true;
+        document.getElementById("botStatusText").innerHTML = "● Running";
+        document.getElementById("botStatusText").className = "bot-status bot-running";
+        updateBotUI();
+        renderStatsPanel();
     });
-};
-ws.onmessage=(msg)=>{
-    let d=JSON.parse(msg.data);
-    if(d.history){
-        let s=d.echo_req.ticks_history;
-        let pip=pipMap[s]||2;
-        let prices=d.history.prices.map(p=>parseFloat(p).toFixed(pip));
-        let digits=prices.map(p=>parseInt(p.slice(-1)));
-        store[s]=digits.slice(-1000);
-        storeShort[s]=digits.slice(-100);
-        storeMedium[s]=digits.slice(-500);
-        historyLoaded[s]=true;
-        render();
-    }
-    if(d.tick){
-        let s=d.tick.symbol;
-        pipMap[s]=d.tick.pip_size;
-        let price=parseFloat(d.tick.quote).toFixed(pipMap[s]);
-        let digit=parseInt(price.slice(-1));
-        priceMap[s]=price;
-        lastDigitMap[s]=digit;
-        if(!historyLoaded[s]) return;
-        store[s].push(digit);
-        storeShort[s].push(digit);
-        storeMedium[s].push(digit);
-        if(store[s].length>1000) store[s].shift();
-        if(storeShort[s].length>100) storeShort[s].shift();
-        if(storeMedium[s].length>500) storeMedium[s].shift();
-        render();
-        // trigger bot tick counter
-        if (typeof window.globalTickCounter === 'undefined') window.globalTickCounter = 0;
-        window.globalTickCounter++;
-        if (botRunning && (window.globalTickCounter % tradeEveryNTicks === 0)) {
-            executeBotTrade();
-        }
-    }
-};
+    document.getElementById("stopBotBtn")?.addEventListener("click", () => { botRunning = false; document.getElementById("botStatusText").innerHTML = "● Stopped"; document.getElementById("botStatusText").className = "bot-status bot-stopped"; renderStatsPanel(); });
+    document.getElementById("botSpeedSelect")?.addEventListener("change", (e) => { tradeEveryNTicks = parseInt(e.target.value); });
+    updateBotUI();
+}
+
+// Initialize without connection (demo mode)
+window.addEventListener("load", () => {
+    renderStatsPanel();
+    // start websocket with default token (will fail but data may still come? but better to prompt)
+    ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
+    ws.onopen = () => {
+        if (token !== "PUT_TOKEN_HERE") ws.send(JSON.stringify({authorize: token}));
+        markets.forEach(m => {
+            store[m.sym] = []; storeShort[m.sym] = []; storeMedium[m.sym] = [];
+            historyLoaded[m.sym] = false;
+            ws.send(JSON.stringify({ticks_history: m.sym, count:1000, end:"latest", style:"ticks"}));
+            ws.send(JSON.stringify({ticks: m.sym, subscribe:1}));
+        });
+    };
+    ws.onmessage = handleWebSocketMessage;
+});
 </script>
 </body>
 </html>
