@@ -14,8 +14,35 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 .market{border:1px solid #1e293b;padding:6px;border-radius:6px;cursor:pointer;}
 .market.active{border:2px solid yellow;}
 
-.price{color:#38bdf8;font-size:11px;}
-.win{font-size:12px;}
+/* 🔥 BLINK */
+.signal{
+animation:blink 0.6s infinite;
+border:2px solid yellow;
+}
+@keyframes blink{
+0%{opacity:1;}
+50%{opacity:0.4;}
+100%{opacity:1;}
+}
+
+.signal-text{
+text-align:center;
+font-weight:bold;
+margin:4px 0;
+}
+.buy-even{color:lime;}
+.buy-odd{color:red;}
+
+/* PRICE */
+.price{
+color:#38bdf8;
+font-size:22px;
+font-weight:bold;
+text-align:center;
+margin-bottom:5px;
+}
+
+.win{font-size:12px;text-align:center;}
 
 .grid{
 display:grid;
@@ -37,7 +64,6 @@ position:relative;
 border:1px solid #1e293b;
 }
 
-/* COLORS */
 .most{background:green;}
 .second{background:blue;}
 .secondLeast{background:orange;}
@@ -46,7 +72,6 @@ border:1px solid #1e293b;
 .digit{font-size:48px;font-weight:bold;}
 .percent{font-size:13px;}
 
-/* POINTER (PULSING) */
 .pointer{
 position:absolute;
 top:50%;
@@ -54,9 +79,7 @@ left:50%;
 transform:translate(-50%,-50%);
 font-size:42px;
 font-weight:bold;
-opacity:1;
 text-shadow:0 0 10px black, 0 0 15px black;
-z-index:10;
 animation:pulsePointer 0.6s infinite;
 }
 .pointer.even{color:lime;}
@@ -68,30 +91,14 @@ animation:pulsePointer 0.6s infinite;
 100%{transform:translate(-50%,-50%) scale(1);}
 }
 
-/* 🔥 FLASH EFFECT */
-.flash{
-animation:flashBox 0.25s;
-}
-
+.flash{animation:flashBox 0.25s;}
 @keyframes flashBox{
 0%{box-shadow:0 0 25px white;}
 100%{box-shadow:none;}
 }
 
-/* REPEAT */
-.repeat{
-animation:pulse 0.4s infinite;
-box-shadow:0 0 20px yellow;
-}
-
-.repeat-count{
-position:absolute;
-top:4px;
-right:6px;
-font-size:14px;
-font-weight:bold;
-color:yellow;
-}
+.repeat{animation:pulse 0.4s infinite;box-shadow:0 0 20px yellow;}
+.repeat-count{position:absolute;top:4px;right:6px;color:yellow;font-weight:bold;}
 
 @keyframes pulse{
 0%{transform:scale(1);}
@@ -108,42 +115,14 @@ justify-content:center;
 }
 .e{color:lime;}
 .o{color:red;}
-
-.bot{border:1px solid #1e293b;padding:10px;border-radius:6px;}
-input,select{width:100%;margin:3px 0;}
-button{margin-top:5px;padding:5px;}
 </style>
 </head>
 
 <body>
 
 <div class="wrapper">
-
 <div class="left" id="markets"></div>
-
-<div class="right">
-<div class="bot">
-
-<h3>DBot</h3>
-
-Direction
-<select id="direction">
-<option value="DIGITEVEN">EVEN</option>
-<option value="DIGITODD">ODD</option>
-</select>
-
-Stake <input id="stake" value="1">
-Martingale <input id="martingale" value="2.3">
-Tick Speed <input id="speed" value="1">
-
-<div>Market: <span id="activeMarket">None</span></div>
-<div>Profit: <span id="profit">0</span></div>
-
-<button onclick="toggleBot()">Start / Stop</button>
-
-</div>
-</div>
-
+<div class="right"></div>
 </div>
 
 <script>
@@ -173,11 +152,9 @@ const markets=[
 
 let ws=new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
 
-let store={},priceMap={},pipMap={},historyLoaded={};
-let active=null;
+let store={},priceMap={},pipMap={},historyLoaded={},lastDigitMap={};
 
-/* TRACK LAST DIGIT PER MARKET */
-let lastDigitMap={};
+let audio=new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
 
 ws.onopen=()=>{
 ws.send(JSON.stringify({authorize:token}));
@@ -217,13 +194,9 @@ let price=parseFloat(d.tick.quote).toFixed(pipMap[s]);
 let digit=parseInt(price.slice(-1));
 
 priceMap[s]=price;
-
-if(!active) active=s;
+lastDigitMap[s]=digit;
 
 if(!historyLoaded[s]) return;
-
-/* STORE LAST DIGIT */
-lastDigitMap[s]=digit;
 
 store[s].push(digit);
 if(store[s].length>1000) store[s].shift();
@@ -232,23 +205,17 @@ render();
 }
 };
 
-function repeat(arr){
-let last=arr[arr.length-1],c=0;
-for(let i=arr.length-1;i>=0;i--){
-if(arr[i]===last)c++;else break;
-}
-return c;
-}
-
 function render(){
-
-document.getElementById("activeMarket").innerText=
-markets.find(m=>m.sym===active)?.name || active;
 
 let wrap=document.getElementById("markets");
 wrap.innerHTML="";
 
-markets.forEach(m=>{
+/* SORT MARKETS (SIGNALS FIRST) */
+let sorted=[...markets].sort((a,b)=>{
+return (checkSignal(b.sym)?1:0)-(checkSignal(a.sym)?1:0);
+});
+
+sorted.forEach(m=>{
 
 let arr=store[m.sym];
 if(!arr || arr.length<1000) return;
@@ -257,72 +224,69 @@ let counts=Array(10).fill(0);
 arr.forEach(d=>counts[d]++);
 
 let total=arr.length;
-let perc=counts.map(c=>((c/total)*100).toFixed(1));
 
-let even=counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
-let odd=counts[1]+counts[3]+counts[5]+counts[7]+counts[9];
+let evenDigits=[0,2,4,6,8];
+let oddDigits=[1,3,5,7,9];
 
-let evenP=((even/total)*100).toFixed(1);
-let oddP=((odd/total)*100).toFixed(1);
+let evenSum=evenDigits.reduce((s,i)=>s+counts[i],0);
+let oddSum=oddDigits.reduce((s,i)=>s+counts[i],0);
 
-let sorted=[...counts].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
+let evenPerc=(evenSum/total)*100;
+let oddPerc=(oddSum/total)*100;
 
-let most=sorted[0].i;
-let second=sorted[1].i;
-let least=sorted[9].i;
-let secondLeast=sorted[8].i;
+/* SIGNAL LOGIC */
+let signal="";
+let isSignal=false;
 
-let last=arr[arr.length-1];
-let rep=repeat(arr);
-
-function box(i){
-
-let cls="";
-if(i===most) cls="most";
-else if(i===second) cls="second";
-else if(i===least) cls="least";
-else if(i===secondLeast) cls="secondLeast";
-
-/* FLASH ONLY WHEN HIT */
-let flash = (lastDigitMap[m.sym]===i) ? "flash" : "";
-
-let pointer=i===last?`<div class="pointer ${i%2==0?'even':'odd'}">●</div>`:"";
-let repeatFx=(i===last && rep>=2)?"repeat":"";
-let counter=(i===last && rep>=2)?`<div class="repeat-count">x${rep}</div>`:"";
-
-return `
-<div class="box ${cls} ${repeatFx} ${flash}">
-${pointer}
-${counter}
-<div class="digit">${i}</div>
-<div class="percent">${perc[i]}%</div>
-</div>`;
+if(evenPerc>oddPerc && oddDigits.every(i=>(counts[i]/total)*100<10)){
+signal="BUY EVEN"; isSignal=true;
+}
+else if(oddPerc>evenPerc && evenDigits.every(i=>(counts[i]/total)*100<10)){
+signal="BUY ODD"; isSignal=true;
 }
 
-let ticks=arr.slice(-50).map(d=>`<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("");
+/* ALARM */
+if(isSignal){ audio.play(); }
 
 let div=document.createElement("div");
-div.className="market "+(m.sym===active?"active":"");
-div.onclick=()=>active=m.sym;
+div.className="market "+(isSignal?"signal":"");
 
 div.innerHTML=`
 <b>${m.name}</b>
 <div class="price">${priceMap[m.sym]}</div>
 
-<div class="win">
-EVEN: <span style="color:lime">${evenP}%</span> |
-ODD: <span style="color:red">${oddP}%</span>
-</div>
+${isSignal?`<div class="signal-text ${signal==='BUY EVEN'?'buy-even':'buy-odd'}">${signal}</div>`:""}
 
-<div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
-<div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
-
-<div class="tick">${ticks}</div>
+<div class="tick">${arr.slice(-50).map(d=>`<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("")}</div>
 `;
 
 wrap.appendChild(div);
 
 });
+}
+
+function checkSignal(sym){
+let arr=store[sym];
+if(!arr || arr.length<1000) return false;
+
+let counts=Array(10).fill(0);
+arr.forEach(d=>counts[d]++);
+
+let total=arr.length;
+
+let even=[0,2,4,6,8];
+let odd=[1,3,5,7,9];
+
+let evenSum=even.reduce((s,i)=>s+counts[i],0);
+let oddSum=odd.reduce((s,i)=>s+counts[i],0);
+
+let evenPerc=(evenSum/total)*100;
+let oddPerc=(oddSum/total)*100;
+
+if(evenPerc>oddPerc && odd.every(i=>(counts[i]/total)*100<10)) return true;
+if(oddPerc>evenPerc && even.every(i=>(counts[i]/total)*100<10)) return true;
+
+return false;
 }
 
 </script>
