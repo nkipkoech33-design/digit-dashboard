@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Digit Analyzer SAFE RESTORE</title>
+<title>Digit Analyzer FINAL</title>
 
 <style>
 body{background:#0f172a;color:white;font-family:Arial;margin:0;}
@@ -27,12 +27,9 @@ margin-top:8px;
 
 .box{
 width:2.5cm;height:2.5cm;
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-position:relative;
-border-radius:6px;
+display:flex;flex-direction:column;
+justify-content:center;align-items:center;
+position:relative;border-radius:6px;
 border:1px solid #1e293b;
 }
 
@@ -41,59 +38,52 @@ border:1px solid #1e293b;
 .secondLeast{background:orange;}
 .least{background:red;}
 
-.digit{font-size:42px;font-weight:bold;}
+.digit{font-size:48px;font-weight:bold;}
 .percent{font-size:13px;}
 
 .pointer{
-position:absolute;
-top:50%;
-left:50%;
+position:absolute;top:50%;left:50%;
 transform:translate(-50%,-50%);
-font-size:44px;
-font-weight:bold;
+font-size:42px;font-weight:bold;
 animation:pulse 0.6s infinite;
-text-shadow:0 0 10px black;
 }
 .pointer.even{color:lime;}
 .pointer.odd{color:red;}
 
 @keyframes pulse{
 0%{transform:translate(-50%,-50%) scale(1);}
-50%{transform:translate(-50%,-50%) scale(1.3);}
+50%{transform:translate(-50%,-50%) scale(1.25);}
 100%{transform:translate(-50%,-50%) scale(1);}
 }
 
 .flash{animation:flash 0.25s;}
 @keyframes flash{0%{box-shadow:0 0 25px white;}100%{box-shadow:none;}}
 
-.repeat{
-box-shadow:0 0 20px yellow;
-}
+.repeat{box-shadow:0 0 20px yellow;}
 .repeat-count{
-position:absolute;
-top:4px;
-right:6px;
-color:yellow;
-font-weight:bold;
-font-size:12px;
+position:absolute;top:4px;right:6px;
+color:yellow;font-weight:bold;
 }
 
 .tick{
 display:grid;
 grid-template-columns:repeat(50,1fr);
-font-size:10px;
-margin-top:8px;
+font-size:10px;margin-top:8px;
 text-align:center;
 }
 .e{color:lime;}
 .o{color:red;}
 
 .signal-text{text-align:center;font-weight:bold;}
+.buy-even{color:lime;}
+.buy-odd{color:red;}
 
+/* NEW */
 .signal-meta{
 text-align:center;
 font-size:11px;
 opacity:0.9;
+margin-top:2px;
 }
 </style>
 </head>
@@ -132,24 +122,19 @@ const markets=[
 
 let ws=new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
 
-let store={},priceMap={},historyLoaded={};
-
+let store={},priceMap={},pipMap={},historyLoaded={},lastDigitMap={};
+let signalStack=[];
 let audio=new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
-
-markets.forEach(m=>{
-store[m.sym]=[];
-historyLoaded[m.sym]=false;
-});
 
 ws.onopen=()=>{
 ws.send(JSON.stringify({authorize:token}));
 
 markets.forEach(m=>{
+store[m.sym]=[];
+historyLoaded[m.sym]=false;
+
 ws.send(JSON.stringify({
-ticks_history:m.sym,
-count:1000,
-end:"latest",
-style:"ticks"
+ticks_history:m.sym,count:1000,end:"latest",style:"ticks"
 }));
 
 ws.send(JSON.stringify({ticks:m.sym,subscribe:1}));
@@ -157,17 +142,15 @@ ws.send(JSON.stringify({ticks:m.sym,subscribe:1}));
 };
 
 ws.onmessage=(msg)=>{
-try{
 let d=JSON.parse(msg.data);
 
-if(d.history && d.echo_req?.ticks_history){
+if(d.history){
 let s=d.echo_req.ticks_history;
+let pip=pipMap[s]||2;
 
-store[s]=(d.history.prices||[])
-.map(p=>{
-let n=parseFloat(p);
-if(isNaN(n)) return 0;
-return parseInt(n.toString().slice(-1));
+store[s]=d.history.prices.map(p=>{
+let f=parseFloat(p).toFixed(pip);
+return parseInt(f.slice(-1));
 });
 
 historyLoaded[s]=true;
@@ -175,31 +158,27 @@ historyLoaded[s]=true;
 
 if(d.tick){
 let s=d.tick.symbol;
-if(!store[s]) store[s]=[];
+pipMap[s]=d.tick.pip_size;
 
-let price=parseFloat(d.tick.quote);
-if(isNaN(price)) return;
+let price=parseFloat(d.tick.quote).toFixed(pipMap[s]);
+let digit=parseInt(price.slice(-1));
 
-priceMap[s]=price.toFixed(2);
+priceMap[s]=price;
+lastDigitMap[s]=digit;
 
-let digit=parseInt(price.toString().slice(-1));
-if(isNaN(digit)) digit=0;
+if(!historyLoaded[s]) return;
 
 store[s].push(digit);
 if(store[s].length>1000) store[s].shift();
 
 render();
 }
-
-}catch(e){}
 };
 
 function repeat(arr){
-let last=arr[arr.length-1];
-let c=0;
+let last=arr[arr.length-1],c=0;
 for(let i=arr.length-1;i>=0;i--){
-if(arr[i]===last)c++;
-else break;
+if(arr[i]===last)c++;else break;
 }
 return c;
 }
@@ -212,12 +191,12 @@ wrap.innerHTML="";
 markets.forEach(m=>{
 
 let arr=store[m.sym];
-if(!arr || arr.length<20) return;
+if(!arr || arr.length<1000) return;
 
 let counts=Array(10).fill(0);
-arr.forEach(d=>counts[d]);
+arr.forEach(d=>counts[d]++);
 
-let total=arr.length||1;
+let total=arr.length;
 
 let even=[0,2,4,6,8];
 let odd=[1,3,5,7,9];
@@ -225,45 +204,56 @@ let odd=[1,3,5,7,9];
 let evenSum=even.reduce((s,i)=>s+counts[i],0);
 let oddSum=odd.reduce((s,i)=>s+counts[i],0);
 
-let evenP=(evenSum/total*100);
-let oddP=(oddSum/total*100);
+let evenP=(evenSum/total)*100;
+let oddP=(oddSum/total)*100;
 
+/* SIGNAL */
 let signal="";
 let isSignal=false;
 
-if(evenP>oddP && odd.every(i=>((counts[i]/total*100)||0)<10)){
+if(evenP>oddP && odd.every(i=>(counts[i]/total)*100<10)){
 signal="BUY EVEN";isSignal=true;
 }
-else if(oddP>evenP && even.every(i=>((counts[i]/total*100)||0)<10)){
+else if(oddP>evenP && even.every(i=>(counts[i]/total)*100<10)){
 signal="BUY ODD";isSignal=true;
 }
 
+/* STRENGTH + CONFIDENCE */
+let strength=Math.abs(evenP-oddP).toFixed(1);
+
+let confidence=isSignal
+? Math.min(100, strength + 40).toFixed(1)
+: 0;
+
 if(isSignal) audio.play();
 
-let maxIndex = counts.indexOf(Math.max(...counts));
-let rep = repeat(arr);
+let sortedDigits=[...counts].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
+let most=sortedDigits[0].i;
+let second=sortedDigits[1].i;
+let least=sortedDigits[9].i;
+let secondLeast=sortedDigits[8].i;
+
+let last=arr[arr.length-1];
+let rep=repeat(arr);
 
 function box(i){
 
 let cls="";
-if(i===maxIndex) cls="most";
+if(i===most) cls="most";
+else if(i===second) cls="second";
+else if(i===least) cls="least";
+else if(i===secondLeast) cls="secondLeast";
 
-let pointer = (i===arr[arr.length-1])
-? `<div class="pointer ${i%2==0?'even':'odd'}">●</div>`
-:"";
+let pointer=i===last?`<div class="pointer ${i%2==0?'even':'odd'}">●</div>`:"";
+let flash=(lastDigitMap[m.sym]===i)?"flash":"";
+let repeatFx=(i===last && rep>=2)?"repeat":"";
+let counter=(i===last && rep>=2)?`<div class="repeat-count">x${rep}</div>`:"";
 
-let counter = (i===arr[arr.length-1] && rep>=2)
-? `<div class="repeat-count">x${rep}</div>`
-:"";
-
-return `
-<div class="box ${cls}">
-${pointer}
-${counter}
+return `<div class="box ${cls} ${flash} ${repeatFx}">
+${pointer}${counter}
 <div class="digit">${i}</div>
-<div class="percent">${((counts[i]/total)*100).toFixed(1)}%</div>
-</div>
-`;
+<div class="percent">${(counts[i]/total*100).toFixed(1)}%</div>
+</div>`;
 }
 
 let ticks=arr.slice(-50).map(d=>`<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("");
@@ -273,18 +263,20 @@ div.className="market "+(isSignal?"signal":"");
 
 div.innerHTML=`
 <b>${m.name}</b>
-<div class="price">${priceMap[m.sym]||"..."}</div>
+<div class="price">${priceMap[m.sym]}</div>
 <div class="win">EVEN ${evenP.toFixed(1)}% | ODD ${oddP.toFixed(1)}%</div>
 
-${isSignal?`<div class="signal-text">${signal}</div>`:""}
-
-<div class="grid">
-${[0,1,2,3,4].map(box).join("")}
+${isSignal?`
+<div class="signal-text ${signal==='BUY EVEN'?'buy-even':'buy-odd'}">
+${signal}
 </div>
-
-<div class="grid">
-${[5,6,7,8,9].map(box).join("")}
+<div class="signal-meta">
+Strength: ${strength}% | Confidence: ${confidence}%
 </div>
+`:""}
+
+<div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
+<div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
 
 <div class="tick">${ticks}</div>
 `;
