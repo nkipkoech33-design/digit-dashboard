@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Digit Analyzer</title>
+<title>Digit Analyzer FIXED</title>
 
 <style>
 body{background:#0f172a;color:white;font-family:Arial;margin:0;}
@@ -15,40 +15,70 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 .market.active{border:2px solid yellow;}
 
 .price{color:#38bdf8;font-size:11px;}
+.win{font-size:12px;}
 
-.grid{display:grid;grid-template-columns:repeat(5,auto);gap:4px;margin-top:5px;}
-
-.box{
-  width:2.5cm;
-  height:2.5cm;
-  border-radius:6px;
-  position:relative;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
+.grid{
+display:grid;
+grid-template-columns:repeat(5, 2.5cm);
+gap:6px;
+margin-top:6px;
 }
 
+/* BOX */
+.box{
+width:2.5cm;
+height:2.5cm;
+border-radius:6px;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+position:relative;
+border:1px solid #1e293b;
+}
+
+/* COLORS */
 .most{background:green;}
 .second{background:blue;}
-.least{background:red;}
 .secondLeast{background:orange;}
+.least{background:red;}
 
-.digit{font-size:42px;font-weight:bold;}
-.percent{font-size:12px;}
+.digit{
+font-size:48px;
+font-weight:bold;
+}
 
+.percent{
+font-size:13px;
+}
+
+/* POINTER INSIDE CENTER */
 .pointer{
-  position:absolute;
-  top:4px;
-  left:50%;
-  transform:translateX(-50%);
-  font-size:18px;
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+font-size:28px;
+font-weight:bold;
+opacity:0.8;
 }
 .pointer.even{color:lime;}
 .pointer.odd{color:red;}
 
-.repeat{animation:pulse 0.4s infinite;box-shadow:0 0 15px yellow;}
-.repeat-count{position:absolute;top:4px;right:6px;color:yellow;font-size:12px;}
+/* REPEAT */
+.repeat{
+animation:pulse 0.4s infinite;
+box-shadow:0 0 20px yellow;
+}
+
+.repeat-count{
+position:absolute;
+top:4px;
+right:6px;
+font-size:14px;
+font-weight:bold;
+color:yellow;
+}
 
 @keyframes pulse{
 0%{transform:scale(1);}
@@ -56,23 +86,56 @@ body{background:#0f172a;color:white;font-family:Arial;margin:0;}
 100%{transform:scale(1);}
 }
 
-.tick{display:grid;grid-template-columns:repeat(50,1fr);font-size:10px;}
+/* TICKS */
+.tick{
+display:grid;
+grid-template-columns:repeat(50,1fr);
+margin-top:6px;
+font-size:10px;
+}
 .e{color:lime;}
 .o{color:red;}
+
+.bot{border:1px solid #1e293b;padding:10px;border-radius:6px;}
+input,select{width:100%;margin:3px 0;}
+button{margin-top:5px;padding:5px;}
 </style>
 </head>
 
 <body>
 
 <div class="wrapper">
+
 <div class="left" id="markets"></div>
-<div class="right"></div>
+
+<div class="right">
+<div class="bot">
+
+<h3>DBot</h3>
+
+Direction
+<select id="direction">
+<option value="DIGITEVEN">EVEN</option>
+<option value="DIGITODD">ODD</option>
+</select>
+
+Stake <input id="stake" value="1">
+Martingale <input id="martingale" value="2.3">
+Tick Speed <input id="speed" value="1">
+
+<div>Market: <span id="activeMarket">None</span></div>
+<div>Profit: <span id="profit">0</span></div>
+
+<button onclick="toggleBot()">Start / Stop</button>
+
+</div>
+</div>
+
 </div>
 
 <script>
 
-let token="PUT_TOKEN";
-let ws=new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
+let token="PUT_TOKEN_HERE";
 
 const markets=[
 {sym:"R_10",name:"Volatility 10 Index"},
@@ -95,47 +158,28 @@ const markets=[
 {sym:"JD100",name:"Jump 100 Index"}
 ];
 
+let ws=new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
+
 let store={},priceMap={},pipMap={},historyLoaded={};
+let active=null;
 
 ws.onopen=()=>{
 ws.send(JSON.stringify({authorize:token}));
 
 markets.forEach(m=>{
 store[m.sym]=[];
+historyLoaded[m.sym]=false;
+
+ws.send(JSON.stringify({
+ticks_history:m.sym,count:1000,end:"latest",style:"ticks"
+}));
+
 ws.send(JSON.stringify({ticks:m.sym,subscribe:1}));
 });
 };
 
 ws.onmessage=(msg)=>{
 let d=JSON.parse(msg.data);
-
-if(d.tick){
-let s=d.tick.symbol;
-
-pipMap[s]=d.tick.pip_size;
-
-let price=parseFloat(d.tick.quote).toFixed(pipMap[s]);
-let digit=parseInt(price.slice(-1));
-
-priceMap[s]=price;
-
-/* LOAD HISTORY FIRST */
-if(!historyLoaded[s]){
-historyLoaded[s]=true;
-ws.send(JSON.stringify({
-ticks_history:s,
-count:1000,
-end:"latest",
-style:"ticks"
-}));
-return;
-}
-
-store[s].push(digit);
-if(store[s].length>1000) store[s].shift();
-
-render();
-}
 
 if(d.history){
 let s=d.echo_req.ticks_history;
@@ -145,6 +189,27 @@ store[s]=d.history.prices.map(p=>{
 let f=parseFloat(p).toFixed(pip);
 return parseInt(f.slice(-1));
 });
+
+historyLoaded[s]=true;
+}
+
+if(d.tick){
+let s=d.tick.symbol;
+pipMap[s]=d.tick.pip_size;
+
+let price=parseFloat(d.tick.quote).toFixed(pipMap[s]);
+let digit=parseInt(price.slice(-1));
+
+priceMap[s]=price;
+
+if(!active) active=s;
+
+if(!historyLoaded[s]) return;
+
+store[s].push(digit);
+if(store[s].length>1000) store[s].shift();
+
+render();
 }
 };
 
@@ -158,19 +223,28 @@ return c;
 
 function render(){
 
+document.getElementById("activeMarket").innerText=
+markets.find(m=>m.sym===active)?.name || active;
+
 let wrap=document.getElementById("markets");
 wrap.innerHTML="";
 
 markets.forEach(m=>{
 
 let arr=store[m.sym];
-if(!arr || arr.length<100) return; // ensure history loaded
+if(!arr || arr.length<1000) return;
 
 let counts=Array(10).fill(0);
 arr.forEach(d=>counts[d]++);
 
 let total=arr.length;
 let perc=counts.map(c=>((c/total)*100).toFixed(1));
+
+let even=counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
+let odd=counts[1]+counts[3]+counts[5]+counts[7]+counts[9];
+
+let evenP=((even/total)*100).toFixed(1);
+let oddP=((odd/total)*100).toFixed(1);
 
 let sorted=[...counts].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
 
@@ -190,7 +264,7 @@ else if(i===second) cls="second";
 else if(i===least) cls="least";
 else if(i===secondLeast) cls="secondLeast";
 
-let pointer=i===last?`<div class="pointer ${i%2==0?'even':'odd'}">▲</div>`:"";
+let pointer=i===last?`<div class="pointer ${i%2==0?'even':'odd'}">●</div>`:"";
 let repeatFx=(i===last && rep>=2)?"repeat":"";
 let counter=(i===last && rep>=2)?`<div class="repeat-count">x${rep}</div>`:"";
 
@@ -211,6 +285,11 @@ div.className="market";
 div.innerHTML=`
 <b>${m.name}</b>
 <div class="price">${priceMap[m.sym]}</div>
+
+<div class="win">
+EVEN: <span style="color:lime">${evenP}%</span> |
+ODD: <span style="color:red">${oddP}%</span>
+</div>
 
 <div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
 <div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
