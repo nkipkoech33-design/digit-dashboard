@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO — Advanced AI + Replay + Correlation</title>
+  <title>Digit Analyzer PRO — AI Ensemble + Heatmap + Regime + Consensus</title>
+  <!-- Chart.js for heatmap -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     /* ==== ORIGINAL STYLES (PRESERVED) ==== */
     body{background:#0f172a;color:white;font-family:Arial;margin:0;}
@@ -128,6 +130,13 @@
     .slider { width: 100%; }
     .small-badge { font-size: 10px; padding: 2px 6px; border-radius: 12px; background: #334155; }
 
+    .regime-calm { background: #15803d; }
+    .regime-choppy { background: #b45309; }
+    .regime-trending { background: #1d4ed8; }
+    .consensus-alert { background: #facc15; color: #0f172a; padding: 8px; border-radius: 8px; font-weight: bold; margin-bottom: 10px; }
+    .reversal-warning { background: #7f1d1d; color: white; padding: 2px 6px; border-radius: 12px; font-size: 10px; margin-left: 5px; }
+    .ml-prob { font-size: 12px; background: #1e293b; padding: 2px 8px; border-radius: 16px; }
+
     @media(max-width:1200px){
         .left{width:100%;}
         .right{display:none;}
@@ -139,9 +148,7 @@
 </head>
 <body>
 <div class="wrapper">
-  <div class="left" id="markets">
-    <!-- Replay controls inserted here dynamically -->
-  </div>
+  <div class="left" id="markets"></div>
   <div class="right" id="statsPanel"></div>
 </div>
 
@@ -150,7 +157,7 @@
     "use strict";
 
     // ==== CONFIGURATION ====
-    let token = "PUT_TOKEN_HERE"; // Replace with your Deriv token
+    let token = "PUT_TOKEN_HERE";
 
     const markets = [
       {sym:"R_10",name:"Volatility 10 Index"},
@@ -176,32 +183,23 @@
     // ==== GLOBAL STATE ====
     let ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
     
-    // Tick storage
     let store = {};          // 1000 ticks
     let storeShort = {};     // 100 ticks
     let storeMedium = {};    // 500 ticks
-    let storeFullHistory = {}; // up to 5000 ticks for replay
+    let storeFullHistory = {};
     let priceMap = {}, pipMap = {}, historyLoaded = {}, lastDigitMap = {};
     let audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
 
-    // Backtest & stats
     let tradeLog = [];
     let marketStats = {};
 
-    // Signal state tracking
     let previousSignalState = {};
     let marketTrendChangeFlag = {};
 
-    // Replay mode
-    let replayMode = false;
-    let replayIndex = 0;
-    let replaySnapshot = {}; // stores arrays of ticks for each symbol
+    let replayMode = false, replayIndex = 0, replaySnapshot = {};
 
-    // Dynamic thresholds (self-learning)
     let optimalParams = { zThreshold: 1.96, maxOpposing: 12, minMargin: 5 };
-    let paramBacktestVersion = 0;
 
-    // Volatility factors (predefined or dynamic)
     const volatilityFactors = {
       'R_10': 0.8, 'R_25': 1.0, 'R_50': 1.3, 'R_75': 1.6, 'R_100': 2.0,
       '1HZ10V': 0.9, '1HZ15V': 1.0, '1HZ25V': 1.2, '1HZ30V': 1.3, '1HZ50V': 1.5,
@@ -209,47 +207,207 @@
       'JD10': 1.2, 'JD25': 1.5, 'JD50': 2.0, 'JD75': 2.5, 'JD100': 3.0
     };
 
+    // ==== ONLINE LOGISTIC REGRESSION (LIGHTWEIGHT ML) ====
+    class OnlineLogisticRegression {
+      constructor(featureCount = 2, learningRate = 0.01) {
+        this.weights = Array(featureCount).fill(0).map(() => Math.random() * 0.1);
+        this.bias = 0;
+        this.lr = learningRate;
+      }
+      sigmoid(z) { return 1 / (1 + Math.exp(-z)); }
+      predict(features) {
+        let z = this.bias;
+        for (let i=0; i<features.length; i++) z += this.weights[i] * features[i];
+        return this.sigmoid(z);
+      }
+      update(features, label) {
+        let pred = this.predict(features);
+        let error = label - pred;
+        for (let i=0; i<features.length; i++) {
+          this.weights[i] += this.lr * error * features[i];
+        }
+        this.bias += this.lr * error;
+      }
+    }
+
+    let mlModel = new OnlineLogisticRegression(3); // features: even%-odd% (normalized), streak length, volatility factor
+    let mlTrainingQueue = [];
+
+    function getMLFeatures(sym, evenP, oddP) {
+      let arr = store[sym];
+      if (!arr || arr.length < 10) return [0,0,0];
+      let diff = (evenP - oddP) / 100; // normalize to ~[-1,1]
+      let streak = 0;
+      let last = arr[arr.length-1];
+      for (let i=arr.length-1; i>=0; i--) {
+        if (arr[i] === last) streak++; else break;
+      }
+      let normStreak = Math.min(streak, 10) / 10;
+      let vol = volatilityFactors[sym] / 3; // normalize
+      return [diff, normStreak, vol];
+    }
+
     // ==== UTILITIES ====
     function nowStr() { return new Date().toLocaleTimeString(); }
 
-    // ==== DYNAMIC THRESHOLD OPTIMIZER ====
+    // ==== MARKET REGIME CLASSIFIER ====
+    function classifyRegime(sym) {
+      let arr = store[sym];
+      if (!arr || arr.length < 50) return { type: 'Unknown', color: '#64748b' };
+      let recent = arr.slice(-50);
+      let parity = recent.map(d => d%2===0 ? 0 : 1);
+      let mean = parity.reduce((a,b)=>a+b,0)/parity.length;
+      let variance = parity.reduce((a,b)=>a+Math.pow(b-mean,2),0)/parity.length;
+      let std = Math.sqrt(variance);
+      if (std < 0.35) return { type: 'Calm', color: '#15803d' };
+      if (std > 0.48) return { type: 'Trending', color: '#1d4ed8' };
+      return { type: 'Choppy', color: '#b45309' };
+    }
+
+    // ==== PATTERN-BASED REVERSAL DETECTION ====
+    function detectReversalPattern(sym, counts, total, evenP, oddP) {
+      let arr = store[sym];
+      if (!arr || arr.length < 30) return null;
+      let recent = arr.slice(-30);
+      let evenCount = recent.filter(d => d%2===0).length;
+      let oddCount = recent.length - evenCount;
+      let biasNow = evenP > oddP ? 'EVEN' : 'ODD';
+      let biasRecent = evenCount > oddCount ? 'EVEN' : 'ODD';
+      if (biasNow !== biasRecent) return '⚠️ Bias shift imminent';
+      
+      // Double top detection in even%
+      let windowSize = 10;
+      let evenPercHistory = [];
+      for (let i=0; i<=arr.length-windowSize; i+=5) {
+        let slice = arr.slice(i, i+windowSize);
+        let e = slice.filter(d=>d%2===0).length / windowSize * 100;
+        evenPercHistory.push(e);
+      }
+      if (evenPercHistory.length >= 3) {
+        let last3 = evenPercHistory.slice(-3);
+        if (last3[0] > last3[1] && last3[2] > last3[1] && Math.abs(last3[0]-last3[2]) < 2) {
+          return '📉 Double top in even%';
+        }
+        if (last3[0] < last3[1] && last3[2] < last3[1] && Math.abs(last3[0]-last3[2]) < 2) {
+          return '📈 Double bottom in even%';
+        }
+      }
+      return null;
+    }
+
+    // ==== HEATMAP (LIVE DIGIT DISTRIBUTION) ====
+    let heatmapChart = null;
+    function renderHeatmap(sym) {
+      let canvas = document.getElementById(`heatmap-${sym}`);
+      if (!canvas) return;
+      let ctx = canvas.getContext('2d');
+      let arr = store[sym];
+      if (!arr || arr.length < 50) return;
+      let recent = arr.slice(-50);
+      let matrix = Array(10).fill().map(() => Array(50).fill(0));
+      for (let i=0; i<recent.length; i++) {
+        let digit = recent[i];
+        matrix[digit][i] = 1;
+      }
+      let data = {
+        labels: Array(50).fill(''),
+        datasets: [{
+          label: 'Digit',
+          data: matrix.flatMap((row, d) => row.map((v, t) => ({ x: t, y: d, v: v }))),
+          backgroundColor(ctx) {
+            let value = ctx.raw.v;
+            if (value === 0) return '#1e293b';
+            let alpha = 0.3 + value * 0.7;
+            return `rgba(56, 189, 248, ${alpha})`;
+          },
+          borderWidth: 0,
+          width: ({ chart }) => (chart.chartArea || {}).width / 50,
+          height: ({ chart }) => (chart.chartArea || {}).height / 10,
+        }]
+      };
+      if (heatmapChart) heatmapChart.destroy();
+      heatmapChart = new Chart(ctx, {
+        type: 'matrix',
+        data: data,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { enabled: false } },
+          scales: {
+            x: { display: false, offset: true },
+            y: { display: true, reverse: true, ticks: { stepSize: 1, color: '#94a3b8' } }
+          }
+        }
+      });
+    }
+
+    // ==== MULTI-SYMBOL CONSENSUS SIGNAL ====
+    function detectConsensus() {
+      const signals = [];
+      markets.forEach(m => {
+        let arr = store[m.sym];
+        if (!arr || arr.length < 1000) return;
+        let signal = getAdvancedSignal(m.sym);
+        if (signal) {
+          let health = computeMarketHealth(m.sym, getCounts(m.sym), arr.length, signal, getEvenP(m.sym), getOddP(m.sym));
+          if (health >= 50) signals.push({ sym: m.sym, bias: signal, health });
+        }
+      });
+      if (signals.length >= 2) {
+        let biasCount = { 'BUY EVEN': 0, 'BUY ODD': 0 };
+        signals.forEach(s => biasCount[s.bias]++);
+        let consensusBias = biasCount['BUY EVEN'] > biasCount['BUY ODD'] ? 'EVEN' : 'ODD';
+        let count = Math.max(biasCount['BUY EVEN'], biasCount['BUY ODD']);
+        if (count >= 2) {
+          return { active: true, bias: consensusBias, symbols: signals.filter(s => s.bias.includes(consensusBias)).map(s=>s.sym) };
+        }
+      }
+      return { active: false };
+    }
+
+    function getCounts(sym) {
+      let arr = store[sym];
+      if (!arr) return Array(10).fill(0);
+      let counts = Array(10).fill(0);
+      arr.forEach(d => counts[d]++);
+      return counts;
+    }
+    function getEvenP(sym) {
+      let counts = getCounts(sym);
+      let total = counts.reduce((a,b)=>a+b,0);
+      let even = counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
+      return (even/total)*100;
+    }
+    function getOddP(sym) {
+      let counts = getCounts(sym);
+      let total = counts.reduce((a,b)=>a+b,0);
+      let odd = counts[1]+counts[3]+counts[5]+counts[7]+counts[9];
+      return (odd/total)*100;
+    }
+
+    // ==== DYNAMIC THRESHOLD OPTIMIZER (unchanged but with ML update) ====
     function recomputeOptimalThresholds() {
       const completed = tradeLog.filter(t => t.outcome !== 'pending');
-      if (completed.length < 20) return; // not enough data
-
+      if (completed.length < 20) return;
       let best = { winRate: 0, z: 1.96, opp: 12, margin: 5 };
-      
-      // Grid search over reasonable ranges
       for (let z of [1.65, 1.96, 2.33, 2.58]) {
         for (let opp of [10, 12, 14, 16]) {
           for (let margin of [3, 5, 7, 9]) {
-            // Simulate how many past trades would have been taken with these params
-            // We don't have per-trade raw data, so we approximate using trade log strength/confidence
-            // Better: we can store the raw condition values at signal time.
-            // For simplicity, we'll use a heuristic: filter by strength and confidence thresholds
-            // as a proxy (since those already encode the thresholds). Actually we can re-evaluate
-            // based on stored raw data. We'll add a field to tradeLog later.
-            // For now, we'll keep a simple adjustment.
             const subset = completed.filter(t => {
               const str = parseFloat(t.strength) || 0;
               const conf = parseFloat(t.confidence) || 0;
-              // Rough mapping: higher z increases required significance (strength)
-              const minStrength = 40 + (z-1.65)*30; // approx
+              const minStrength = 40 + (z-1.65)*30;
               const minConf = 30 + (opp-10)*10;
               return str >= minStrength && conf >= minConf;
             });
             if (subset.length < 5) continue;
             const wins = subset.filter(t => t.outcome === 'win').length;
             const rate = (wins / subset.length) * 100;
-            if (rate > best.winRate) {
-              best = { winRate: rate, z, opp, margin };
-            }
+            if (rate > best.winRate) { best = { winRate: rate, z, opp, margin }; }
           }
         }
       }
-      if (best.winRate > 0) {
-        optimalParams = { zThreshold: best.z, maxOpposing: best.opp, minMargin: best.margin };
-      }
+      if (best.winRate > 0) optimalParams = { zThreshold: best.z, maxOpposing: best.opp, minMargin: best.margin };
     }
 
     // ==== SIGNAL DETECTION (with dynamic thresholds) ====
@@ -262,13 +420,10 @@
     }
 
     function checkMultiTimeframeAlignment(sym) {
-      let arrShort = storeShort[sym];
-      let arrMed = storeMedium[sym];
-      let arrLong = store[sym];
+      let arrShort = storeShort[sym], arrMed = storeMedium[sym], arrLong = store[sym];
       if (!arrShort || arrShort.length < 50) return false;
       if (!arrMed || arrMed.length < 200) return false;
       if (!arrLong || arrLong.length < 800) return false;
-      
       function getParityBias(arr) {
         let evens = arr.filter(d => d%2===0).length;
         let odds = arr.length - evens;
@@ -276,9 +431,7 @@
         if (odds > evens) return "ODD";
         return null;
       }
-      let biasShort = getParityBias(arrShort);
-      let biasMed = getParityBias(arrMed);
-      let biasLong = getParityBias(arrLong);
+      let biasShort = getParityBias(arrShort), biasMed = getParityBias(arrMed), biasLong = getParityBias(arrLong);
       let votes = [biasShort, biasMed, biasLong].filter(b => b !== null);
       let evenVotes = votes.filter(v => v === "EVEN").length;
       let oddVotes = votes.filter(v => v === "ODD").length;
@@ -290,31 +443,22 @@
     function getAdvancedSignal(sym) {
       let arr = store[sym];
       if (!arr || arr.length < 1000) return null;
-      
       let tfBias = checkMultiTimeframeAlignment(sym);
       if (!tfBias) return null;
-      
-      let counts = Array(10).fill(0);
-      arr.forEach(d => counts[d]++);
+      let counts = getCounts(sym);
       let total = arr.length;
       let evenSum = counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
       let oddSum = total - evenSum;
-      
       if (!isStatisticallySignificant(evenSum, oddSum, total)) return null;
-      
       let opposingDigits = (tfBias === "EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
       let maxOpposing = Math.max(...opposingDigits.map(d => (counts[d]/total)*100));
       if (maxOpposing >= optimalParams.maxOpposing) return null;
-      
-      let evenP = (evenSum/total)*100;
-      let oddP = (oddSum/total)*100;
+      let evenP = (evenSum/total)*100, oddP = (oddSum/total)*100;
       let margin = Math.abs(evenP - oddP);
       if (margin < optimalParams.minMargin) return null;
-      
       return tfBias === "EVEN" ? "BUY EVEN" : "BUY ODD";
     }
 
-    // ==== VOLATILITY-ADJUSTED STRENGTH ====
     function computeSignalStrength(evenP, oddP, perc, signalType, sym) {
       if (!signalType) return 0;
       let diff = Math.abs(evenP - oddP);
@@ -344,66 +488,49 @@
       return `${rawConf.toFixed(0)}%`;
     }
 
-    // ==== MARKET HEALTH SCORE (0-100) ====
     function computeMarketHealth(sym, counts, total, signalType, evenP, oddP) {
       if (!store[sym] || store[sym].length < 1000) return 0;
-      // Components:
-      // 1. Statistical significance (z-score normalized)
       let evenSum = counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
       let oddSum = total - evenSum;
       let observed = evenSum / total;
       let expected = 0.5;
       let stdErr = Math.sqrt(0.5 * 0.5 / total);
       let z = Math.abs(observed - expected) / stdErr;
-      let sigScore = Math.min(100, (z / 3) * 100); // max z~3 => 100
-
-      // 2. Multi-TF alignment score
+      let sigScore = Math.min(100, (z / 3) * 100);
       let tfBias = checkMultiTimeframeAlignment(sym);
       let tfScore = tfBias ? 100 : 0;
-
-      // 3. Opposing digit suppression
       let opposing = (signalType === "BUY EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
       let maxOpposing = Math.max(...opposing.map(d => (counts[d]/total)*100));
       let oppScore = Math.max(0, 100 - (maxOpposing / optimalParams.maxOpposing) * 100);
-
-      // 4. Margin score
       let margin = Math.abs(evenP - oddP);
       let marginScore = Math.min(100, (margin / 15) * 100);
-
-      // Weighted average
-      let health = (sigScore * 0.3 + tfScore * 0.3 + oppScore * 0.2 + marginScore * 0.2);
-      return Math.round(health);
+      return Math.round(sigScore * 0.3 + tfScore * 0.3 + oppScore * 0.2 + marginScore * 0.2);
     }
 
-    // ==== EXIT SIGNAL & STOP-LOSS SUGGESTION ====
     function getExitSuggestion(sym, signalType, counts, total) {
       if (!signalType) return "";
       let opposing = (signalType === "BUY EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
       let maxOpposing = Math.max(...opposing.map(d => (counts[d]/total)*100));
-      let threshold = optimalParams.maxOpposing * 0.9; // 90% of max allowed
-      if (maxOpposing >= threshold) {
-        return `⚠️ Exit soon: opposing ${maxOpposing.toFixed(1)}%`;
-      }
-      // Suggest take profit after 3 consecutive wins on same bias (tracked elsewhere)
+      let threshold = optimalParams.maxOpposing * 0.9;
+      if (maxOpposing >= threshold) return `⚠️ Exit soon: opposing ${maxOpposing.toFixed(1)}%`;
       return "🎯 Hold until opposing > " + threshold.toFixed(1) + "%";
     }
 
-    // ==== CORRELATION HEATMAP ====
     function computeCorrelationMatrix() {
       const symbols = markets.map(m => m.sym).filter(s => store[s] && store[s].length >= 100);
       if (symbols.length < 2) return { symbols, matrix: [] };
       const windowSize = 100;
       let matrix = [];
-      for (let i = 0; i < symbols.length; i++) {
+      for (let i=0; i<symbols.length; i++) {
         let row = [];
-        for (let j = 0; j < symbols.length; j++) {
-          if (i === j) { row.push(1); continue; }
+        for (let j=0; j<symbols.length; j++) {
+          if (i===j) { row.push(1); continue; }
           let s1 = symbols[i], s2 = symbols[j];
           let arr1 = store[s1].slice(-windowSize).map(d => d%2===0 ? 0 : 1);
           let arr2 = store[s2].slice(-windowSize).map(d => d%2===0 ? 0 : 1);
           let mean1 = arr1.reduce((a,b)=>a+b,0)/arr1.length;
           let mean2 = arr2.reduce((a,b)=>a+b,0)/arr2.length;
-          let num = 0, den1 = 0, den2 = 0;
+          let num=0, den1=0, den2=0;
           for (let k=0; k<arr1.length; k++) {
             let d1 = arr1[k]-mean1, d2 = arr2[k]-mean2;
             num += d1*d2;
@@ -422,7 +549,6 @@
       const { symbols, matrix } = computeCorrelationMatrix();
       if (!symbols.length) return '<div>Insufficient data</div>';
       let html = '<div class="correlation-grid">';
-      // Header
       html += '<div></div>';
       symbols.forEach(s => html += `<div style="font-weight:bold;">${s}</div>`);
       for (let i=0; i<symbols.length; i++) {
@@ -437,22 +563,13 @@
       return html;
     }
 
-    // ==== TRADE LOGGING ====
     function recordSignal(symbol, signalType, strength, confidence) {
       let id = Date.now() + Math.random();
-      let entry = {
-        id, symbol, signalType, strength, confidence,
-        timestamp: nowStr(), outcome: "pending"
-      };
+      let entry = { id, symbol, signalType, strength, confidence, timestamp: nowStr(), outcome: "pending" };
       tradeLog.push(entry);
       if (!marketStats[symbol]) marketStats[symbol] = { totalSignals:0, wins:0, losses:0 };
       marketStats[symbol].totalSignals++;
-      
-      // Every 20 completed trades, recompute optimal thresholds
-      if (tradeLog.filter(t=>t.outcome!=='pending').length % 20 === 0) {
-        recomputeOptimalThresholds();
-      }
-      
+      if (tradeLog.filter(t=>t.outcome!=='pending').length % 20 === 0) recomputeOptimalThresholds();
       renderStatsPanel();
       setTimeout(() => resolveSignalOutcome(symbol, signalType, id), 150);
       return id;
@@ -464,7 +581,6 @@
       let isEven = lastDigit % 2 === 0;
       let predictedEven = (predictedType === "BUY EVEN");
       let win = (predictedEven && isEven) || (!predictedEven && !isEven);
-      
       let trade = tradeLog.find(t => t.id === tradeId);
       if (trade && trade.outcome === "pending") {
         trade.outcome = win ? "win" : "loss";
@@ -472,41 +588,34 @@
           if (win) marketStats[trade.symbol].wins++;
           else marketStats[trade.symbol].losses++;
         }
+        // Train ML model with outcome
+        let counts = getCounts(symbol);
+        let total = counts.reduce((a,b)=>a+b,0);
+        let evenP = (counts[0]+counts[2]+counts[4]+counts[6]+counts[8])/total*100;
+        let oddP = 100 - evenP;
+        let features = getMLFeatures(symbol, evenP, oddP);
+        mlModel.update(features, win ? 1 : 0);
         renderStatsPanel();
       }
     }
 
-    // ==== REPLAY MODE ====
+    // ==== REPLAY (unchanged) ====
     function enterReplayMode() {
       replayMode = true;
-      // Snapshot current full history
-      markets.forEach(m => {
-        if (storeFullHistory[m.sym]) {
-          replaySnapshot[m.sym] = [...storeFullHistory[m.sym]];
-        }
-      });
+      markets.forEach(m => { if (storeFullHistory[m.sym]) replaySnapshot[m.sym] = [...storeFullHistory[m.sym]]; });
       replayIndex = 0;
       renderReplayControls();
     }
-
-    function exitReplayMode() {
-      replayMode = false;
-      renderReplayControls();
-      // Restore live data (already in store)
-      render();
-    }
-
+    function exitReplayMode() { replayMode = false; renderReplayControls(); render(); }
     function replayTick(forward = true) {
       if (!replayMode) return;
       const maxLen = Math.max(...Object.values(replaySnapshot).map(a => a.length));
       if (forward && replayIndex < maxLen - 1) replayIndex++;
       else if (!forward && replayIndex > 0) replayIndex--;
-      
-      // Override store arrays with sliced history up to replayIndex
       markets.forEach(m => {
         let hist = replaySnapshot[m.sym];
         if (hist) {
-          let slice = hist.slice(0, replayIndex + 1);
+          let slice = hist.slice(0, replayIndex+1);
           store[m.sym] = slice.slice(-1000);
           storeShort[m.sym] = slice.slice(-100);
           storeMedium[m.sym] = slice.slice(-500);
@@ -516,7 +625,6 @@
       render();
       renderReplayControls();
     }
-
     function renderReplayControls() {
       let container = document.getElementById('replayBar');
       if (!container) {
@@ -537,24 +645,17 @@
           ` : ''}
         </div>
       `;
-      document.getElementById('replayBtn').onclick = () => {
-        if (replayMode) exitReplayMode();
-        else enterReplayMode();
-      };
+      document.getElementById('replayBtn').onclick = () => replayMode ? exitReplayMode() : enterReplayMode();
       if (replayMode) {
         document.getElementById('replayPrev').onclick = () => replayTick(false);
         document.getElementById('replayNext').onclick = () => replayTick(true);
-        document.getElementById('replaySlider').oninput = (e) => {
-          replayIndex = parseInt(e.target.value);
-          replayTick();
-        };
+        document.getElementById('replaySlider').oninput = (e) => { replayIndex = parseInt(e.target.value); replayTick(); };
       }
     }
 
     // ==== RENDER MAIN PANEL ====
     function render() {
-      if (replayMode) return; // already handled in replayTick
-      
+      if (replayMode) return;
       let wrap = document.getElementById("markets");
       if (!wrap) return;
       wrap.innerHTML = "";
@@ -565,17 +666,14 @@
         if (!arr || arr.length < 1000) return;
         let signalType = getAdvancedSignal(m.sym);
         let isSignal = signalType !== null;
-        
-        let counts = Array(10).fill(0);
-        arr.forEach(d => counts[d]++);
+        let counts = getCounts(m.sym);
         let total = arr.length;
         let perc = counts.map(c => ((c/total)*100).toFixed(1));
         let evenSum = counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
         let oddSum = total - evenSum;
-        let evenP = (evenSum/total)*100;
-        let oddP = (oddSum/total)*100;
+        let evenP = (evenSum/total)*100, oddP = (oddSum/total)*100;
         
-        let strength = 0, confidence = "—", health = 0;
+        let strength = 0, confidence = "—", health = 0, mlProb = null;
         if (isSignal) {
           strength = computeSignalStrength(evenP, oddP, perc, signalType, m.sym);
           confidence = computeConfidence(evenP, oddP, perc, signalType);
@@ -587,6 +685,12 @@
         }
         health = computeMarketHealth(m.sym, counts, total, signalType, evenP, oddP);
         let exitMsg = getExitSuggestion(m.sym, signalType, counts, total);
+        let regime = classifyRegime(m.sym);
+        let reversal = detectReversalPattern(m.sym, counts, total, evenP, oddP);
+        
+        // ML prediction
+        let features = getMLFeatures(m.sym, evenP, oddP);
+        mlProb = mlModel.predict(features);
         
         let prevState = previousSignalState[m.sym] || false;
         let trendChanged = (prevState !== isSignal);
@@ -598,24 +702,25 @@
         marketDataArray.push({
           sym: m.sym, name: m.name, price: priceMap[m.sym] || "—",
           evenP, oddP, signalType, isSignal, strength, confidence, health, exitMsg,
+          regime, reversal, mlProb,
           perc, counts, arr, lastDigit: lastDigitMap[m.sym],
           repCount: (()=>{ let c=0, ld=arr[arr.length-1]; for(let i=arr.length-1;i>=0;i--){if(arr[i]===ld)c++;else break;} return c; })(),
           trendChanged, sortScore
         });
       });
       
-      marketDataArray.sort((a,b) => {
-        if (a.isSignal && !b.isSignal) return -1;
-        if (!a.isSignal && b.isSignal) return 1;
-        if (a.isSignal && b.isSignal) return b.sortScore - a.sortScore;
-        return a.name.localeCompare(b.name);
-      });
+      marketDataArray.sort((a,b) => a.isSignal && !b.isSignal ? -1 : !a.isSignal && b.isSignal ? 1 : a.isSignal && b.isSignal ? b.sortScore - a.sortScore : a.name.localeCompare(b.name));
+      
+      // Consensus detection
+      let consensus = detectConsensus();
       
       marketDataArray.forEach((data, idx) => {
         let m = data;
         let isSignal = data.isSignal;
         let barWidth = Math.min(100, data.strength);
         let healthWidth = data.health;
+        let mlProbPercent = (data.mlProb * 100).toFixed(1);
+        let mlColor = data.mlProb > 0.55 ? '#4ade80' : (data.mlProb < 0.45 ? '#f87171' : '#facc15');
         
         let sortedDigits = [...data.counts].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
         let most = sortedDigits[0].i, second = sortedDigits[1].i, least = sortedDigits[9].i, secondLeast = sortedDigits[8].i;
@@ -639,6 +744,7 @@
         if (data.trendChanged) {
           trendHtml = !isSignal && previousSignalState[data.sym] ? '<span class="stop-signal">⛔ SIGNAL ENDED</span>' : '<span class="trend-change">🔄 NEW SIGNAL</span>';
         }
+        let reversalHtml = data.reversal ? `<span class="reversal-warning">${data.reversal}</span>` : '';
         
         let div = document.createElement("div");
         div.className = "market " + (isSignal ? "signal" : "");
@@ -646,10 +752,15 @@
         
         div.innerHTML = `
           <div style="display:flex; align-items:center; justify-content:space-between;">
-            <b>${data.name} ${trendHtml}</b>
+            <div>
+              <b>${data.name}</b> 
+              <span class="small-badge" style="background:${data.regime.color}">🌊 ${data.regime.type}</span>
+              ${trendHtml} ${reversalHtml}
+            </div>
             <div style="display:flex; align-items:center;">
-              <span class="small-badge">❤️ Health ${data.health}%</span>
+              <span class="small-badge">❤️ ${data.health}%</span>
               <div class="health-bar-bg"><div class="health-bar-fill" style="width:${healthWidth}%;"></div></div>
+              <span class="ml-prob" style="color:${mlColor}">🤖 ML: ${mlProbPercent}% even</span>
             </div>
           </div>
           <div class="price">${data.price}</div>
@@ -661,18 +772,28 @@
             ${isSignal ? '<span class="confidence-badge" style="background:#22c55e20;">🔥 ACTIVE</span>' : '<span class="confidence-badge" style="background:#334155;">⚡ IDLE</span>'}</div>
           </div>
           ${isSignal ? `<div class="signal-text ${data.signalType==='BUY EVEN'?'buy-even':'buy-odd'}">🚀 ${data.signalType} (strength ${data.strength.toFixed(1)}% | conf ${data.confidence}) <span class="exit-suggestion">${data.exitMsg}</span></div>` : ''}
+          <div style="height:80px; margin:5px 0;"><canvas id="heatmap-${data.sym}" width="200" height="80" style="width:100%; height:100%;"></canvas></div>
           <div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
           <div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
           <div class="tick">${ticks}</div>
         `;
         wrap.appendChild(div);
+        setTimeout(() => renderHeatmap(data.sym), 10);
       });
+      
+      // Show consensus alert if active
+      if (consensus.active) {
+        let alertDiv = document.createElement('div');
+        alertDiv.className = 'consensus-alert';
+        alertDiv.innerHTML = `🤝 CONSENSUS SIGNAL: ${consensus.bias} bias across ${consensus.symbols.join(', ')} (${consensus.symbols.length} markets)`;
+        wrap.prepend(alertDiv);
+      }
       
       renderStatsPanel();
       if (!replayMode) renderReplayControls();
     }
 
-    // ==== STATS PANEL (with new sections) ====
+    // ==== STATS PANEL (with ML info) ====
     function renderStatsPanel() {
       let panel = document.getElementById("statsPanel");
       if (!panel) return;
@@ -693,18 +814,16 @@
       }
       let marketName = markets.find(m => m.sym === bestMarket)?.name || bestMarket;
       
-      // Optimal entry (from self-learning)
       let recHtml = `
         <div class="recommendation-box">
           <div class="rec-title">🧠 SELF-LEARNING OPTIMIZER</div>
           <div class="stat-row"><span class="stat-label">Z threshold:</span><span class="stat-value">${optimalParams.zThreshold.toFixed(2)}</span></div>
           <div class="stat-row"><span class="stat-label">Max opposing %:</span><span class="stat-value">${optimalParams.maxOpposing}%</span></div>
           <div class="stat-row"><span class="stat-label">Min margin %:</span><span class="stat-value">${optimalParams.minMargin}%</span></div>
-          <div class="stat-row"><span class="stat-label">Based on trades:</span><span class="stat-value">${tradeLog.filter(t=>t.outcome!=='pending').length}</span></div>
+          <div class="stat-row"><span class="stat-label">Trained on:</span><span class="stat-value">${tradeLog.filter(t=>t.outcome!=='pending').length} trades</span></div>
         </div>
       `;
       
-      // Correlation heatmap
       let corrHtml = `
         <div class="stats-panel">
           <div class="stats-title">🔗 CORRELATION HEATMAP (100t)</div>
@@ -726,6 +845,7 @@
           <div class="stat-row"><span class="stat-label">Overall win rate:</span><span class="stat-value ${overallWinRate > 55 ? 'winrate-good' : (overallWinRate < 45 ? 'winrate-bad' : '')}">${overallWinRate}%</span></div>
           <div class="stat-row"><span class="stat-label">🔥 Best market:</span><span class="stat-value">${marketName} ${bestRate.toFixed(1)}%</span></div>
           <div class="stat-row"><span class="stat-label">⏳ Pending signals:</span><span class="stat-value">${pending}</span></div>
+          <div class="stat-row"><span class="stat-label">🤖 ML weights:</span><span class="stat-value">${mlModel.weights.map(w=>w.toFixed(3)).join(', ')}</span></div>
         </div>
         ${recHtml}
         ${corrHtml}
@@ -740,10 +860,7 @@
     ws.onopen = () => {
       ws.send(JSON.stringify({authorize: token}));
       markets.forEach(m => {
-        store[m.sym] = [];
-        storeShort[m.sym] = [];
-        storeMedium[m.sym] = [];
-        storeFullHistory[m.sym] = [];
+        store[m.sym] = []; storeShort[m.sym] = []; storeMedium[m.sym] = []; storeFullHistory[m.sym] = [];
         historyLoaded[m.sym] = false;
         ws.send(JSON.stringify({ticks_history: m.sym, count: 1000, end: "latest", style: "ticks"}));
         ws.send(JSON.stringify({ticks: m.sym, subscribe: 1}));
@@ -760,7 +877,7 @@
         store[s] = digits.slice(-1000);
         storeShort[s] = digits.slice(-100);
         storeMedium[s] = digits.slice(-500);
-        storeFullHistory[s] = digits; // keep all for replay
+        storeFullHistory[s] = digits;
         historyLoaded[s] = true;
         render();
       }
@@ -772,10 +889,7 @@
         priceMap[s] = price;
         lastDigitMap[s] = digit;
         if (!historyLoaded[s]) return;
-        store[s].push(digit);
-        storeShort[s].push(digit);
-        storeMedium[s].push(digit);
-        storeFullHistory[s].push(digit);
+        store[s].push(digit); storeShort[s].push(digit); storeMedium[s].push(digit); storeFullHistory[s].push(digit);
         if (store[s].length > 1000) store[s].shift();
         if (storeShort[s].length > 100) storeShort[s].shift();
         if (storeMedium[s].length > 500) storeMedium[s].shift();
@@ -784,7 +898,6 @@
       }
     };
 
-    // Initial render
     render();
   })();
 </script>
