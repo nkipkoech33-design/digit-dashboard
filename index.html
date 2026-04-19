@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO — AI Ensemble + Heatmap + Regime + Consensus</title>
-  <!-- Chart.js for heatmap -->
+  <title>Digit Analyzer PRO — Optimized + Real‑Time Sync</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     /* ==== ORIGINAL STYLES (PRESERVED) ==== */
@@ -99,7 +98,6 @@
     .buy-even{color:lime;}
     .buy-odd{color:red;}
 
-    /* stats panel */
     .stats-panel{background:#0f172a;border-radius:12px;padding:12px;margin-bottom:15px;border:1px solid #1e293b;}
     .stats-title{font-size:16px;font-weight:bold;border-bottom:1px solid #334155;padding-bottom:6px;margin-bottom:10px;color:#94a3b8;}
     .stat-row{display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;}
@@ -120,7 +118,6 @@
     .recommendation-box { background: #1e293b; border-radius: 12px; padding: 12px; margin-top: 12px; }
     .rec-title { color: #facc15; font-weight: bold; margin-bottom: 8px; }
 
-    /* ==== NEW ENHANCEMENT STYLES ==== */
     .health-bar-bg { width: 60px; background: #334155; border-radius: 20px; height: 6px; overflow: hidden; display: inline-block; margin-left: 5px; }
     .health-bar-fill { background: linear-gradient(90deg, #ef4444, #facc15, #4ade80); height: 6px; width: 0%; border-radius: 20px; }
     .exit-suggestion { font-size: 11px; background: #1e293b; padding: 3px 8px; border-radius: 16px; margin-left: 8px; }
@@ -207,7 +204,7 @@
       'JD10': 1.2, 'JD25': 1.5, 'JD50': 2.0, 'JD75': 2.5, 'JD100': 3.0
     };
 
-    // ==== ONLINE LOGISTIC REGRESSION (LIGHTWEIGHT ML) ====
+    // ==== ONLINE LOGISTIC REGRESSION ====
     class OnlineLogisticRegression {
       constructor(featureCount = 2, learningRate = 0.01) {
         this.weights = Array(featureCount).fill(0).map(() => Math.random() * 0.1);
@@ -230,27 +227,25 @@
       }
     }
 
-    let mlModel = new OnlineLogisticRegression(3); // features: even%-odd% (normalized), streak length, volatility factor
-    let mlTrainingQueue = [];
+    let mlModel = new OnlineLogisticRegression(3);
 
     function getMLFeatures(sym, evenP, oddP) {
       let arr = store[sym];
       if (!arr || arr.length < 10) return [0,0,0];
-      let diff = (evenP - oddP) / 100; // normalize to ~[-1,1]
+      let diff = (evenP - oddP) / 100;
       let streak = 0;
       let last = arr[arr.length-1];
       for (let i=arr.length-1; i>=0; i--) {
         if (arr[i] === last) streak++; else break;
       }
       let normStreak = Math.min(streak, 10) / 10;
-      let vol = volatilityFactors[sym] / 3; // normalize
+      let vol = volatilityFactors[sym] / 3;
       return [diff, normStreak, vol];
     }
 
-    // ==== UTILITIES ====
     function nowStr() { return new Date().toLocaleTimeString(); }
 
-    // ==== MARKET REGIME CLASSIFIER ====
+    // ==== MARKET REGIME ====
     function classifyRegime(sym) {
       let arr = store[sym];
       if (!arr || arr.length < 50) return { type: 'Unknown', color: '#64748b' };
@@ -264,7 +259,7 @@
       return { type: 'Choppy', color: '#b45309' };
     }
 
-    // ==== PATTERN-BASED REVERSAL DETECTION ====
+    // ==== PATTERN REVERSAL ====
     function detectReversalPattern(sym, counts, total, evenP, oddP) {
       let arr = store[sym];
       if (!arr || arr.length < 30) return null;
@@ -274,8 +269,6 @@
       let biasNow = evenP > oddP ? 'EVEN' : 'ODD';
       let biasRecent = evenCount > oddCount ? 'EVEN' : 'ODD';
       if (biasNow !== biasRecent) return '⚠️ Bias shift imminent';
-      
-      // Double top detection in even%
       let windowSize = 10;
       let evenPercHistory = [];
       for (let i=0; i<=arr.length-windowSize; i+=5) {
@@ -285,50 +278,53 @@
       }
       if (evenPercHistory.length >= 3) {
         let last3 = evenPercHistory.slice(-3);
-        if (last3[0] > last3[1] && last3[2] > last3[1] && Math.abs(last3[0]-last3[2]) < 2) {
-          return '📉 Double top in even%';
-        }
-        if (last3[0] < last3[1] && last3[2] < last3[1] && Math.abs(last3[0]-last3[2]) < 2) {
-          return '📈 Double bottom in even%';
-        }
+        if (last3[0] > last3[1] && last3[2] > last3[1] && Math.abs(last3[0]-last3[2]) < 2) return '📉 Double top in even%';
+        if (last3[0] < last3[1] && last3[2] < last3[1] && Math.abs(last3[0]-last3[2]) < 2) return '📈 Double bottom in even%';
       }
       return null;
     }
 
-    // ==== HEATMAP (LIVE DIGIT DISTRIBUTION) ====
-    let heatmapChart = null;
+    // ==== HEATMAP (throttled) ====
+    const heatmapUpdateCounters = {};
     function renderHeatmap(sym) {
       let canvas = document.getElementById(`heatmap-${sym}`);
       if (!canvas) return;
       let ctx = canvas.getContext('2d');
       let arr = store[sym];
       if (!arr || arr.length < 50) return;
+      // Throttle: only update every 10 ticks per market
+      if (!heatmapUpdateCounters[sym]) heatmapUpdateCounters[sym] = 0;
+      heatmapUpdateCounters[sym]++;
+      if (heatmapUpdateCounters[sym] % 3 !== 0) return; // adjust frequency
+      
       let recent = arr.slice(-50);
       let matrix = Array(10).fill().map(() => Array(50).fill(0));
       for (let i=0; i<recent.length; i++) {
         let digit = recent[i];
         matrix[digit][i] = 1;
       }
-      let data = {
-        labels: Array(50).fill(''),
-        datasets: [{
-          label: 'Digit',
-          data: matrix.flatMap((row, d) => row.map((v, t) => ({ x: t, y: d, v: v }))),
-          backgroundColor(ctx) {
-            let value = ctx.raw.v;
-            if (value === 0) return '#1e293b';
-            let alpha = 0.3 + value * 0.7;
-            return `rgba(56, 189, 248, ${alpha})`;
-          },
-          borderWidth: 0,
-          width: ({ chart }) => (chart.chartArea || {}).width / 50,
-          height: ({ chart }) => (chart.chartArea || {}).height / 10,
-        }]
-      };
-      if (heatmapChart) heatmapChart.destroy();
-      heatmapChart = new Chart(ctx, {
+      // Destroy previous chart instance if exists
+      let existingChart = Chart.getChart(canvas);
+      if (existingChart) existingChart.destroy();
+      
+      new Chart(ctx, {
         type: 'matrix',
-        data: data,
+        data: {
+          labels: Array(50).fill(''),
+          datasets: [{
+            label: 'Digit',
+            data: matrix.flatMap((row, d) => row.map((v, t) => ({ x: t, y: d, v: v }))),
+            backgroundColor(ctx) {
+              let value = ctx.raw.v;
+              if (value === 0) return '#1e293b';
+              let alpha = 0.3 + value * 0.7;
+              return `rgba(56, 189, 248, ${alpha})`;
+            },
+            borderWidth: 0,
+            width: ({ chart }) => (chart.chartArea || {}).width / 50,
+            height: ({ chart }) => (chart.chartArea || {}).height / 10,
+          }]
+        },
         options: {
           responsive: true,
           maintainAspectRatio: false,
@@ -341,7 +337,7 @@
       });
     }
 
-    // ==== MULTI-SYMBOL CONSENSUS SIGNAL ====
+    // ==== CONSENSUS ====
     function detectConsensus() {
       const signals = [];
       markets.forEach(m => {
@@ -385,7 +381,7 @@
       return (odd/total)*100;
     }
 
-    // ==== DYNAMIC THRESHOLD OPTIMIZER (unchanged but with ML update) ====
+    // ==== DYNAMIC THRESHOLD OPTIMIZER ====
     function recomputeOptimalThresholds() {
       const completed = tradeLog.filter(t => t.outcome !== 'pending');
       if (completed.length < 20) return;
@@ -410,7 +406,7 @@
       if (best.winRate > 0) optimalParams = { zThreshold: best.z, maxOpposing: best.opp, minMargin: best.margin };
     }
 
-    // ==== SIGNAL DETECTION (with dynamic thresholds) ====
+    // ==== SIGNAL DETECTION ====
     function isStatisticallySignificant(evenCount, oddCount, total) {
       let observed = evenCount / total;
       let expected = 0.5;
@@ -570,7 +566,7 @@
       if (!marketStats[symbol]) marketStats[symbol] = { totalSignals:0, wins:0, losses:0 };
       marketStats[symbol].totalSignals++;
       if (tradeLog.filter(t=>t.outcome!=='pending').length % 20 === 0) recomputeOptimalThresholds();
-      renderStatsPanel();
+      throttledStatsUpdate();
       setTimeout(() => resolveSignalOutcome(symbol, signalType, id), 150);
       return id;
     }
@@ -588,14 +584,13 @@
           if (win) marketStats[trade.symbol].wins++;
           else marketStats[trade.symbol].losses++;
         }
-        // Train ML model with outcome
         let counts = getCounts(symbol);
         let total = counts.reduce((a,b)=>a+b,0);
         let evenP = (counts[0]+counts[2]+counts[4]+counts[6]+counts[8])/total*100;
         let oddP = 100 - evenP;
         let features = getMLFeatures(symbol, evenP, oddP);
         mlModel.update(features, win ? 1 : 0);
-        renderStatsPanel();
+        throttledStatsUpdate();
       }
     }
 
@@ -606,7 +601,7 @@
       replayIndex = 0;
       renderReplayControls();
     }
-    function exitReplayMode() { replayMode = false; renderReplayControls(); render(); }
+    function exitReplayMode() { replayMode = false; renderReplayControls(); renderAllMarkets(); }
     function replayTick(forward = true) {
       if (!replayMode) return;
       const maxLen = Math.max(...Object.values(replaySnapshot).map(a => a.length));
@@ -622,7 +617,7 @@
           if (slice.length) lastDigitMap[m.sym] = slice[slice.length-1];
         }
       });
-      render();
+      renderAllMarkets();
       renderReplayControls();
     }
     function renderReplayControls() {
@@ -653,13 +648,35 @@
       }
     }
 
-    // ==== RENDER MAIN PANEL ====
-    function render() {
-      if (replayMode) return;
+    // ==== OPTIMIZED RENDERING ====
+    let renderScheduled = false;
+    let marketElements = {}; // cache DOM elements per symbol
+
+    function scheduleRender() {
+      if (renderScheduled) return;
+      renderScheduled = true;
+      requestAnimationFrame(() => {
+        if (!replayMode) renderAllMarkets();
+        renderScheduled = false;
+      });
+    }
+
+    function renderAllMarkets() {
       let wrap = document.getElementById("markets");
       if (!wrap) return;
-      wrap.innerHTML = "";
       
+      // Create or reuse market containers
+      markets.forEach(m => {
+        let existing = marketElements[m.sym];
+        if (!existing) {
+          let div = document.createElement("div");
+          div.id = `market-${m.sym}`;
+          div.className = "market";
+          wrap.appendChild(div);
+          marketElements[m.sym] = div;
+        }
+      });
+
       let marketDataArray = [];
       markets.forEach(m => {
         let arr = store[m.sym];
@@ -687,8 +704,6 @@
         let exitMsg = getExitSuggestion(m.sym, signalType, counts, total);
         let regime = classifyRegime(m.sym);
         let reversal = detectReversalPattern(m.sym, counts, total, evenP, oddP);
-        
-        // ML prediction
         let features = getMLFeatures(m.sym, evenP, oddP);
         mlProb = mlModel.predict(features);
         
@@ -711,11 +726,24 @@
       
       marketDataArray.sort((a,b) => a.isSignal && !b.isSignal ? -1 : !a.isSignal && b.isSignal ? 1 : a.isSignal && b.isSignal ? b.sortScore - a.sortScore : a.name.localeCompare(b.name));
       
-      // Consensus detection
       let consensus = detectConsensus();
       
+      // Remove existing consensus alert
+      let oldAlert = document.getElementById('consensusAlert');
+      if (oldAlert) oldAlert.remove();
+      if (consensus.active) {
+        let alertDiv = document.createElement('div');
+        alertDiv.id = 'consensusAlert';
+        alertDiv.className = 'consensus-alert';
+        alertDiv.innerHTML = `🤝 CONSENSUS SIGNAL: ${consensus.bias} bias across ${consensus.symbols.join(', ')} (${consensus.symbols.length} markets)`;
+        wrap.prepend(alertDiv);
+      }
+      
+      // Update each market container efficiently
       marketDataArray.forEach((data, idx) => {
-        let m = data;
+        let container = marketElements[data.sym];
+        if (!container) return;
+        
         let isSignal = data.isSignal;
         let barWidth = Math.min(100, data.strength);
         let healthWidth = data.health;
@@ -746,11 +774,10 @@
         }
         let reversalHtml = data.reversal ? `<span class="reversal-warning">${data.reversal}</span>` : '';
         
-        let div = document.createElement("div");
-        div.className = "market " + (isSignal ? "signal" : "");
-        if (idx === 0 && isSignal) div.classList.add("ranked-first");
+        container.className = "market " + (isSignal ? "signal" : "");
+        if (idx === 0 && isSignal) container.classList.add("ranked-first");
         
-        div.innerHTML = `
+        container.innerHTML = `
           <div style="display:flex; align-items:center; justify-content:space-between;">
             <div>
               <b>${data.name}</b> 
@@ -777,23 +804,26 @@
           <div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
           <div class="tick">${ticks}</div>
         `;
-        wrap.appendChild(div);
+        
+        // Update heatmap (throttled inside function)
         setTimeout(() => renderHeatmap(data.sym), 10);
       });
       
-      // Show consensus alert if active
-      if (consensus.active) {
-        let alertDiv = document.createElement('div');
-        alertDiv.className = 'consensus-alert';
-        alertDiv.innerHTML = `🤝 CONSENSUS SIGNAL: ${consensus.bias} bias across ${consensus.symbols.join(', ')} (${consensus.symbols.length} markets)`;
-        wrap.prepend(alertDiv);
-      }
-      
-      renderStatsPanel();
+      throttledStatsUpdate();
       if (!replayMode) renderReplayControls();
     }
 
-    // ==== STATS PANEL (with ML info) ====
+    // Throttled stats panel update
+    let statsUpdateScheduled = false;
+    function throttledStatsUpdate() {
+      if (statsUpdateScheduled) return;
+      statsUpdateScheduled = true;
+      setTimeout(() => {
+        renderStatsPanel();
+        statsUpdateScheduled = false;
+      }, 200);
+    }
+
     function renderStatsPanel() {
       let panel = document.getElementById("statsPanel");
       if (!panel) return;
@@ -856,7 +886,7 @@
       `;
     }
 
-    // ==== WEBSOCKET ====
+    // ==== WEBSOCKET (with correct digit extraction) ====
     ws.onopen = () => {
       ws.send(JSON.stringify({authorize: token}));
       markets.forEach(m => {
@@ -879,7 +909,7 @@
         storeMedium[s] = digits.slice(-500);
         storeFullHistory[s] = digits;
         historyLoaded[s] = true;
-        render();
+        scheduleRender();
       }
       if (d.tick && !replayMode) {
         let s = d.tick.symbol;
@@ -894,11 +924,13 @@
         if (storeShort[s].length > 100) storeShort[s].shift();
         if (storeMedium[s].length > 500) storeMedium[s].shift();
         if (storeFullHistory[s].length > 5000) storeFullHistory[s].shift();
-        render();
+        scheduleRender();
       }
     };
 
-    render();
+    // Initialize empty containers
+    markets.forEach(m => { marketElements[m.sym] = null; });
+    renderAllMarkets();
   })();
 </script>
 </body>
