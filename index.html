@@ -111,6 +111,44 @@ text-align:center;
 .log-loss{color:#f87171;}
 .log-pending{color:#facc15;}
 
+/* new ranking and alert styles */
+.market.ranked-first {
+    border-left: 4px solid #facc15;
+}
+.trend-change {
+    background: rgba(239,68,68,0.2);
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 11px;
+    color: #f87171;
+    margin-left: 8px;
+    animation: fadeOut 3s forwards;
+}
+@keyframes fadeOut {
+    0% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { opacity: 0; }
+}
+.stop-signal {
+    background: #7f1d1d;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 16px;
+    font-weight: bold;
+    font-size: 11px;
+}
+.recommendation-box {
+    background: #1e293b;
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 12px;
+}
+.rec-title {
+    color: #facc15;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
 @media(max-width:1200px){
     .left{width:100%;}
     .right{display:none;}
@@ -164,70 +202,13 @@ let audio=new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
 let tradeLog = [];           // { symbol, timestamp, signalType, outcome (win/loss/pending), strength, confidence }
 let marketStats = {};        // per symbol: { totalSignals, wins, losses, winRate }
 
+// New: track signal state changes
+let previousSignalState = {};    // symbol -> boolean (was signal active last tick)
+let marketTrendChangeFlag = {};  // symbol -> timestamp of last change
+
 // Helper: get current timestamp
 function nowStr() {
     return new Date().toLocaleTimeString();
-}
-
-// Update stats panel UI
-function renderStatsPanel() {
-    let panel = document.getElementById("statsPanel");
-    if (!panel) return;
-    
-    let totalSignals = tradeLog.length;
-    let totalWins = tradeLog.filter(t => t.outcome === "win").length;
-    let totalLosses = tradeLog.filter(t => t.outcome === "loss").length;
-    let pending = tradeLog.filter(t => t.outcome === "pending").length;
-    let overallWinRate = totalSignals - pending > 0 ? (totalWins / (totalWins + totalLosses) * 100).toFixed(1) : "—";
-    
-    // best market by winrate
-    let bestMarket = "—";
-    let bestRate = 0;
-    for (let sym in marketStats) {
-        let s = marketStats[sym];
-        if (s.wins + s.losses > 0) {
-            let rate = (s.wins / (s.wins + s.losses) * 100);
-            if (rate > bestRate) {
-                bestRate = rate;
-                bestMarket = sym;
-            }
-        }
-    }
-    let marketName = markets.find(m => m.sym === bestMarket)?.name || bestMarket;
-    
-    // recent signals (last 10)
-    let recentHtml = tradeLog.slice(-10).reverse().map(log => {
-        let outcomeClass = log.outcome === "win" ? "log-win" : (log.outcome === "loss" ? "log-loss" : "log-pending");
-        let outcomeText = log.outcome === "win" ? "✓ WIN" : (log.outcome === "loss" ? "✗ LOSS" : "⌛ pending");
-        return `<div class="log-entry">
-            <span>${log.timestamp}</span> 
-            <span>${log.symbol}</span> 
-            <span>${log.signalType}</span>
-            <span class="${outcomeClass}">${outcomeText}</span>
-            <span>💪${log.strength}%</span>
-        </div>`;
-    }).join("");
-    
-    panel.innerHTML = `
-        <div class="stats-panel">
-            <div class="stats-title">📊 BACKTEST ENGINE</div>
-            <div class="stat-row"><span class="stat-label">Total signals:</span><span class="stat-value">${totalSignals}</span></div>
-            <div class="stat-row"><span class="stat-label">Wins / Losses:</span><span class="stat-value">${totalWins} / ${totalLosses}</span></div>
-            <div class="stat-row"><span class="stat-label">Overall win rate:</span><span class="stat-value ${overallWinRate > 55 ? 'winrate-good' : (overallWinRate < 45 ? 'winrate-bad' : '')}">${overallWinRate}%</span></div>
-            <div class="stat-row"><span class="stat-label">🔥 Best market:</span><span class="stat-value">${marketName} ${bestRate.toFixed(1)}%</span></div>
-            <div class="stat-row"><span class="stat-label">⏳ Pending signals:</span><span class="stat-value">${pending}</span></div>
-        </div>
-        <div class="stats-panel">
-            <div class="stats-title">📋 RECENT SIGNALS</div>
-            <div class="signal-log">${recentHtml || "<div>No signals yet</div>"}</div>
-        </div>
-        <div class="stats-panel">
-            <div class="stats-title">⚙️ RULES (active)</div>
-            <div class="stat-row"><span class="stat-label">Multi‑TF:</span><span class="stat-value">100/500/1000 ticks</span></div>
-            <div class="stat-row"><span class="stat-label">Threshold:</span><span class="stat-value">Adaptive Z>1.96</span></div>
-            <div class="stat-row"><span class="stat-label">Backtest:</span><span class="stat-value">Live outcome tracking</span></div>
-        </div>
-    `;
 }
 
 // Record a new trade signal and later resolve outcome
@@ -367,13 +348,122 @@ function computeConfidence(evenP, oddP, perc, signalType) {
     return `${rawConf.toFixed(0)}%`;
 }
 
-// Render markets with new signal logic
+// New function: analyze trade log for optimal thresholds
+function computeOptimalThresholds() {
+    const results = [];
+    const strengthBins = [0, 40, 50, 60, 70, 80, 90];
+    const confidenceBins = [0, 30, 40, 50, 60, 70, 80];
+    
+    // Filter completed trades only
+    const completed = tradeLog.filter(t => t.outcome !== "pending");
+    
+    let bestCombo = { winRate: 0, strengthMin: 0, confMin: 0, count: 0 };
+    
+    for (let sMin of strengthBins) {
+        for (let cMin of confidenceBins) {
+            const subset = completed.filter(t => {
+                const str = parseFloat(t.strength) || 0;
+                const conf = parseFloat(t.confidence) || 0;
+                return str >= sMin && conf >= cMin;
+            });
+            if (subset.length < 5) continue; // require minimum sample
+            const wins = subset.filter(t => t.outcome === "win").length;
+            const rate = (wins / subset.length) * 100;
+            if (rate > bestCombo.winRate || (rate === bestCombo.winRate && subset.length > bestCombo.count)) {
+                bestCombo = { winRate: rate, strengthMin: sMin, confMin: cMin, count: subset.length };
+            }
+        }
+    }
+    return bestCombo;
+}
+
+// Enhanced renderStatsPanel with backtest recommendations
+function renderStatsPanel() {
+    let panel = document.getElementById("statsPanel");
+    if (!panel) return;
+    
+    let totalSignals = tradeLog.length;
+    let totalWins = tradeLog.filter(t => t.outcome === "win").length;
+    let totalLosses = tradeLog.filter(t => t.outcome === "loss").length;
+    let pending = tradeLog.filter(t => t.outcome === "pending").length;
+    let overallWinRate = totalSignals - pending > 0 ? (totalWins / (totalWins + totalLosses) * 100).toFixed(1) : "—";
+    
+    // Best market by winrate
+    let bestMarket = "—";
+    let bestRate = 0;
+    for (let sym in marketStats) {
+        let s = marketStats[sym];
+        if (s.wins + s.losses > 0) {
+            let rate = (s.wins / (s.wins + s.losses) * 100);
+            if (rate > bestRate) {
+                bestRate = rate;
+                bestMarket = sym;
+            }
+        }
+    }
+    let marketName = markets.find(m => m.sym === bestMarket)?.name || bestMarket;
+    
+    // Optimal thresholds from backtest
+    let optimal = computeOptimalThresholds();
+    let recHtml = '';
+    if (optimal.count > 0) {
+        recHtml = `
+        <div class="recommendation-box">
+            <div class="rec-title">🎯 OPTIMAL ENTRY (from backtest)</div>
+            <div class="stat-row"><span class="stat-label">Strength ≥</span><span class="stat-value">${optimal.strengthMin}%</span></div>
+            <div class="stat-row"><span class="stat-label">Confidence ≥</span><span class="stat-value">${optimal.confMin}%</span></div>
+            <div class="stat-row"><span class="stat-label">Win rate (n=${optimal.count})</span><span class="stat-value winrate-good">${optimal.winRate.toFixed(1)}%</span></div>
+            <div class="stat-row"><span class="stat-label">📌 Recommended ticks</span><span class="stat-value">1000 (multi‑TF aligned)</span></div>
+            <div class="stat-row"><span class="stat-label">⏱️ Entry</span><span class="stat-value">When signal appears & meets thresholds</span></div>
+        </div>`;
+    } else {
+        recHtml = `<div class="recommendation-box"><div class="rec-title">⏳ Collecting data...</div><div>Need more completed trades for analysis.</div></div>`;
+    }
+    
+    // Recent signals (last 10)
+    let recentHtml = tradeLog.slice(-10).reverse().map(log => {
+        let outcomeClass = log.outcome === "win" ? "log-win" : (log.outcome === "loss" ? "log-loss" : "log-pending");
+        let outcomeText = log.outcome === "win" ? "✓ WIN" : (log.outcome === "loss" ? "✗ LOSS" : "⌛ pending");
+        return `<div class="log-entry">
+            <span>${log.timestamp}</span> 
+            <span>${log.symbol}</span> 
+            <span>${log.signalType}</span>
+            <span class="${outcomeClass}">${outcomeText}</span>
+            <span>💪${log.strength}%</span>
+        </div>`;
+    }).join("");
+    
+    panel.innerHTML = `
+        <div class="stats-panel">
+            <div class="stats-title">📊 BACKTEST ENGINE</div>
+            <div class="stat-row"><span class="stat-label">Total signals:</span><span class="stat-value">${totalSignals}</span></div>
+            <div class="stat-row"><span class="stat-label">Wins / Losses:</span><span class="stat-value">${totalWins} / ${totalLosses}</span></div>
+            <div class="stat-row"><span class="stat-label">Overall win rate:</span><span class="stat-value ${overallWinRate > 55 ? 'winrate-good' : (overallWinRate < 45 ? 'winrate-bad' : '')}">${overallWinRate}%</span></div>
+            <div class="stat-row"><span class="stat-label">🔥 Best market:</span><span class="stat-value">${marketName} ${bestRate.toFixed(1)}%</span></div>
+            <div class="stat-row"><span class="stat-label">⏳ Pending signals:</span><span class="stat-value">${pending}</span></div>
+        </div>
+        ${recHtml}
+        <div class="stats-panel">
+            <div class="stats-title">📋 RECENT SIGNALS</div>
+            <div class="signal-log">${recentHtml || "<div>No signals yet</div>"}</div>
+        </div>
+        <div class="stats-panel">
+            <div class="stats-title">⚙️ RULES (active)</div>
+            <div class="stat-row"><span class="stat-label">Multi‑TF:</span><span class="stat-value">100/500/1000 ticks</span></div>
+            <div class="stat-row"><span class="stat-label">Threshold:</span><span class="stat-value">Adaptive Z>1.96</span></div>
+            <div class="stat-row"><span class="stat-label">Backtest:</span><span class="stat-value">Live outcome tracking</span></div>
+        </div>
+    `;
+}
+
+// Render markets with new sorting, ranking, and trend change detection
 function render() {
     let wrap = document.getElementById("markets");
     if (!wrap) return;
     wrap.innerHTML = "";
     
-    let marketItems = [];
+    // Build market data array for sorting
+    let marketDataArray = [];
     markets.forEach(m => {
         let arr = store[m.sym];
         if (!arr || arr.length < 1000) return;
@@ -395,8 +485,7 @@ function render() {
         if (isSignal) {
             strength = computeSignalStrength(evenP, oddP, perc, signalType);
             confidence = computeConfidence(evenP, oddP, perc, signalType);
-            // record signal if not already recorded for this exact tick (avoid duplicate per tick)
-            // we check if last recorded signal for this symbol is same tick? simpler: record every new signal, but only once per tick.
+            // record signal if not already recorded for this exact tick
             if (!window._lastSignalTick || window._lastSignalTick !== lastDigitMap[m.sym]) {
                 window._lastSignalTick = lastDigitMap[m.sym];
                 recordSignal(m.sym, signalType, strength.toFixed(1), confidence);
@@ -404,17 +493,61 @@ function render() {
             if (isSignal) audio.play();
         }
         
-        let strengthRaw = strength;
+        // Detect trend change: signal appeared/disappeared
+        let prevState = previousSignalState[m.sym] || false;
+        let trendChanged = (prevState !== isSignal);
+        if (trendChanged) {
+            marketTrendChangeFlag[m.sym] = Date.now();
+        }
+        previousSignalState[m.sym] = isSignal;
+        
+        // Compute sort score: active signals first, then by strength (if active)
+        let sortScore = isSignal ? (strength * (parseFloat(confidence) || 0) / 100) : -1;
+        
+        // Store all needed data for rendering
+        marketDataArray.push({
+            sym: m.sym,
+            name: m.name,
+            price: priceMap[m.sym] || "—",
+            evenP, oddP,
+            signalType, isSignal,
+            strength, confidence,
+            perc, counts, arr,
+            lastDigit: lastDigitMap[m.sym],
+            repCount: (()=>{
+                let c=0, lastd=arr[arr.length-1];
+                for(let i=arr.length-1;i>=0;i--){if(arr[i]===lastd)c++;else break;}
+                return c;
+            })(),
+            trendChanged,
+            sortScore
+        });
+    });
+    
+    // Sort: active signals first (descending score), then inactive markets (by name)
+    marketDataArray.sort((a, b) => {
+        if (a.isSignal && !b.isSignal) return -1;
+        if (!a.isSignal && b.isSignal) return 1;
+        if (a.isSignal && b.isSignal) return b.sortScore - a.sortScore;
+        return a.name.localeCompare(b.name);
+    });
+    
+    // Render sorted markets
+    marketDataArray.forEach((data, index) => {
+        let m = data;
+        let signalType = data.signalType;
+        let isSignal = data.isSignal;
+        let strengthRaw = data.strength;
         let barWidth = Math.min(100, strengthRaw);
         
-        // digit ranking
-        let sortedDigits = [...counts].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
+        // Digit ranking for boxes
+        let sortedDigits = [...data.counts].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
         let most = sortedDigits[0].i;
         let second = sortedDigits[1].i;
         let least = sortedDigits[9].i;
         let secondLeast = sortedDigits[8].i;
-        let last = arr[arr.length-1];
-        let rep = (()=>{let c=0,lastd=arr[arr.length-1]; for(let i=arr.length-1;i>=0;i--){if(arr[i]===lastd)c++;else break;} return c;})();
+        let last = data.arr[data.arr.length-1];
+        let rep = data.repCount;
         
         function box(i){
             let cls="";
@@ -423,37 +556,50 @@ function render() {
             else if(i===least) cls="least";
             else if(i===secondLeast) cls="secondLeast";
             let pointer = (i===last) ? `<div class="pointer ${i%2==0?'even':'odd'}">●</div>` : "";
-            let flash = (lastDigitMap[m.sym]===i)?"flash":"";
+            let flash = (data.lastDigit===i)?"flash":"";
             let repeatFx = (i===last && rep>=2)?"repeat":"";
             let counter = (i===last && rep>=2)?`<div class="repeat-count">x${rep}</div>`:"";
             return `<div class="box ${cls} ${flash} ${repeatFx}">
 ${pointer}${counter}
 <div class="digit">${i}</div>
-<div class="percent">${perc[i]}%</div>
+<div class="percent">${data.perc[i]}%</div>
 </div>`;
         }
         
-        let ticks = arr.slice(-50).map(d => `<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("");
+        let ticks = data.arr.slice(-50).map(d => `<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("");
+        
+        // Trend change warning (show only if recently changed)
+        let trendChangeHtml = '';
+        if (data.trendChanged) {
+            if (!isSignal && previousSignalState[data.sym] === true) {
+                trendChangeHtml = `<span class="stop-signal">⛔ SIGNAL ENDED</span>`;
+            } else if (isSignal) {
+                trendChangeHtml = `<span class="trend-change">🔄 NEW SIGNAL</span>`;
+            }
+        }
         
         let div = document.createElement("div");
         div.className = "market " + (isSignal ? "signal" : "");
+        if (index === 0 && isSignal) div.classList.add("ranked-first");
+        
         div.innerHTML = `
-<b>${m.name}</b>
-<div class="price">${priceMap[m.sym] || "—"}</div>
-<div class="win">🎲 EVEN ${evenP.toFixed(1)}% | ODD ${oddP.toFixed(1)}%</div>
+<b>${data.name} ${trendChangeHtml}</b>
+<div class="price">${data.price}</div>
+<div class="win">🎲 EVEN ${data.evenP.toFixed(1)}% | ODD ${data.oddP.toFixed(1)}%</div>
 <div class="metrics">
     <div class="metric-item"><span class="metric-label">💪 STRENGTH</span><span class="strength-value">${strengthRaw.toFixed(1)}%</span>
     <div class="strength-bar-bg"><div class="strength-bar-fill" style="width:${barWidth}%;"></div></div></div>
-    <div class="metric-item"><span class="metric-label">🎯 CONFIDENCE</span><span class="confidence-value">${confidence}</span>
+    <div class="metric-item"><span class="metric-label">🎯 CONFIDENCE</span><span class="confidence-value">${data.confidence}</span>
     ${isSignal ? `<span class="confidence-badge" style="background:#22c55e20;">🔥 ACTIVE</span>` : `<span class="confidence-badge" style="background:#334155;">⚡ IDLE</span>`}</div>
 </div>
-${isSignal?`<div class="signal-text ${signalType==='BUY EVEN'?'buy-even':'buy-odd'}">🚀 ${signalType} (strength ${strengthRaw.toFixed(1)}% | conf ${confidence})</div>`:""}
+${isSignal?`<div class="signal-text ${signalType==='BUY EVEN'?'buy-even':'buy-odd'}">🚀 ${signalType} (strength ${strengthRaw.toFixed(1)}% | conf ${data.confidence})</div>`:""}
 <div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
 <div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
 <div class="tick">${ticks}</div>
 `;
         wrap.appendChild(div);
     });
+    
     renderStatsPanel();
 }
 
