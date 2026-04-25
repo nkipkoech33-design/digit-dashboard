@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO — Fixed Selector</title>
+  <title>Digit Analyzer PRO — Strict Opposing Digit Rule</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
   </script>
   <style>
@@ -136,7 +136,7 @@
     let marketStats = {};
     let previousSignalState = {};
     let lastSignalTime = {};
-    let optimalParams = { zThreshold: 1.65, maxOpposing: 14, minMargin: 3 }; // slightly more sensitive
+    let optimalParams = { zThreshold: 1.65, maxOpposing: 14, minMargin: 3 }; // maxOpposing still used in strength/confidence
     const volatilityFactors = {
       'R_10':0.8,'R_25':1.0,'R_50':1.3,'R_75':1.6,'R_100':2.0,'1HZ10V':0.9,'1HZ15V':1.0,'1HZ25V':1.2,'1HZ30V':1.3,'1HZ50V':1.5,'1HZ75V':1.8,'1HZ90V':1.9,'1HZ100V':2.0,'JD10':1.2,'JD25':1.5,'JD50':2.0,'JD75':2.5,'JD100':3.0
     };
@@ -171,7 +171,24 @@
     function recomputeOptimalThresholds(){const completed=tradeLog.filter(t=>t.outcome!=='pending');if(completed.length<20)return;let best={winRate:0,z:1.96,opp:14,margin:3};for(let z of[1.65,1.96,2.33,2.58])for(let o of[10,12,14,16])for(let m of[3,5,7,9]){const sub=completed.filter(t=>{let s=parseFloat(t.strength)||0,c=parseFloat(t.confidence)||0;return s>=40+(z-1.65)*30&&c>=30+(o-10)*10;});if(sub.length<5)continue;const w=sub.filter(t=>t.outcome==='win').length;const r=(w/sub.length)*100;if(r>best.winRate)best={winRate:r,z,opp:o,margin:m};}if(best.winRate>0)optimalParams={zThreshold:best.z,maxOpposing:best.opp,minMargin:best.margin};}
     function isStatisticallySignificant(e,o,t){return Math.abs(e/t-0.5)/Math.sqrt(0.25/t)>optimalParams.zThreshold;}
     function checkMultiTimeframeAlignment(sym){let S=storeShort[sym],M=storeMedium[sym],L=store[sym];if(!S||S.length<50||!M||M.length<200||!L||L.length<800)return false;const bias=a=>{let e=a.filter(d=>d%2===0).length;return e>a.length/2?"EVEN":(a.length-e>a.length/2?"ODD":null);};let bs=bias(S),bm=bias(M),bl=bias(L);let votes=[bs,bm,bl].filter(b=>b!==null);return votes.filter(v=>v==="EVEN").length>=2?"EVEN":(votes.filter(v=>v==="ODD").length>=2?"ODD":null);}
-    function getAdvancedSignal(sym){let a=store[sym];if(!a||a.length<1000)return null;let tf=checkMultiTimeframeAlignment(sym);if(!tf)return null;let cnt=getCounts(sym),t=a.length,es=cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8],os=t-es;if(!isStatisticallySignificant(es,os,t))return null;let opp=tf==="EVEN"?[1,3,5,7,9]:[0,2,4,6,8];let maxOpp=Math.max(...opp.map(d=>(cnt[d]/t)*100));if(maxOpp>=optimalParams.maxOpposing)return null;let ep=(es/t)*100,op=(os/t)*100;if(Math.abs(ep-op)<optimalParams.minMargin)return null;return tf==="EVEN"?"BUY EVEN":"BUY ODD";}
+
+    // ********** THE MODIFIED SIGNAL FUNCTION **********
+    function getAdvancedSignal(sym){
+      let a=store[sym]; if(!a||a.length<1000)return null;
+      let tf=checkMultiTimeframeAlignment(sym); if(!tf)return null;
+      let cnt=getCounts(sym),t=a.length, es=cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8], os=t-es;
+      if(!isStatisticallySignificant(es,os,t))return null;
+
+      // NEW RULE: all opposing digits must be < 10% each
+      let oppDigits = (tf==="EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
+      let allOppBelow10 = oppDigits.every(d => (cnt[d]/t)*100 < 10);
+      if(!allOppBelow10) return null;
+
+      let ep=(es/t)*100, op=(os/t)*100;
+      if(Math.abs(ep-op)<optimalParams.minMargin)return null;
+      return tf==="EVEN"?"BUY EVEN":"BUY ODD";
+    }
+
     function computeSignalStrength(ep,op,perc,sig,sym){if(!sig)return 0;let diff=Math.abs(ep-op);let vf=volatilityFactors[sym]||1;if(sig==="BUY EVEN"){let odd=[1,3,5,7,9];let mo=Math.max(...odd.map(d=>parseFloat(perc[d])));return Math.min(100,(diff*0.5+Math.max(0,optimalParams.maxOpposing-mo)*5)/vf);}else{let even=[0,2,4,6,8];let mo=Math.max(...even.map(d=>parseFloat(perc[d])));return Math.min(100,(diff*0.5+Math.max(0,optimalParams.maxOpposing-mo)*5)/vf);}}
     function computeConfidence(ep,op,perc,sig){if(!sig)return"—";let opp=sig==="BUY EVEN"?[1,3,5,7,9]:[0,2,4,6,8];let maxOpp=Math.max(...opp.map(d=>parseFloat(perc[d])));let margin=optimalParams.maxOpposing-maxOpp;return`${Math.min(100,Math.max(0,(margin/optimalParams.maxOpposing)*100)).toFixed(0)}%`;}
     function computeMarketHealth(sym,cnt,t,sig,ep,op){if(!store[sym]||store[sym].length<1000)return 0;let e=cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8];let z=Math.abs(e/t-0.5)/Math.sqrt(0.25/t);let sigSc=Math.min(100,(z/3)*100);let tfSc=checkMultiTimeframeAlignment(sym)?100:0;let opp=sig==="BUY EVEN"?[1,3,5,7,9]:[0,2,4,6,8];let maxOpp=Math.max(...opp.map(d=>(cnt[d]/t)*100));let oppSc=Math.max(0,100-(maxOpp/optimalParams.maxOpposing)*100);let marginSc=Math.min(100,(Math.abs(ep-op)/15)*100);return Math.round(sigSc*0.3+tfSc*0.3+oppSc*0.2+marginSc*0.2);}
@@ -185,18 +202,46 @@
 
     function computeMarketData(m){let a=store[m.sym];if(!a||a.length<1000)return null;let sig=getAdvancedSignal(m.sym);let isSig=sig!==null;let cnt=getCounts(m.sym),t=a.length,perc=cnt.map(c=>(c/t*100).toFixed(1)),es=cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8],os=t-es,ep=es/t*100,op=os/t*100;let strength=0,confidence="—",health=0,mlProb=null;if(isSig){strength=computeSignalStrength(ep,op,perc,sig,m.sym);confidence=computeConfidence(ep,op,perc,sig);if(!window._lastSignalTick||window._lastSignalTick!==lastDigitMap[m.sym]){window._lastSignalTick=lastDigitMap[m.sym];recordSignal(m.sym,sig,strength.toFixed(1),confidence);}audio.play();}health=computeMarketHealth(m.sym,cnt,t,sig,ep,op);let exitMsg=getExitSuggestion(m.sym,sig,cnt,t);let regime=classifyRegime(m.sym);let reversal=detectReversalPattern(m.sym,cnt,t,ep,op);let features=getMLFeatures(m.sym,ep,op);mlProb=mlModel.predict(features);let momentum=computeBiasMomentum(m.sym);let divergence=detectDivergence(m.sym,sig,momentum);let mlAcc=computeMLAccuracy(m.sym);recordMLPrediction(m.sym,mlProb);if(isSig)lastSignalTime[m.sym]=Date.now();else if(!lastSignalTime[m.sym])lastSignalTime[m.sym]=0;if(!previousSignalState[m.sym]&&isSig)lastSignalTime[m.sym]=Date.now();let prevState=previousSignalState[m.sym]||false;let trendChanged=(prevState!==isSig);previousSignalState[m.sym]=isSig;let sortScore=pinnedSymbols.has(m.sym)?Infinity:(isSig?1e9+(strength*(parseFloat(confidence)||0)/100):lastSignalTime[m.sym]||0);return{sym:m.sym,name:m.name,price:priceMap[m.sym]||"—",evenP:ep,oddP:op,signalType:sig,isSignal:isSig,strength,confidence,health,exitMsg,regime,reversal,mlProb,momentum,divergence,mlAccuracy:mlAcc,perc,cnt,arr:a,lastDigit:lastDigitMap[m.sym],repCount:(()=>{let c=0,ld=a[a.length-1];for(let i=a.length-1;i>=0;i--){if(a[i]===ld)c++;else break;}return c;})(),trendChanged,sortScore};}
 
-    function renderAllMarkets(){let wrap=document.getElementById("markets");if(!wrap)return;let visible=[];document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb=>{if(cb.checked)visible.push(cb.dataset.sym);});let arr=[];markets.forEach(m=>{if(!visible.includes(m.sym))return;let d=computeMarketData(m);if(d)arr.push(d);});arr.sort((a,b)=>b.sortScore-a.sortScore);let oldAlert=document.getElementById('consensusAlert');if(oldAlert)oldAlert.remove();let consensus=detectConsensus();if(consensus.active){let ad=document.createElement('div');ad.id='consensusAlert';ad.className='consensus-alert';ad.innerHTML=`🤝 CONSENSUS SIGNAL: ${consensus.bias} bias across ${consensus.symbols.join(', ')} (${consensus.symbols.length} markets)`;wrap.prepend(ad);}let existingOrder=Array.from(wrap.children).filter(el=>el.id.startsWith('market-'));let desiredIds=arr.map(d=>`market-${d.sym}`);existingOrder.forEach(el=>{if(!desiredIds.includes(el.id))el.remove();});desiredIds.forEach((id,idx)=>{let sym=id.replace('market-','');let container=document.getElementById(id);if(!container){container=document.createElement('div');container.id=id;container.className='market';wrap.appendChild(container);}let currentPos=Array.from(wrap.children).indexOf(container);if(currentPos!==idx)wrap.insertBefore(container,wrap.children[idx]||null);marketElements[sym]=container;});arr.forEach((data,idx)=>{let container=marketElements[data.sym];if(!container)return;let isSig=data.isSignal;let barWidth=Math.min(100,data.strength);let healthWidth=data.health;let mlProbPercent=(data.mlProb*100).toFixed(1);let mlColor=data.mlProb>0.55?'#4ade80':(data.mlProb<0.45?'#f87171':'#facc15');let sorted=[...data.cnt].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);let most=sorted[0].i,second=sorted[1].i,least=sorted[9].i,secondLeast=sorted[8].i;let last=data.arr[data.arr.length-1],rep=data.repCount;function box(i){let cls="";if(i===most)cls="most";else if(i===second)cls="second";else if(i===least)cls="least";else if(i===secondLeast)cls="secondLeast";let pointer=(i===last)?`<div class="pointer ${i%2==0?'even':'odd'}">●</div>`:"";let flash=(data.lastDigit===i)?"flash":"";let repeatFx=(i===last&&rep>=2)?"repeat":"";let counter=(i===last&&rep>=2)?`<div class="repeat-count">x${rep}</div>`:"";return`<div class="box ${cls} ${flash} ${repeatFx}">${pointer}${counter}<div class="digit">${i}</div><div class="percent">${data.perc[i]}%</div></div>`;}let ticks=data.arr.slice(-50).map(d=>`<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("");let mom=data.momentum;let momClass=mom.label==='up'?'momentum-up':(mom.label==='down'?'momentum-down':'momentum-neutral');let momText=mom.label==='up'?`📈 EVENS RISING +${mom.value.toFixed(1)}%`:(mom.label==='down'?`📉 ODDS RISING ${mom.value.toFixed(1)}%`:`➖ steady ${mom.value.toFixed(1)}%`);let momentumHtml=`<span class="momentum-badge ${momClass}">${momText}</span>`;let trendHtml='';if(data.trendChanged){trendHtml=!isSig&&previousSignalState[data.sym]?'<span class="stop-signal">⛔ SIGNAL ENDED</span>':'<span class="trend-change">🔄 NEW SIGNAL</span>';}let reversalHtml=data.reversal?`<span class="reversal-warning">${data.reversal}</span>`:'';let divergenceHtml=data.divergence?`<span class="divergence-badge">${data.divergence}</span>`:'';let mlAccHtml=`<span class="ml-accuracy-badge" style="color:${data.mlAccuracy>50?'var(--good)':'var(--bad)'}">📊 ML Acc: ${data.mlAccuracy.toFixed(1)}%</span>`;let pinStarHtml=`<span class="pin-star ${pinnedSymbols.has(data.sym)?'pinned':''}" onclick="window.pinMarketPermanent('${data.sym}')">⭐</span>`;container.className="market "+(isSig?"signal":"")+(pinnedSymbols.has(data.sym)?" pinned":"");if(idx===0&&isSig&&!pinnedSymbols.has(data.sym))container.classList.add("ranked-first");container.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;"><div><b>${data.name} ${pinStarHtml}</b> <span class="small-badge" style="background:${data.regime.color}">🌊 ${data.regime.type}</span>${trendHtml}${reversalHtml}${divergenceHtml}${momentumHtml}</div><div style="display:flex;align-items:center;"><span class="small-badge">❤️ ${data.health}%</span><div class="health-bar-bg"><div class="health-bar-fill" style="width:${healthWidth}%;"></div></div><span class="ml-prob" style="color:${mlColor}">🤖 ML: ${mlProbPercent}% even</span>${mlAccHtml}</div></div><div class="price">${data.price}</div><div class="win">🎲 EVEN ${data.evenP.toFixed(1)}% | ODD ${data.oddP.toFixed(1)}%</div><div class="metrics"><div class="metric-item"><span class="metric-label">💪 STRENGTH</span><span class="strength-value">${data.strength.toFixed(1)}%</span><div class="strength-bar-bg"><div class="strength-bar-fill" style="width:${barWidth}%;"></div></div></div><div class="metric-item"><span class="metric-label">🎯 CONFIDENCE</span><span class="confidence-value">${data.confidence}</span>${isSig?'<span class="confidence-badge" style="background:#22c55e20;">🔥 ACTIVE</span>':'<span class="confidence-badge" style="background:#334155;">⚡ IDLE</span>'}</div></div>${isSig?`<div class="signal-text ${data.signalType==='BUY EVEN'?'buy-even':'buy-odd'}">🚀 ${data.signalType} (strength ${data
+    function renderAllMarkets(){
+      let wrap=document.getElementById("markets");if(!wrap)return;
+      let visible=[];document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb=>{if(cb.checked)visible.push(cb.dataset.sym);});
+      let arr=[];markets.forEach(m=>{if(!visible.includes(m.sym))return;let d=computeMarketData(m);if(d)arr.push(d);});
+      arr.sort((a,b)=>b.sortScore-a.sortScore);
+      let oldAlert=document.getElementById('consensusAlert');if(oldAlert)oldAlert.remove();
+      let consensus=detectConsensus();if(consensus.active){let ad=document.createElement('div');ad.id='consensusAlert';ad.className='consensus-alert';ad.innerHTML=`🤝 CONSENSUS SIGNAL: ${consensus.bias} bias across ${consensus.symbols.join(', ')} (${consensus.symbols.length} markets)`;wrap.prepend(ad);}
+      let existingOrder=Array.from(wrap.children).filter(el=>el.id.startsWith('market-'));
+      let desiredIds=arr.map(d=>`market-${d.sym}`);
+      existingOrder.forEach(el=>{if(!desiredIds.includes(el.id))el.remove();});
+      desiredIds.forEach((id,idx)=>{let sym=id.replace('market-','');let container=document.getElementById(id);if(!container){container=document.createElement('div');container.id=id;container.className='market';wrap.appendChild(container);}let currentPos=Array.from(wrap.children).indexOf(container);if(currentPos!==idx)wrap.insertBefore(container,wrap.children[idx]||null);marketElements[sym]=container;});
+      arr.forEach((data,idx)=>{
+        let container=marketElements[data.sym];if(!container)return;
+        let isSig=data.isSignal;let barWidth=Math.min(100,data.strength);let healthWidth=data.health;
+        let mlProbPercent=(data.mlProb*100).toFixed(1);let mlColor=data.mlProb>0.55?'#4ade80':(data.mlProb<0.45?'#f87171':'#facc15');
+        let sorted=[...data.cnt].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
+        let most=sorted[0].i,second=sorted[1].i,least=sorted[9].i,secondLeast=sorted[8].i;
+        let last=data.arr[data.arr.length-1],rep=data.repCount;
+        function box(i){let cls="";if(i===most)cls="most";else if(i===second)cls="second";else if(i===least)cls="least";else if(i===secondLeast)cls="secondLeast";let pointer=(i===last)?`<div class="pointer ${i%2==0?'even':'odd'}">●</div>`:"";let flash=(data.lastDigit===i)?"flash":"";let repeatFx=(i===last&&rep>=2)?"repeat":"";let counter=(i===last&&rep>=2)?`<div class="repeat-count">x${rep}</div>`:"";return`<div class="box ${cls} ${flash} ${repeatFx}">${pointer}${counter}<div class="digit">${i}</div><div class="percent">${data.perc[i]}%</div></div>`;}
+        let ticks=data.arr.slice(-50).map(d=>`<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("");
+        let mom=data.momentum;let momClass=mom.label==='up'?'momentum-up':(mom.label==='down'?'momentum-down':'momentum-neutral');
+        let momText=mom.label==='up'?`📈 EVENS RISING +${mom.value.toFixed(1)}%`:(mom.label==='down'?`📉 ODDS RISING ${mom.value.toFixed(1)}%`:`➖ steady ${mom.value.toFixed(1)}%`);
+        let momentumHtml=`<span class="momentum-badge ${momClass}">${momText}</span>`;
+        let trendHtml='';if(data.trendChanged){trendHtml=!isSig&&previousSignalState[data.sym]?'<span class="stop-signal">⛔ SIGNAL ENDED</span>':'<span class="trend-change">🔄 NEW SIGNAL</span>';}
+        let reversalHtml=data.reversal?`<span class="reversal-warning">${data.reversal}</span>`:'';
+        let divergenceHtml=data.divergence?`<span class="divergence-badge">${data.divergence}</span>`:'';
+        let mlAccHtml=`<span class="ml-accuracy-badge" style="color:${data.mlAccuracy>50?'var(--good)':'var(--bad)'}">📊 ML Acc: ${data.mlAccuracy.toFixed(1)}%</span>`;
+        let pinStarHtml=`<span class="pin-star ${pinnedSymbols.has(data.sym)?'pinned':''}" onclick="window.pinMarketPermanent('${data.sym}')">⭐</span>`;
+        container.className="market "+(isSig?"signal":"")+(pinnedSymbols.has(data.sym)?" pinned":"");
+        if(idx===0&&isSig&&!pinnedSymbols.has(data.sym))container.classList.add("ranked-first");
+        container.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;"><div><b>${data.name} ${pinStarHtml}</b> <span class="small-badge" style="background:${data.regime.color}">🌊 ${data.regime.type}</span>${trendHtml}${reversalHtml}${divergenceHtml}${momentumHtml}</div><div style="display:flex;align-items:center;"><span class="small-badge">❤️ ${data.health}%</span><div class="health-bar-bg"><div class="health-bar-fill" style="width:${healthWidth}%;"></div></div><span class="ml-prob" style="color:${mlColor}">🤖 ML: ${mlProbPercent}% even</span>${mlAccHtml}</div></div><div class="price">${data.price}</div><div class="win">🎲 EVEN ${data.evenP.toFixed(1)}% | ODD ${data.oddP.toFixed(1)}%</div><div class="metrics"><div class="metric-item"><span class="metric-label">💪 STRENGTH</span><span class="strength-value">${data.strength.toFixed(1)}%</span><div class="strength-bar-bg"><div class="strength-bar-fill" style="width:${barWidth}%;"></div></div></div><div class="metric-item"><span class="metric-label">🎯 CONFIDENCE</span><span class="confidence-value">${data.confidence}</span>${isSig?'<span class="confidence-badge" style="background:#22c55e20;">🔥 ACTIVE</span>':'<span class="confidence-badge" style="background:#334155;">⚡ IDLE</span>'}</div></div>${isSig?`<div class="signal-text ${data.signalType==='BUY EVEN'?'buy-even':'buy-odd'}">🚀 ${data.signalType} (strength ${data.strength.toFixed(1)}% | conf ${data.confidence}) <span class="exit-suggestion">${data.exitMsg}</span></div>`:''}<canvas id="sparkline-${data.sym}" class="sparkline-canvas"></canvas><div style="height:80px;margin:5px 0;"><canvas id="heatmap-${data.sym}" width="200" height="80" style="width:100%;height:100%;"></canvas></div><div class="grid">${[0,2,4,6,8].map(box).join("")}</div><div class="grid">${[1,3,5,7,9].map(box).join("")}</div><div class="tick">${ticks}</div>`;
+        setTimeout(()=>{drawSparkline(data.sym);updateHeatmap(data.sym);},10);
+      });
+      updateBlinkingStates();
+    }
 
-.strength.toFixed(1)}% | conf ${data.confidence}) <span class="exit-suggestion">${data.exitMsg}</span></div>`:''}<canvas id="sparkline-${data.sym}" class="sparkline-canvas"></canvas><div style="height:80px;margin:5px 0;"><canvas id="heatmap-${data.sym}" width="200" height="80" style="width:100%;height:100%;"></canvas></div><div class="grid">${[0,2,4,6,8].map(box).join("")}</div><div class="grid">${[1,3,5,7,9].map(box).join("")}</div><div class="tick">${ticks}</div>`;setTimeout(()=>{drawSparkline(data.sym);updateHeatmap(data.sym);},10);});updateBlinkingStates();}
-
-    // --- Permanent market selection panel (never re-rendered, just created once) ---
+    // Static market selector
     function buildStaticSelector(){
-      let panel = document.getElementById("statsPanel");
-      if (!panel) return;
-      // Create selector if not exists
-      let selectorDiv = document.getElementById("marketSelectorContainer");
-      if (selectorDiv) return; // already built
-
+      let panel = document.getElementById("statsPanel"); if (!panel) return;
+      if (document.getElementById("marketSelectorContainer")) return;
       let html = `<div class="stats-panel" id="marketSelectorContainer">
         <div class="stats-title">📋 Market Selection</div>
         <div id="marketSelectorList" class="market-selector-list">
@@ -206,28 +251,17 @@
               <span>${m.name}</span>
             </div>`).join('')}
         </div>
-        <div style="margin-top:8px; display:flex; gap:6px;">
+        <div style="margin-top:8px;display:flex;gap:6px;">
           <button id="selectAll">All</button>
           <button id="deselectAll">None</button>
         </div>
       </div>`;
       panel.insertAdjacentHTML('afterbegin', html);
-
-      // Attach events
-      document.getElementById('selectAll').onclick = () => {
-        document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.checked = true);
-        scheduleRender();
-      };
-      document.getElementById('deselectAll').onclick = () => {
-        document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.checked = false);
-        scheduleRender();
-      };
-      document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => {
-        cb.addEventListener('change', () => scheduleRender());
-      });
+      document.getElementById('selectAll').onclick = () => { document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.checked = true); scheduleRender(); };
+      document.getElementById('deselectAll').onclick = () => { document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.checked = false); scheduleRender(); };
+      document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.addEventListener('change', () => scheduleRender()));
     }
 
-    // Update blinking classes without re-rendering the entire list
     function updateBlinkingStates(){
       markets.forEach(m => {
         let item = document.getElementById(`item-${m.sym}`);
@@ -240,10 +274,16 @@
       });
     }
 
-    // Separate function to update recent signals log only
+    function buildRecentSignalsPanel(){
+      let panel = document.getElementById("statsPanel"); if (!panel || document.getElementById("recentSignalsContainer")) return;
+      panel.insertAdjacentHTML('beforeend', `<div class="stats-panel" id="recentSignalsContainer">
+        <div class="stats-title">📋 RECENT SIGNALS (click to pin)</div>
+        <div class="signal-log" id="recentSignalsLog">No signals yet</div>
+      </div>`);
+    }
+
     function updateRecentSignals(){
-      let logContainer = document.getElementById("recentSignalsLog");
-      if (!logContainer) return;
+      let logContainer = document.getElementById("recentSignalsLog"); if (!logContainer) return;
       let recentHtml = tradeLog.slice(-10).reverse().map(log => {
         let outcomeClass = log.outcome === "win" ? "log-win" : (log.outcome === "loss" ? "log-loss" : "log-pending");
         let outcomeText = log.outcome === "win" ? "✓ WIN" : (log.outcome === "loss" ? "✗ LOSS" : "⌛ pending");
@@ -258,20 +298,7 @@
       logContainer.innerHTML = recentHtml || "<div>No signals yet</div>";
     }
 
-    // One-time setup of recent signals panel (also permanent)
-    function buildRecentSignalsPanel(){
-      let panel = document.getElementById("statsPanel");
-      if (!panel || document.getElementById("recentSignalsContainer")) return;
-      let html = `<div class="stats-panel" id="recentSignalsContainer">
-        <div class="stats-title">📋 RECENT SIGNALS (click to pin)</div>
-        <div class="signal-log" id="recentSignalsLog">No signals yet</div>
-      </div>`;
-      panel.insertAdjacentHTML('beforeend', html);
-    }
-
     window.pinMarketPermanent = pinMarketPermanent;
-    window.refreshMarkets = scheduleRender;
-
     function recordMLPrediction(sym,prob){lastMLPredictions[sym]={prob,timestamp:Date.now()};}
     function computeMLAccuracy(sym){if(!mlAccuracyHistory[sym])return 0;let a=mlAccuracyHistory[sym].slice(-50);return a.length?(a.filter(x=>x).length/a.length)*100:0;}
 
@@ -313,7 +340,6 @@
       }
     };
 
-    // Initialize static panels
     markets.forEach(m=>{marketElements[m.sym]=null;lastSignalTime[m.sym]=0;});
     buildStaticSelector();
     buildRecentSignalsPanel();
