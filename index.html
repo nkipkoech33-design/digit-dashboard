@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO — Instant Price + Fast Load</title>
+  <title>Digit Analyzer PRO — Fixed & Working</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
   </script>
   <style>
@@ -151,9 +151,10 @@
     let lastMLPredictions = {}, mlAccuracyHistory = {};
     let pinnedSymbols = new Set();
 
-    // ---- two-phase history loading ----
-    let phaseOneLoaded = {};   // true after the first 200 ticks arrive
-    let phaseTwoLoaded = {};   // true after the full 1000 ticks arrive
+    // Two-phase history loading
+    let phaseOneLoaded = {};
+    let phaseTwoLoaded = {};
+    let marketElements = {}; // <-- FIX: declared globally here
 
     function getMLFeatures(s,eP,oP){let a=store[s];if(!a||a.length<10)return[0,0,0];let d=(eP-oP)/100,str=0,lst=a[a.length-1];for(let i=a.length-1;i>=0;i--){if(a[i]===lst)str++;else break;}return[d,Math.min(str,10)/10,volatilityFactors[s]/3];}
     function nowStr(){return new Date().toLocaleTimeString();}
@@ -198,22 +199,16 @@
     function recordSignal(symbol,sigType,strength,confidence){let id=Date.now()+Math.random();let entry={id,symbol,signalType:sigType,strength,confidence,timestamp:nowStr(),outcome:"pending"};tradeLog.push(entry);if(!marketStats[symbol])marketStats[symbol]={totalSignals:0,wins:0,losses:0};marketStats[symbol].totalSignals++;if(tradeLog.filter(t=>t.outcome!=='pending').length%20===0)recomputeOptimalThresholds();updateRecentSignals();setTimeout(()=>resolveSignalOutcome(symbol,sigType,id),150);return id;}
     function resolveSignalOutcome(symbol,pred,id){let last=lastDigitMap[symbol];if(last===undefined)return;let win=(pred==="BUY EVEN"&&last%2===0)||(pred==="BUY ODD"&&last%2!==0);let trade=tradeLog.find(t=>t.id===id);if(trade&&trade.outcome==="pending"){trade.outcome=win?"win":"loss";if(marketStats[trade.symbol]){if(win)marketStats[trade.symbol].wins++;else marketStats[trade.symbol].losses++;}let cnt=getCounts(symbol),t=cnt.reduce((a,b)=>a+b,0),ep=(cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8])/t*100;mlModel.update(getMLFeatures(symbol,ep,100-ep),win?1:0);updateRecentSignals();}}
 
-    // Render scheduling (immediate, no requestAnimationFrame)
-    let renderScheduled = false;
-    function scheduleRender() {
-      if (renderScheduled) return;
-      renderScheduled = true;
-      Promise.resolve().then(() => {  // microtask for immediate but batched
-        renderAllMarkets();
-        renderScheduled = false;
-      });
+    // Direct render (no microtask queuing)
+    function directRender() {
+      renderAllMarkets();
     }
 
     function computeMarketData(m){
       let a=store[m.sym];
-      // Show market even with partial data if at least phase one loaded
       if (!phaseOneLoaded[m.sym]) return null;
       let t = a.length;
+      if (t < 10) return null;
       let cnt = getCounts(m.sym);
       let perc = cnt.map(c => (c/t*100).toFixed(1));
       let es = cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8], os = t-es;
@@ -232,8 +227,6 @@
           audio.play();
         }
         health = computeMarketHealth(m.sym,cnt,t,sig,ep,op);
-      } else {
-        health = 0;  // not ready yet
       }
       let exitMsg = isSig ? getExitSuggestion(m.sym,sig,cnt,t) : "";
       let regime = classifyRegime(m.sym);
@@ -263,10 +256,18 @@
     function renderAllMarkets(){
       let wrap = document.getElementById("markets"); if(!wrap) return;
       let visible = [];
-      document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => { if(cb.checked) visible.push(cb.dataset.sym); });
+      let checkboxes = document.querySelectorAll('#marketSelectorList .market-checkbox');
+      if (checkboxes.length === 0) {
+        // selector not built yet, default to all
+        visible = markets.map(m => m.sym);
+      } else {
+        checkboxes.forEach(cb => { if(cb.checked) visible.push(cb.dataset.sym); });
+      }
       let arr = [];
       markets.forEach(m => { if(!visible.includes(m.sym)) return; let d = computeMarketData(m); if(d) arr.push(d); });
       arr.sort((a,b) => b.sortScore - a.sortScore);
+
+      // Remove old consensus
       let oldAlert = document.getElementById('consensusAlert'); if(oldAlert) oldAlert.remove();
       if(areSignalsReady()){
         let consensus = detectConsensus();
@@ -276,17 +277,33 @@
           wrap.prepend(ad);
         }
       }
-      let existingOrder = Array.from(wrap.children).filter(el => el.id.startsWith('market-'));
+
+      // Build or reorder containers
+      let existingIds = Array.from(wrap.children).filter(el => el.id.startsWith('market-')).map(el => el.id);
       let desiredIds = arr.map(d => `market-${d.sym}`);
-      existingOrder.forEach(el => { if(!desiredIds.includes(el.id)) el.remove(); });
-      desiredIds.forEach((id,idx) => {
+
+      // Remove ones no longer needed
+      existingIds.forEach(id => { if(!desiredIds.includes(id)) { let el = document.getElementById(id); if(el) el.remove(); } });
+
+      // Create / reorder
+      desiredIds.forEach((id, idx) => {
         let sym = id.replace('market-','');
         let container = document.getElementById(id);
-        if(!container){ container = document.createElement('div'); container.id = id; container.className = 'market'; wrap.appendChild(container); }
+        if(!container){
+          container = document.createElement('div');
+          container.id = id;
+          container.className = 'market';
+          wrap.appendChild(container);
+        }
+        // Move to correct position if needed
         let currentPos = Array.from(wrap.children).indexOf(container);
-        if(currentPos !== idx) wrap.insertBefore(container, wrap.children[idx] || null);
+        if(currentPos !== idx && idx < wrap.children.length) {
+          wrap.insertBefore(container, wrap.children[idx] || null);
+        }
         marketElements[sym] = container;
       });
+
+      // Update content
       arr.forEach((data, idx) => {
         let container = marketElements[data.sym]; if(!container) return;
         let isSig = data.isSignal;
@@ -349,7 +366,7 @@
       updateBlinkingStates();
     }
 
-    // ---- Static panels (unchanged) ----
+    // Static panels
     function buildStaticSelector(){
       let panel = document.getElementById("statsPanel"); if(!panel) return;
       if(document.getElementById("marketSelectorContainer")) return;
@@ -368,9 +385,9 @@
         </div>
       </div>`;
       panel.insertAdjacentHTML('afterbegin', html);
-      document.getElementById('selectAll').onclick = () => { document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.checked=true); scheduleRender(); };
-      document.getElementById('deselectAll').onclick = () => { document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.checked=false); scheduleRender(); };
-      document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.addEventListener('change', ()=>scheduleRender()));
+      document.getElementById('selectAll').onclick = () => { document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.checked=true); directRender(); };
+      document.getElementById('deselectAll').onclick = () => { document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.checked=false); directRender(); };
+      document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.addEventListener('change', ()=>directRender()));
     }
 
     function updateBlinkingStates(){
@@ -409,17 +426,16 @@
       logContainer.innerHTML = recentHtml || "<div>No signals yet</div>";
     }
 
-    window.pinMarketPermanent = (sym) => { if(pinnedSymbols.has(sym)) pinnedSymbols.delete(sym); else pinnedSymbols.add(sym); scheduleRender(); };
+    window.pinMarketPermanent = (sym) => { if(pinnedSymbols.has(sym)) pinnedSymbols.delete(sym); else pinnedSymbols.add(sym); directRender(); };
     function recordMLPrediction(sym,prob){ lastMLPredictions[sym]={prob,timestamp:Date.now()}; }
     function computeMLAccuracy(sym){ if(!mlAccuracyHistory[sym]) return 0; let a = mlAccuracyHistory[sym].slice(-50); return a.length?(a.filter(x=>x).length/a.length)*100:0; }
 
-    // ---- WebSocket with phased history ----
+    // WebSocket
     ws.onopen = () => {
       ws.send(JSON.stringify({authorize:token}));
       markets.forEach(m => {
         store[m.sym] = []; storeShort[m.sym] = []; storeMedium[m.sym] = []; storeFullHistory[m.sym] = [];
         phaseOneLoaded[m.sym] = false; phaseTwoLoaded[m.sym] = false;
-        // Phase 1: instant price
         ws.send(JSON.stringify({ticks_history:m.sym, count:200, end:"latest", style:"ticks"}));
         ws.send(JSON.stringify({ticks:m.sym, subscribe:1}));
       });
@@ -433,28 +449,24 @@
         let prices = d.history.prices.map(p => parseFloat(p).toFixed(pip));
         let digits = prices.map(p => parseInt(p.slice(-1)));
         if (!phaseOneLoaded[s]) {
-          // first small history
           store[s] = digits.slice(-200);
           storeShort[s] = digits.slice(-100);
-          storeMedium[s] = digits.slice(-200); // medium now uses 200
+          storeMedium[s] = digits.slice(-200);
           phaseOneLoaded[s] = true;
-          // request full history for signals
           ws.send(JSON.stringify({ticks_history:s, count:1000, end:"latest", style:"ticks"}));
         } else if (!phaseTwoLoaded[s]) {
-          // second large history – overwrite stores completely
           store[s] = digits.slice(-1000);
           storeShort[s] = digits.slice(-100);
           storeMedium[s] = digits.slice(-500);
           phaseTwoLoaded[s] = true;
-          historyLoaded[s] = true; // for compatibility
+          historyLoaded[s] = true;
         } else {
-          // shouldn't happen, but just in case
           store[s] = digits.slice(-1000);
           storeShort[s] = digits.slice(-100);
           storeMedium[s] = digits.slice(-500);
         }
         storeFullHistory[s] = digits;
-        scheduleRender();
+        directRender();
       }
       if (d.tick) {
         let s = d.tick.symbol;
@@ -463,7 +475,7 @@
         let digit = parseInt(price.slice(-1));
         priceMap[s] = price;
         lastDigitMap[s] = digit;
-        if (!phaseOneLoaded[s]) return;   // wait until first history
+        if (!phaseOneLoaded[s]) return;
         store[s].push(digit); storeShort[s].push(digit); storeMedium[s].push(digit);
         storeFullHistory[s].push(digit);
         if (store[s].length > 1000) store[s].shift();
@@ -477,7 +489,7 @@
           mlAccuracyHistory[s].push(predEven === actualEven);
           if (mlAccuracyHistory[s].length > 50) mlAccuracyHistory[s].shift();
         }
-        scheduleRender();
+        directRender();
       }
     };
 
