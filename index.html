@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO — Smooth & Responsive</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <title>Digit Analyzer PRO — Market Selector + Theme</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+  </script>
   <style>
     /* ============ CSS VARIABLES FOR LIGHT/DARK THEME ============ */
     :root {
@@ -96,7 +97,6 @@
     .stat-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
     .stat-label { color: var(--text-secondary); }
     .stat-value { font-weight: bold; color: var(--accent); }
-    .winrate-good { color: var(--good); } .winrate-bad { color: var(--bad); }
     .signal-log { font-size: 11px; max-height: 200px; overflow-y: auto; }
     .log-entry { padding: 4px; border-bottom: 1px solid var(--border); font-family: monospace; cursor: pointer; transition: 0.2s; }
     .log-entry:hover { background: var(--surface); }
@@ -119,18 +119,17 @@
     .momentum-up { color: var(--good); } .momentum-down { color: var(--bad); } .momentum-neutral { color: var(--text-secondary); }
     .sparkline-canvas { width: 100%; height: 40px; margin: 5px 0; }
 
-    #toolbar { display: flex; align-items: center; gap: 12px; padding: 6px 10px; background: var(--surface); border-radius: 12px; margin-bottom: 6px; position: relative; z-index: 2; }
-    #marketSelectorPanel {
-      position: absolute; top: 40px; left: 10px; background: var(--bg); border: 1px solid var(--border);
-      border-radius: 12px; padding: 12px; z-index: 10; max-height: 300px; overflow-y: auto;
-      display: none; min-width: 200px;
-    }
-    #marketSelectorPanel.visible { display: block; }
-    .market-check label { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text); }
+    /* Toolbar now only holds theme toggle */
+    #toolbar { display: flex; align-items: center; gap: 12px; padding: 6px 10px; background: var(--surface); border-radius: 12px; margin-bottom: 6px; }
     .pin-star { cursor: pointer; color: var(--text-secondary); margin-left: 6px; }
     .pin-star.pinned { color: var(--accent); }
     .divergence-badge { background: #7f1d1d; color: white; padding: 2px 6px; border-radius: 12px; font-size: 10px; margin-left: 5px; }
     .ml-accuracy-badge { font-size: 10px; padding: 2px 6px; border-radius: 12px; background: var(--surface); }
+
+    /* Market selector list in right panel */
+    .market-selector-list { max-height: 400px; overflow-y: auto; }
+    .market-check { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 2px 0; }
+    .market-check input { margin: 0; }
 
     @media(max-width:1200px) {
         .left { width: 100%; } .right { display: none; }
@@ -191,7 +190,6 @@
       'JD10': 1.2, 'JD25': 1.5, 'JD50': 2.0, 'JD75': 2.5, 'JD100': 3.0
     };
 
-    // ML
     class OnlineLogisticRegression {
       constructor(fc=2, lr=0.01) { this.weights = Array(fc).fill(0).map(()=>Math.random()*0.1); this.bias=0; this.lr=lr; }
       sigmoid(z){return 1/(1+Math.exp(-z));}
@@ -202,10 +200,8 @@
     let lastMLPredictions = {};
     let mlAccuracyHistory = {};
 
-    // Permanent pin
     let pinnedSymbols = new Set();
 
-    // Utilities
     function getMLFeatures(s,eP,oP){
       let a=store[s]; if(!a||a.length<10) return [0,0,0];
       let d=(eP-oP)/100, str=0, lst=a[a.length-1];
@@ -250,7 +246,6 @@
       return null;
     }
 
-    // Chart-related
     let chartInstances = {};
     function drawSparkline(sym) {
       let canvas = document.getElementById(`sparkline-${sym}`);
@@ -284,13 +279,12 @@
       let arr = store[sym]; if(!arr||arr.length<50) return;
       if(!heatmapCounters[sym]) heatmapCounters[sym]=0;
       heatmapCounters[sym]++;
-      if(heatmapCounters[sym] % 5 !== 0) return; // throttle to every 5 ticks
+      if(heatmapCounters[sym] % 5 !== 0) return;
       let recent = arr.slice(-50);
       let matrix = Array(10).fill().map(()=>Array(50).fill(0));
       for(let i=0;i<recent.length;i++) matrix[recent[i]][i]=1;
       let existing = chartInstances[sym];
       if(existing) {
-        // update existing chart data
         existing.data.datasets[0].data = matrix.flatMap((row,d)=> row.map((v,t)=>({x:t, y:d, v:v})));
         existing.update();
       } else {
@@ -320,7 +314,6 @@
       }
     }
 
-    // Consensus detection
     function detectConsensus(){
       const signals=[];
       markets.forEach(m=>{
@@ -343,7 +336,6 @@
     function getEvenP(sym){ let c=getCounts(sym); let t=c.reduce((a,b)=>a+b,0); let e=c[0]+c[2]+c[4]+c[6]+c[8]; return (e/t)*100; }
     function getOddP(sym){ return 100-getEvenP(sym); }
 
-    // Dynamic thresholds (unchanged)
     function recomputeOptimalThresholds(){
       const completed=tradeLog.filter(t=>t.outcome!=='pending'); if(completed.length<20)return;
       let best={winRate:0,z:1.96,opp:12,margin:5};
@@ -428,7 +420,6 @@
         throttledStatsUpdate();
       }
     }
-    // Replay
     function enterReplayMode(){replayMode=true; markets.forEach(m=>{if(storeFullHistory[m.sym])replaySnapshot[m.sym]=[...storeFullHistory[m.sym]];}); replayIndex=0;renderReplayControls();}
     function exitReplayMode(){replayMode=false;renderReplayControls();renderAllMarkets();}
     function replayTick(forward=true){
@@ -445,13 +436,12 @@
       if(replayMode){document.getElementById('replayPrev').onclick=()=>replayTick(false);document.getElementById('replayNext').onclick=()=>replayTick(true);document.getElementById('replaySlider').oninput=(e)=>{replayIndex=parseInt(e.target.value);replayTick();};}
     }
 
-    // ==== RENDERING (optimized) ====
+    // ===== RENDERING =====
     let renderScheduled=false;
-    let marketElements={}; // store container divs
+    let marketElements={};
     function pinMarketPermanent(sym){ if(pinnedSymbols.has(sym))pinnedSymbols.delete(sym); else pinnedSymbols.add(sym); scheduleRender(); }
     function scheduleRender(){if(renderScheduled)return; renderScheduled=true; requestAnimationFrame(()=>{ if(!replayMode){renderToolbar();renderAllMarkets();} renderScheduled=false; });}
 
-    // Market selector panel
     function renderToolbar(){
       let toolbar=document.getElementById('toolbar');
       if(!toolbar){
@@ -459,28 +449,10 @@
         toolbar=document.createElement('div'); toolbar.id='toolbar';
         left.prepend(toolbar);
       }
-      // Keep innerHTML minimal and attach events dynamically to avoid re‑attaching on every render
+      // Only theme toggle button (market selector moved to right panel)
       if(!toolbar._initialized){
-        toolbar.innerHTML=`
-          <button id="themeToggle">🌓 Theme</button>
-          <div style="position:relative;">
-            <button id="marketSelectorBtn">📋 Markets</button>
-            <div id="marketSelectorPanel">
-              <div style="font-weight:bold; margin-bottom:6px;">Show/Hide Markets</div>
-              ${markets.map(m=>`<div class="market-check"><label><input type="checkbox" class="market-checkbox" data-sym="${m.sym}" checked> ${m.name}</label></div>`).join('')}
-              <button id="selectAll">All</button> <button id="deselectAll">None</button>
-            </div>
-          </div>
-        `;
+        toolbar.innerHTML=`<button id="themeToggle">🌓 Theme</button>`;
         document.getElementById('themeToggle').onclick=()=>document.body.classList.toggle('light');
-        let panel=document.getElementById('marketSelectorPanel');
-        let btn=document.getElementById('marketSelectorBtn');
-        btn.onclick=(e)=>{ e.stopPropagation(); panel.classList.toggle('visible'); };
-        panel.addEventListener('click', (e)=> e.stopPropagation()); // prevent close when clicking inside
-        document.addEventListener('click', ()=> panel.classList.remove('visible'));
-        document.getElementById('selectAll').onclick=()=>{ document.querySelectorAll('.market-checkbox').forEach(cb=>cb.checked=true); scheduleRender(); };
-        document.getElementById('deselectAll').onclick=()=>{ document.querySelectorAll('.market-checkbox').forEach(cb=>cb.checked=false); scheduleRender(); };
-        document.querySelectorAll('.market-checkbox').forEach(cb=>{ cb.onchange=()=>scheduleRender(); });
         toolbar._initialized=true;
       }
     }
@@ -543,8 +515,11 @@
     function renderAllMarkets() {
       let wrap = document.getElementById("markets");
       if (!wrap) return;
+      // Read visibility from right panel checkboxes
       let visibleMarkets = new Set();
-      document.querySelectorAll('.market-checkbox').forEach(cb => { if (cb.checked) visibleMarkets.add(cb.dataset.sym); });
+      document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => {
+        if (cb.checked) visibleMarkets.add(cb.dataset.sym);
+      });
 
       let marketDataArray = [];
       markets.forEach(m => {
@@ -555,7 +530,6 @@
 
       marketDataArray.sort((a,b) => b.sortScore - a.sortScore);
 
-      // Remove old consensus alert
       let oldAlert = document.getElementById('consensusAlert');
       if (oldAlert) oldAlert.remove();
       let consensus = detectConsensus();
@@ -564,16 +538,13 @@
         alertDiv.id = 'consensusAlert';
         alertDiv.className = 'consensus-alert';
         alertDiv.innerHTML = `🤝 CONSENSUS SIGNAL: ${consensus.bias} bias across ${consensus.symbols.join(', ')} (${consensus.symbols.length} markets)`;
-        wrap.insertBefore(alertDiv, wrap.firstChild);
+        wrap.prepend(alertDiv);
       }
 
-      // Reorder existing containers or create new ones
       let existingOrder = Array.from(wrap.children).filter(el => el.id.startsWith('market-'));
       let desiredOrder = marketDataArray.map(d => `market-${d.sym}`);
-      // Remove containers not in desired order (hidden markets)
       existingOrder.forEach(el => { if (!desiredOrder.includes(el.id)) el.remove(); });
 
-      // Create missing containers
       desiredOrder.forEach((id, idx) => {
         let sym = id.replace('market-','');
         let container = document.getElementById(id);
@@ -583,7 +554,6 @@
           container.className = 'market';
           wrap.appendChild(container);
         }
-        // Move to correct position
         let currentPos = Array.from(wrap.children).indexOf(container);
         if (currentPos !== idx) {
           wrap.insertBefore(container, wrap.children[idx] || null);
@@ -591,7 +561,6 @@
         marketElements[sym] = container;
       });
 
-      // Update content for each market
       marketDataArray.forEach((data, idx) => {
         let container = marketElements[data.sym];
         if (!container) return;
@@ -675,39 +644,63 @@
       if (!replayMode) renderReplayControls();
     }
 
-    // Stats panel
+    // Stats panel: now contains only market selector list and recent signals
     let statsUpdateScheduled = false;
     function throttledStatsUpdate() { if(statsUpdateScheduled) return; statsUpdateScheduled = true; setTimeout(()=>{ renderStatsPanel(); statsUpdateScheduled=false; },200); }
     function renderStatsPanel() {
-      let panel = document.getElementById("statsPanel"); if(!panel)return;
-      let totalSignals = tradeLog.length;
-      let totalWins = tradeLog.filter(t=>t.outcome==="win").length;
-      let totalLosses = tradeLog.filter(t=>t.outcome==="loss").length;
-      let pending = tradeLog.filter(t=>t.outcome==="pending").length;
-      let overallWinRate = totalSignals-pending>0?(totalWins/(totalWins+totalLosses)*100).toFixed(1):"—";
-      let bestMarket="—",bestRate=0;
-      for(let sym in marketStats){ let s=marketStats[sym]; if(s.wins+s.losses>0){ let r=(s.wins/(s.wins+s.losses)*100); if(r>bestRate){bestRate=r;bestMarket=sym;}} }
-      let marketName = markets.find(m=>m.sym===bestMarket)?.name||bestMarket;
-      let recentHtml = tradeLog.slice(-10).reverse().map(log=>{
-        let outClass=log.outcome==="win"?"log-win":(log.outcome==="loss"?"log-loss":"log-pending");
-        let outText=log.outcome==="win"?"✓ WIN":(log.outcome==="loss"?"✗ LOSS":"⌛ pending");
-        return `<div class="log-entry" onclick="window.pinMarketFromLog('${log.symbol}')" title="Click to pin ${log.symbol}"><span>${log.timestamp}</span> <span>${log.symbol}</span> <span>${log.signalType}</span><span class="${outClass}">${outText}</span><span>💪${log.strength}%</span></div>`;
+      let panel = document.getElementById("statsPanel");
+      if(!panel) return;
+
+      // Generate market list HTML
+      let marketListHtml = markets.map(m => `
+        <div class="market-check">
+          <label>
+            <input type="checkbox" class="market-checkbox" data-sym="${m.sym}" checked> ${m.name}
+          </label>
+        </div>
+      `).join('');
+
+      let recentHtml = tradeLog.slice(-10).reverse().map(log => {
+        let outcomeClass = log.outcome === "win" ? "log-win" : (log.outcome === "loss" ? "log-loss" : "log-pending");
+        let outcomeText = log.outcome === "win" ? "✓ WIN" : (log.outcome === "loss" ? "✗ LOSS" : "⌛ pending");
+        return `<div class="log-entry" onclick="window.pinMarketFromLog('${log.symbol}')" title="Click to pin ${log.symbol}">
+          <span>${log.timestamp}</span> 
+          <span>${log.symbol}</span> 
+          <span>${log.signalType}</span>
+          <span class="${outcomeClass}">${outcomeText}</span>
+          <span>💪${log.strength}%</span>
+        </div>`;
       }).join("");
-      panel.innerHTML=`
+
+      panel.innerHTML = `
         <div class="stats-panel">
-          <div class="stats-title">📊 BACKTEST ENGINE</div>
-          <div class="stat-row"><span class="stat-label">Total signals:</span><span class="stat-value">${totalSignals}</span></div>
-          <div class="stat-row"><span class="stat-label">Wins / Losses:</span><span class="stat-value">${totalWins} / ${totalLosses}</span></div>
-          <div class="stat-row"><span class="stat-label">Overall win rate:</span><span class="stat-value ${overallWinRate>55?'winrate-good':(overallWinRate<45?'winrate-bad':'')}">${overallWinRate}%</span></div>
-          <div class="stat-row"><span class="stat-label">🔥 Best market:</span><span class="stat-value">${marketName} ${bestRate.toFixed(1)}%</span></div>
-          <div class="stat-row"><span class="stat-label">⏳ Pending signals:</span><span class="stat-value">${pending}</span></div>
-          <div class="stat-row"><span class="stat-label">🤖 ML weights:</span><span class="stat-value">${mlModel.weights.map(w=>w.toFixed(3)).join(', ')}</span></div>
+          <div class="stats-title">📋 Market Selection</div>
+          <div id="marketSelectorList" class="market-selector-list">
+            ${marketListHtml}
+          </div>
+          <div style="margin-top:8px; display:flex; gap:6px;">
+            <button id="selectAllMarkets">All</button>
+            <button id="deselectAllMarkets">None</button>
+          </div>
         </div>
         <div class="stats-panel">
           <div class="stats-title">📋 RECENT SIGNALS (click to pin)</div>
-          <div class="signal-log">${recentHtml||"<div>No signals yet</div>"}</div>
+          <div class="signal-log">${recentHtml || "<div>No signals yet</div>"}</div>
         </div>
       `;
+
+      // Attach events for selectors
+      document.getElementById('selectAllMarkets').onclick = () => {
+        document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.checked = true);
+        scheduleRender();
+      };
+      document.getElementById('deselectAllMarkets').onclick = () => {
+        document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.checked = false);
+        scheduleRender();
+      };
+      document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => {
+        cb.onchange = () => scheduleRender();
+      });
     }
 
     // Globals
