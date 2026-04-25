@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO — Market Selector + Theme</title>
+  <title>Digit Analyzer PRO — Theme Top + Blinking List</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
   </script>
   <style>
@@ -92,6 +92,7 @@
     .signal-text { text-align: center; font-weight: bold; margin-top: 4px; }
     .buy-even { color: lime; } .buy-odd { color: red; }
 
+    /* Stats panels */
     .stats-panel { background: var(--surface); border-radius: 12px; padding: 12px; margin-bottom: 15px; border: 1px solid var(--border); }
     .stats-title { font-size: 16px; font-weight: bold; border-bottom: 1px solid var(--bar-bg); padding-bottom: 6px; margin-bottom: 10px; color: var(--text-secondary); }
     .stat-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
@@ -107,8 +108,6 @@
     @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
     .stop-signal { background: #7f1d1d; color: white; padding: 2px 8px; border-radius: 16px; font-weight: bold; font-size: 11px; }
     .exit-suggestion { font-size: 11px; background: var(--surface); padding: 3px 8px; border-radius: 16px; margin-left: 8px; }
-    .replay-controls { background: var(--surface); padding: 8px; border-radius: 8px; margin-bottom: 10px; }
-    .slider { width: 100%; }
     .small-badge { font-size: 10px; padding: 2px 6px; border-radius: 12px; background: var(--surface); }
 
     .regime-calm { background: #15803d; } .regime-choppy { background: #b45309; } .regime-trending { background: #1d4ed8; }
@@ -119,17 +118,43 @@
     .momentum-up { color: var(--good); } .momentum-down { color: var(--bad); } .momentum-neutral { color: var(--text-secondary); }
     .sparkline-canvas { width: 100%; height: 40px; margin: 5px 0; }
 
-    /* Toolbar now only holds theme toggle */
-    #toolbar { display: flex; align-items: center; gap: 12px; padding: 6px 10px; background: var(--surface); border-radius: 12px; margin-bottom: 6px; }
+    /* Top bar for theme toggle */
+    #topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      padding: 6px 10px;
+      display: flex;
+      justify-content: flex-end;
+      z-index: 20;
+      border-bottom: 1px solid var(--border);
+    }
+    body { padding-top: 40px; } /* offset for fixed topbar */
+
     .pin-star { cursor: pointer; color: var(--text-secondary); margin-left: 6px; }
     .pin-star.pinned { color: var(--accent); }
     .divergence-badge { background: #7f1d1d; color: white; padding: 2px 6px; border-radius: 12px; font-size: 10px; margin-left: 5px; }
     .ml-accuracy-badge { font-size: 10px; padding: 2px 6px; border-radius: 12px; background: var(--surface); }
 
-    /* Market selector list in right panel */
-    .market-selector-list { max-height: 400px; overflow-y: auto; }
-    .market-check { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 2px 0; }
-    .market-check input { margin: 0; }
+    /* Market selector list blinking */
+    .market-list-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      padding: 2px 0;
+      cursor: pointer;
+    }
+    .market-list-item.blinking {
+      animation: listBlink 0.8s infinite;
+    }
+    @keyframes listBlink {
+      0% { color: var(--text); }
+      50% { color: var(--accent); }
+      100% { color: var(--text); }
+    }
 
     @media(max-width:1200px) {
         .left { width: 100%; } .right { display: none; }
@@ -139,6 +164,9 @@
   </style>
 </head>
 <body>
+<div id="topbar">
+  <button id="themeToggle">🌓 Theme</button>
+</div>
 <div class="wrapper">
   <div class="left" id="markets"></div>
   <div class="right" id="statsPanel"></div>
@@ -171,7 +199,7 @@
       {sym:"JD100",name:"Jump 100 Index"}
     ];
 
-    // Global state
+    // Global state (replay removed entirely)
     let ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
     let store = {}, storeShort = {}, storeMedium = {}, storeFullHistory = {};
     let priceMap = {}, pipMap = {}, historyLoaded = {}, lastDigitMap = {};
@@ -181,8 +209,8 @@
     let previousSignalState = {};
     let marketTrendChangeFlag = {};
     let lastSignalTime = {};
-    let replayMode = false, replayIndex = 0, replaySnapshot = {};
     let optimalParams = { zThreshold: 1.96, maxOpposing: 12, minMargin: 5 };
+
     const volatilityFactors = {
       'R_10': 0.8, 'R_25': 1.0, 'R_50': 1.3, 'R_75': 1.6, 'R_100': 2.0,
       '1HZ10V': 0.9, '1HZ15V': 1.0, '1HZ25V': 1.2, '1HZ30V': 1.3, '1HZ50V': 1.5,
@@ -190,6 +218,7 @@
       'JD10': 1.2, 'JD25': 1.5, 'JD50': 2.0, 'JD75': 2.5, 'JD100': 3.0
     };
 
+    // ML model
     class OnlineLogisticRegression {
       constructor(fc=2, lr=0.01) { this.weights = Array(fc).fill(0).map(()=>Math.random()*0.1); this.bias=0; this.lr=lr; }
       sigmoid(z){return 1/(1+Math.exp(-z));}
@@ -246,6 +275,7 @@
       return null;
     }
 
+    // Chart management
     let chartInstances = {};
     function drawSparkline(sym) {
       let canvas = document.getElementById(`sparkline-${sym}`);
@@ -314,6 +344,7 @@
       }
     }
 
+    // Consensus
     function detectConsensus(){
       const signals=[];
       markets.forEach(m=>{
@@ -336,6 +367,7 @@
     function getEvenP(sym){ let c=getCounts(sym); let t=c.reduce((a,b)=>a+b,0); let e=c[0]+c[2]+c[4]+c[6]+c[8]; return (e/t)*100; }
     function getOddP(sym){ return 100-getEvenP(sym); }
 
+    // Dynamic thresholds
     function recomputeOptimalThresholds(){
       const completed=tradeLog.filter(t=>t.outcome!=='pending'); if(completed.length<20)return;
       let best={winRate:0,z:1.96,opp:12,margin:5};
@@ -420,41 +452,22 @@
         throttledStatsUpdate();
       }
     }
-    function enterReplayMode(){replayMode=true; markets.forEach(m=>{if(storeFullHistory[m.sym])replaySnapshot[m.sym]=[...storeFullHistory[m.sym]];}); replayIndex=0;renderReplayControls();}
-    function exitReplayMode(){replayMode=false;renderReplayControls();renderAllMarkets();}
-    function replayTick(forward=true){
-      if(!replayMode)return; const maxLen=Math.max(...Object.values(replaySnapshot).map(a=>a.length));
-      if(forward&&replayIndex<maxLen-1)replayIndex++; else if(!forward&&replayIndex>0)replayIndex--;
-      markets.forEach(m=>{let h=replaySnapshot[m.sym];if(h){let s=h.slice(0,replayIndex+1);store[m.sym]=s.slice(-1000);storeShort[m.sym]=s.slice(-100);storeMedium[m.sym]=s.slice(-500);if(s.length)lastDigitMap[m.sym]=s[s.length-1];}});
-      renderAllMarkets();renderReplayControls();
-    }
-    function renderReplayControls(){
-      let c=document.getElementById('replayBar'); if(!c){c=document.createElement('div');c.id='replayBar';document.querySelector('.left').prepend(c);}
-      const maxLen=Math.max(...Object.values(replaySnapshot).map(a=>a.length||0));
-      c.innerHTML=`<div class="replay-controls"><button id="replayBtn">${replayMode?'Exit Replay':'Replay Mode'}</button>${replayMode?`<button id="replayPrev">◀ Prev</button><button id="replayNext">Next ▶</button><span style="margin:0 10px;">Tick ${replayIndex+1} / ${maxLen}</span><input type="range" min="0" max="${maxLen-1}" value="${replayIndex}" class="slider" id="replaySlider">`:''}</div>`;
-      document.getElementById('replayBtn').onclick=()=>replayMode?exitReplayMode():enterReplayMode();
-      if(replayMode){document.getElementById('replayPrev').onclick=()=>replayTick(false);document.getElementById('replayNext').onclick=()=>replayTick(true);document.getElementById('replaySlider').oninput=(e)=>{replayIndex=parseInt(e.target.value);replayTick();};}
-    }
 
-    // ===== RENDERING =====
+    // Rendering
     let renderScheduled=false;
     let marketElements={};
-    function pinMarketPermanent(sym){ if(pinnedSymbols.has(sym))pinnedSymbols.delete(sym); else pinnedSymbols.add(sym); scheduleRender(); }
-    function scheduleRender(){if(renderScheduled)return; renderScheduled=true; requestAnimationFrame(()=>{ if(!replayMode){renderToolbar();renderAllMarkets();} renderScheduled=false; });}
-
-    function renderToolbar(){
-      let toolbar=document.getElementById('toolbar');
-      if(!toolbar){
-        let left=document.querySelector('.left');
-        toolbar=document.createElement('div'); toolbar.id='toolbar';
-        left.prepend(toolbar);
-      }
-      // Only theme toggle button (market selector moved to right panel)
-      if(!toolbar._initialized){
-        toolbar.innerHTML=`<button id="themeToggle">🌓 Theme</button>`;
-        document.getElementById('themeToggle').onclick=()=>document.body.classList.toggle('light');
-        toolbar._initialized=true;
-      }
+    function pinMarketPermanent(sym){
+      if(pinnedSymbols.has(sym)) pinnedSymbols.delete(sym);
+      else pinnedSymbols.add(sym);
+      scheduleRender();
+    }
+    function scheduleRender(){
+      if(renderScheduled) return;
+      renderScheduled = true;
+      requestAnimationFrame(() => {
+        renderAllMarkets();
+        renderScheduled = false;
+      });
     }
 
     function computeMarketData(m) {
@@ -530,6 +543,7 @@
 
       marketDataArray.sort((a,b) => b.sortScore - a.sortScore);
 
+      // Consensus alert
       let oldAlert = document.getElementById('consensusAlert');
       if (oldAlert) oldAlert.remove();
       let consensus = detectConsensus();
@@ -541,6 +555,7 @@
         wrap.prepend(alertDiv);
       }
 
+      // Reorder or create containers
       let existingOrder = Array.from(wrap.children).filter(el => el.id.startsWith('market-'));
       let desiredOrder = marketDataArray.map(d => `market-${d.sym}`);
       existingOrder.forEach(el => { if (!desiredOrder.includes(el.id)) el.remove(); });
@@ -561,6 +576,7 @@
         marketElements[sym] = container;
       });
 
+      // Update content
       marketDataArray.forEach((data, idx) => {
         let container = marketElements[data.sym];
         if (!container) return;
@@ -641,29 +657,42 @@
       });
 
       throttledStatsUpdate();
-      if (!replayMode) renderReplayControls();
     }
 
-    // Stats panel: now contains only market selector list and recent signals
+    // Stats panel (market list + recent signals)
     let statsUpdateScheduled = false;
-    function throttledStatsUpdate() { if(statsUpdateScheduled) return; statsUpdateScheduled = true; setTimeout(()=>{ renderStatsPanel(); statsUpdateScheduled=false; },200); }
+    function throttledStatsUpdate() {
+      if(statsUpdateScheduled) return;
+      statsUpdateScheduled = true;
+      setTimeout(() => {
+        renderStatsPanel();
+        statsUpdateScheduled = false;
+      }, 200);
+    }
+
     function renderStatsPanel() {
       let panel = document.getElementById("statsPanel");
       if(!panel) return;
 
-      // Generate market list HTML
-      let marketListHtml = markets.map(m => `
-        <div class="market-check">
-          <label>
-            <input type="checkbox" class="market-checkbox" data-sym="${m.sym}" checked> ${m.name}
-          </label>
-        </div>
-      `).join('');
+      // Generate market list with blinking based on signal status
+      let marketListHtml = markets.map(m => {
+        let hasSignal = false;
+        if (store[m.sym] && store[m.sym].length >= 1000) {
+          hasSignal = getAdvancedSignal(m.sym) !== null;
+        }
+        let blinkClass = hasSignal ? 'blinking' : '';
+        return `
+          <div class="market-list-item ${blinkClass}" onclick="window.pinMarketPermanent('${m.sym}')">
+            <input type="checkbox" class="market-checkbox" data-sym="${m.sym}" checked onclick="event.stopPropagation();" onchange="window.refreshMarkets()">
+            <span>${m.name}</span>
+          </div>
+        `;
+      }).join('');
 
       let recentHtml = tradeLog.slice(-10).reverse().map(log => {
         let outcomeClass = log.outcome === "win" ? "log-win" : (log.outcome === "loss" ? "log-loss" : "log-pending");
         let outcomeText = log.outcome === "win" ? "✓ WIN" : (log.outcome === "loss" ? "✗ LOSS" : "⌛ pending");
-        return `<div class="log-entry" onclick="window.pinMarketFromLog('${log.symbol}')" title="Click to pin ${log.symbol}">
+        return `<div class="log-entry" onclick="window.pinMarketPermanent('${log.symbol}')" title="Click to pin ${log.symbol}">
           <span>${log.timestamp}</span> 
           <span>${log.symbol}</span> 
           <span>${log.signalType}</span>
@@ -679,8 +708,8 @@
             ${marketListHtml}
           </div>
           <div style="margin-top:8px; display:flex; gap:6px;">
-            <button id="selectAllMarkets">All</button>
-            <button id="deselectAllMarkets">None</button>
+            <button onclick="document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb=>cb.checked=true);window.refreshMarkets();">All</button>
+            <button onclick="document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb=>cb.checked=false);window.refreshMarkets();">None</button>
           </div>
         </div>
         <div class="stats-panel">
@@ -689,23 +718,18 @@
         </div>
       `;
 
-      // Attach events for selectors
-      document.getElementById('selectAllMarkets').onclick = () => {
-        document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.checked = true);
-        scheduleRender();
-      };
-      document.getElementById('deselectAllMarkets').onclick = () => {
-        document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.checked = false);
-        scheduleRender();
-      };
+      // Attach change handlers to checkboxes (they already call refreshMarkets on change)
       document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => {
-        cb.onchange = () => scheduleRender();
+        cb.onchange = () => window.refreshMarkets();
       });
     }
 
-    // Globals
+    // Refresh function for checkboxes
+    window.refreshMarkets = function() { scheduleRender(); };
+
     window.pinMarketPermanent = pinMarketPermanent;
-    window.pinMarketFromLog = (sym)=>{ pinnedSymbols.add(sym); scheduleRender(); setTimeout(()=>{ let el=document.getElementById(`market-${sym}`); if(el)el.scrollIntoView({behavior:'smooth',block:'start'}); },100); };
+
+    // ML helpers
     function recordMLPrediction(sym, prob) { lastMLPredictions[sym] = {prob, timestamp: Date.now()}; }
     function computeMLAccuracy(sym) {
       if(!mlAccuracyHistory[sym]) return 0;
@@ -714,47 +738,64 @@
       return (arr.filter(x=>x).length / arr.length) * 100;
     }
 
-    // WebSocket
-    ws.onopen = ()=>{
+    // WebSocket (no replay)
+    ws.onopen = () => {
       ws.send(JSON.stringify({authorize:token}));
-      markets.forEach(m=>{
-        store[m.sym]=[]; storeShort[m.sym]=[]; storeMedium[m.sym]=[]; storeFullHistory[m.sym]=[];
-        historyLoaded[m.sym]=false;
-        ws.send(JSON.stringify({ticks_history:m.sym, count:1000, end:"latest", style:"ticks"}));
-        ws.send(JSON.stringify({ticks:m.sym, subscribe:1}));
+      markets.forEach(m => {
+        store[m.sym] = []; storeShort[m.sym] = []; storeMedium[m.sym] = []; storeFullHistory[m.sym] = [];
+        historyLoaded[m.sym] = false;
+        ws.send(JSON.stringify({ticks_history: m.sym, count: 1000, end: "latest", style: "ticks"}));
+        ws.send(JSON.stringify({ticks: m.sym, subscribe: 1}));
       });
     };
-    ws.onmessage = (msg)=>{
-      let d=JSON.parse(msg.data);
+
+    ws.onmessage = (msg) => {
+      let d = JSON.parse(msg.data);
       if(d.history){
-        let s=d.echo_req.ticks_history; let pip=pipMap[s]||2;
-        let prices=d.history.prices.map(p=>parseFloat(p).toFixed(pip));
-        let digits=prices.map(p=>parseInt(p.slice(-1)));
-        store[s]=digits.slice(-1000); storeShort[s]=digits.slice(-100); storeMedium[s]=digits.slice(-500);
-        storeFullHistory[s]=digits; historyLoaded[s]=true; scheduleRender();
+        let s = d.echo_req.ticks_history;
+        let pip = pipMap[s] || 2;
+        let prices = d.history.prices.map(p => parseFloat(p).toFixed(pip));
+        let digits = prices.map(p => parseInt(p.slice(-1)));
+        store[s] = digits.slice(-1000);
+        storeShort[s] = digits.slice(-100);
+        storeMedium[s] = digits.slice(-500);
+        storeFullHistory[s] = digits;
+        historyLoaded[s] = true;
+        scheduleRender();
       }
-      if(d.tick && !replayMode){
-        let s=d.tick.symbol; pipMap[s]=d.tick.pip_size;
-        let price=parseFloat(d.tick.quote).toFixed(pipMap[s]);
-        let digit=parseInt(price.slice(-1));
-        priceMap[s]=price; lastDigitMap[s]=digit;
+      if(d.tick){
+        let s = d.tick.symbol;
+        pipMap[s] = d.tick.pip_size;
+        let price = parseFloat(d.tick.quote).toFixed(pipMap[s]);
+        let digit = parseInt(price.slice(-1));
+        priceMap[s] = price;
+        lastDigitMap[s] = digit;
         if(!historyLoaded[s]) return;
-        let lastPred=lastMLPredictions[s];
+
+        // ML accuracy update
+        let lastPred = lastMLPredictions[s];
         if(lastPred){
-          let predEven=lastPred.prob>0.5; let actualEven=digit%2===0;
-          if(!mlAccuracyHistory[s])mlAccuracyHistory[s]=[];
-          mlAccuracyHistory[s].push(predEven===actualEven);
-          if(mlAccuracyHistory[s].length>50) mlAccuracyHistory[s].shift();
+          let predEven = lastPred.prob > 0.5;
+          let actualEven = digit % 2 === 0;
+          if(!mlAccuracyHistory[s]) mlAccuracyHistory[s] = [];
+          mlAccuracyHistory[s].push(predEven === actualEven);
+          if(mlAccuracyHistory[s].length > 50) mlAccuracyHistory[s].shift();
         }
+
         store[s].push(digit); storeShort[s].push(digit); storeMedium[s].push(digit); storeFullHistory[s].push(digit);
-        if(store[s].length>1000) store[s].shift(); if(storeShort[s].length>100) storeShort[s].shift();
-        if(storeMedium[s].length>500) storeMedium[s].shift(); if(storeFullHistory[s].length>5000) storeFullHistory[s].shift();
+        if(store[s].length > 1000) store[s].shift();
+        if(storeShort[s].length > 100) storeShort[s].shift();
+        if(storeMedium[s].length > 500) storeMedium[s].shift();
+        if(storeFullHistory[s].length > 5000) storeFullHistory[s].shift();
         scheduleRender();
       }
     };
 
-    markets.forEach(m=>{ marketElements[m.sym]=null; lastSignalTime[m.sym]=0; });
+    // Initialize
+    markets.forEach(m => { marketElements[m.sym] = null; lastSignalTime[m.sym] = 0; });
     renderAllMarkets();
+    // Theme toggle
+    document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
   })();
 </script>
 </body>
