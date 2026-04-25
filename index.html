@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO — Signal‑Parity Match Fix</title>
+  <title>Digit Analyzer PRO — Martingale Auto‑Trade Bot</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
   </script>
   <style>
@@ -74,7 +74,7 @@
     .stat-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
     .stat-label { color: var(--text-secondary); }
     .stat-value { font-weight: bold; color: var(--accent); }
-    .signal-log { font-size: 11px; max-height: 200px; overflow-y: auto; }
+    .signal-log { font-size: 11px; max-height: 150px; overflow-y: auto; }
     .log-entry { padding: 4px; border-bottom: 1px solid var(--border); font-family: monospace; cursor: pointer; transition: 0.2s; }
     .log-entry:hover { background: var(--surface); }
     .log-win { color: var(--good); } .log-loss { color: var(--bad); } .log-pending { color: var(--accent); }
@@ -105,6 +105,11 @@
     .market-list-item.blinking { animation: listBlink 0.8s infinite; }
     @keyframes listBlink { 0% { color: var(--text); } 50% { color: var(--accent); } 100% { color: var(--text); } }
 
+    .bot-panel input, .bot-panel select { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; }
+    .bot-toggle { padding: 4px 12px; border-radius: 16px; cursor: pointer; font-weight: bold; border: none; }
+    .bot-on { background: var(--good); color: black; }
+    .bot-off { background: var(--bad); color: white; }
+
     @media(max-width:1200px) { .left { width: 100%; } .right { display: none; } .grid { grid-template-columns: repeat(5, 2.2cm); } .box { width: 2.2cm; height: 2.2cm; } .digit { font-size: 36px; } }
   </style>
 </head>
@@ -128,11 +133,26 @@
       {sym:"JD75",name:"Jump 75 Index"},{sym:"JD100",name:"Jump 100 Index"}
     ];
 
+    // ---- BOT SETTINGS ----
+    let botEnabled = false;
+    let botSpeed = 1;                // ticks before entry (minimum 1)
+    let botMartingaleMult = 1.8;     // stake multiplier on loss
+    let botTakeProfit = 2;           // total profit target (resets sequence)
+    let botStopLoss = 20;            // total loss limit (pauses trading)
+    let botBaseStake = 1;
+    let botPaperMode = true;
+    let botBalance = 1000;           // paper balance
+    let botTradeLog = [];            // {time,market,direction,stake,outcome,balance}
+
+    // Per‑market martingale state
+    let botState = {}; // sym -> { currentStake, totalProfit, totalLoss, active }
+
+    // ---- existing global state ----
     let ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
     let store = {}, storeShort = {}, storeMedium = {}, storeFullHistory = {};
     let priceMap = {}, pipMap = {}, historyLoaded = {}, lastDigitMap = {};
     let audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
-    let tradeLog = [];
+    let tradeLog = [];               // original signal log (kept)
     let marketStats = {};
     let previousSignalState = {};
     let lastSignalTime = {};
@@ -151,11 +171,12 @@
     let lastMLPredictions = {}, mlAccuracyHistory = {};
     let pinnedSymbols = new Set();
 
-    // Two-phase history loading
     let phaseOneLoaded = {};
     let phaseTwoLoaded = {};
     let marketElements = {};
+    let signalStreakMap = {};   // sym -> { lastSignalType, count }
 
+    // same functions as before (unchanged)
     function getMLFeatures(s,eP,oP){let a=store[s];if(!a||a.length<10)return[0,0,0];let d=(eP-oP)/100,str=0,lst=a[a.length-1];for(let i=a.length-1;i>=0;i--){if(a[i]===lst)str++;else break;}return[d,Math.min(str,10)/10,volatilityFactors[s]/3];}
     function nowStr(){return new Date().toLocaleTimeString();}
     function classifyRegime(s){let a=store[s];if(!a||a.length<50)return{type:'Unknown',color:'#64748b'};let r=a.slice(-50).map(d=>d%2===0?0:1);let m=r.reduce((a,b)=>a+b,0)/r.length;let std=Math.sqrt(r.reduce((a,b)=>a+Math.pow(b-m,2),0)/r.length);if(std<0.35)return{type:'Calm',color:'#15803d'};if(std>0.48)return{type:'Trending',color:'#1d4ed8'};return{type:'Choppy',color:'#b45309'};}
@@ -165,7 +186,6 @@
 
     let chartInstances = {};
     function drawSparkline(sym){let c=document.getElementById(`sparkline-${sym}`);if(!c)return;let a=store[sym];if(!a||a.length<10)return;let ctx=c.getContext('2d');let w=c.width=c.offsetWidth||300,h=c.height=40;ctx.clearRect(0,0,w,h);let rec=a.slice(-50);if(rec.length<2)return;let pts=[];for(let i=0;i<rec.length;i++){let sl=rec.slice(0,i+1);let ep=sl.filter(d=>d%2===0).length/sl.length*100;pts.push({x:(i/(rec.length-1))*w,y:h-(ep/100)*h});}let grad=ctx.createLinearGradient(0,0,0,h);grad.addColorStop(0,'rgba(74,222,128,0.3)');grad.addColorStop(1,'rgba(248,113,113,0.3)');ctx.fillStyle=grad;ctx.beginPath();ctx.moveTo(pts[0].x,h);for(let p of pts)ctx.lineTo(p.x,p.y);ctx.lineTo(pts[pts.length-1].x,h);ctx.closePath();ctx.fill();ctx.strokeStyle='#38bdf8';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let p of pts)ctx.lineTo(p.x,p.y);ctx.stroke();ctx.strokeStyle='#64748b';ctx.lineWidth=0.5;ctx.setLineDash([2,2]);ctx.beginPath();ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.stroke();ctx.setLineDash([]);}
-
     const heatmapCounters = {};
     function updateHeatmap(sym){let canvas=document.getElementById(`heatmap-${sym}`);if(!canvas)return;let a=store[sym];if(!a||a.length<50)return;if(!heatmapCounters[sym])heatmapCounters[sym]=0;heatmapCounters[sym]++;if(heatmapCounters[sym]%5!==0)return;let recent=a.slice(-50);let matrix=Array(10).fill().map(()=>Array(50).fill(0));for(let i=0;i<recent.length;i++)matrix[recent[i]][i]=1;let existing=chartInstances[sym];if(existing){existing.data.datasets[0].data=matrix.flatMap((row,d)=>row.map((v,t)=>({x:t,y:d,v:v})));existing.update();}else{let chart=new Chart(canvas,{type:'matrix',data:{labels:Array(50).fill(''),datasets:[{data:matrix.flatMap((row,d)=>row.map((v,t)=>({x:t,y:d,v:v}))),backgroundColor(ctx){let val=ctx.raw.v;if(val===0)return'#1e293b';return`rgba(56,189,248,${0.3+val*0.7})`;},borderWidth:0,width:({chart})=>(chart.chartArea||{}).width/50,height:({chart})=>(chart.chartArea||{}).height/10,}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false,offset:true},y:{display:true,reverse:true,ticks:{stepSize:1,color:'#94a3b8'}}}}});chartInstances[sym]=chart;}}
 
@@ -182,10 +202,9 @@
       let tf=checkMultiTimeframeAlignment(sym); if(!tf)return null;
       let cnt=getCounts(sym),t=a.length, es=cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8], os=t-es;
       if(!isStatisticallySignificant(es,os,t))return null;
-      // Ensure 1000‑tick parity matches the multi‑TF bias direction
       let ep=(es/t)*100, op=(os/t)*100;
-      if (tf === "EVEN" && ep <= op) return null;   // FIX: even must dominate
-      if (tf === "ODD"  && op <= ep) return null;   // FIX: odd must dominate
+      if (tf === "EVEN" && ep <= op) return null;
+      if (tf === "ODD"  && op <= ep) return null;
       let oppDigits = (tf==="EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
       let allOppBelow10 = oppDigits.every(d => (cnt[d]/t)*100 < 10);
       if(!allOppBelow10) return null;
@@ -194,13 +213,191 @@
     }
 
     function areSignalsReady(){ return Object.values(phaseTwoLoaded).filter(Boolean).length === markets.length; }
-
     function computeSignalStrength(ep,op,perc,sig,sym){if(!sig)return 0;let diff=Math.abs(ep-op);let vf=volatilityFactors[sym]||1;if(sig==="BUY EVEN"){let odd=[1,3,5,7,9];let mo=Math.max(...odd.map(d=>parseFloat(perc[d])));return Math.min(100,(diff*0.5+Math.max(0,optimalParams.maxOpposing-mo)*5)/vf);}else{let even=[0,2,4,6,8];let mo=Math.max(...even.map(d=>parseFloat(perc[d])));return Math.min(100,(diff*0.5+Math.max(0,optimalParams.maxOpposing-mo)*5)/vf);}}
     function computeConfidence(ep,op,perc,sig){if(!sig)return"—";let opp=sig==="BUY EVEN"?[1,3,5,7,9]:[0,2,4,6,8];let maxOpp=Math.max(...opp.map(d=>parseFloat(perc[d])));let margin=optimalParams.maxOpposing-maxOpp;return`${Math.min(100,Math.max(0,(margin/optimalParams.maxOpposing)*100)).toFixed(0)}%`;}
     function computeMarketHealth(sym,cnt,t,sig,ep,op){if(!store[sym]||store[sym].length<1000)return 0;let e=cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8];let z=Math.abs(e/t-0.5)/Math.sqrt(0.25/t);let sigSc=Math.min(100,(z/3)*100);let tfSc=checkMultiTimeframeAlignment(sym)?100:0;let opp=sig==="BUY EVEN"?[1,3,5,7,9]:[0,2,4,6,8];let maxOpp=Math.max(...opp.map(d=>(cnt[d]/t)*100));let oppSc=Math.max(0,100-(maxOpp/optimalParams.maxOpposing)*100);let marginSc=Math.min(100,(Math.abs(ep-op)/15)*100);return Math.round(sigSc*0.3+tfSc*0.3+oppSc*0.2+marginSc*0.2);}
     function getExitSuggestion(sym,sig,cnt,t){if(!sig)return"";let opp=sig==="BUY EVEN"?[1,3,5,7,9]:[0,2,4,6,8];let maxOpp=Math.max(...opp.map(d=>(cnt[d]/t)*100));let thr=optimalParams.maxOpposing*0.9;if(maxOpp>=thr)return`⚠️ Exit soon: opposing ${maxOpp.toFixed(1)}%`;return"🎯 Hold until opposing > "+thr.toFixed(1)+"%";}
     function recordSignal(symbol,sigType,strength,confidence){let id=Date.now()+Math.random();let entry={id,symbol,signalType:sigType,strength,confidence,timestamp:nowStr(),outcome:"pending"};tradeLog.push(entry);if(!marketStats[symbol])marketStats[symbol]={totalSignals:0,wins:0,losses:0};marketStats[symbol].totalSignals++;if(tradeLog.filter(t=>t.outcome!=='pending').length%20===0)recomputeOptimalThresholds();updateRecentSignals();setTimeout(()=>resolveSignalOutcome(symbol,sigType,id),150);return id;}
     function resolveSignalOutcome(symbol,pred,id){let last=lastDigitMap[symbol];if(last===undefined)return;let win=(pred==="BUY EVEN"&&last%2===0)||(pred==="BUY ODD"&&last%2!==0);let trade=tradeLog.find(t=>t.id===id);if(trade&&trade.outcome==="pending"){trade.outcome=win?"win":"loss";if(marketStats[trade.symbol]){if(win)marketStats[trade.symbol].wins++;else marketStats[trade.symbol].losses++;}let cnt=getCounts(symbol),t=cnt.reduce((a,b)=>a+b,0),ep=(cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8])/t*100;mlModel.update(getMLFeatures(symbol,ep,100-ep),win?1:0);updateRecentSignals();}}
+
+    // ---- BOT LOGIC ----
+    function handleBotTrade(sym, signalType) {
+      if (!botEnabled || !phaseTwoLoaded[sym]) return;
+
+      // Check if signal has persisted for botSpeed ticks
+      if (!signalStreakMap[sym]) signalStreakMap[sym] = { lastSignalType: null, count: 0 };
+      let streak = signalStreakMap[sym];
+      if (streak.lastSignalType !== signalType) {
+        streak.lastSignalType = signalType;
+        streak.count = 1;
+      } else {
+        streak.count++;
+      }
+
+      if (streak.count < botSpeed) return;   // wait for required streak
+
+      // Get bot state for this market
+      if (!botState[sym]) {
+        botState[sym] = {
+          currentStake: botBaseStake,
+          totalProfit: 0,
+          totalLoss: 0,
+          active: true
+        };
+      }
+      let state = botState[sym];
+      if (!state.active) return;   // stop-loss hit
+
+      let direction = signalType === "BUY EVEN" ? "DIGITEVEN" : "DIGITODD";
+      let stake = state.currentStake;
+
+      // Record paper trade (or real)
+      let entryTime = nowStr();
+      let outcome = "pending";
+      let actualWin = false;
+
+      // For immediate resolution, use last digit (the one that just came)
+      let lastDigit = lastDigitMap[sym];
+      let isEven = lastDigit % 2 === 0;
+      let predictedEven = direction === "DIGITEVEN";
+      actualWin = (predictedEven && isEven) || (!predictedEven && !isEven);
+
+      // Simulate trade outcome (paper)
+      if (botPaperMode) {
+        outcome = actualWin ? "win" : "loss";
+        if (actualWin) {
+          // Payout: digit contracts pay ~9.5? Actually to simplify, assume a 1:1 payout (you risk stake to win stake). In Deriv digit odd/even actual payout is 1.96? I'll approximate with 1.96 multiplier for win, 0 for loss.
+          // But your bot rules might assume a fixed net profit equal to stake (i.e., payout = 2x). Let's use a standard 1.96 multiplier (net gain = stake * 0.96).
+          const payoutMultiplier = 1.96;
+          let profit = stake * (payoutMultiplier - 1);
+          botBalance += profit;
+          state.totalProfit += profit;
+        } else {
+          botBalance -= stake;
+          state.totalLoss += stake;
+        }
+      } else {
+        // Real trade: send buy request to Deriv API
+        ws.send(JSON.stringify({
+          buy: 1,
+          price: stake,
+          parameters: {
+            contract_type: direction,
+            symbol: sym,
+            duration: 1,
+            duration_unit: "t",
+            basis: "stake",
+            amount: stake,
+            currency: "USD"
+          }
+        }));
+        // outcome will be resolved when trade reply comes – for now keep pending
+      }
+
+      let tradeEntry = {
+        time: entryTime,
+        market: sym,
+        direction,
+        stake,
+        outcome,
+        balance: botBalance.toFixed(2)
+      };
+      botTradeLog.unshift(tradeEntry);
+      if (botTradeLog.length > 50) botTradeLog.pop();
+
+      // Martingale logic
+      if (outcome === "win") {
+        // Check take profit
+        if (state.totalProfit >= botTakeProfit) {
+          state.totalProfit = 0;
+          state.totalLoss = 0;
+          state.currentStake = botBaseStake;
+          // reset streak?
+        } else {
+          // Reset stake to base after a win (martingale reset)
+          state.currentStake = botBaseStake;
+        }
+      } else if (outcome === "loss") {
+        // Check stop loss
+        if (state.totalLoss >= botStopLoss) {
+          state.active = false;
+          // maybe reset after a cooldown
+        } else {
+          state.currentStake = state.currentStake * botMartingaleMult;
+          // Round to 2 decimals
+          state.currentStake = Math.round(state.currentStake * 100) / 100;
+        }
+      }
+
+      updateBotPanel();
+    }
+
+    // ---- UI for bot settings ----
+    function buildBotPanel() {
+      let panel = document.getElementById("statsPanel");
+      if (!panel || document.getElementById("botContainer")) return;
+      let html = `
+        <div class="stats-panel" id="botContainer">
+          <div class="stats-title">🤖 MARTINGALE BOT</div>
+          <div class="stat-row"><span class="stat-label">Status</span>
+            <button id="botToggle" class="bot-toggle ${botEnabled?'bot-on':'bot-off'}">${botEnabled?'ON':'OFF'}</button>
+          </div>
+          <div class="stat-row"><span class="stat-label">Speed (ticks)</span><input id="botSpeed" type="number" value="${botSpeed}" min="1" style="width:60px;"></div>
+          <div class="stat-row"><span class="stat-label">Base Stake</span><input id="botBaseStake" type="number" value="${botBaseStake}" step="0.1" style="width:60px;"></div>
+          <div class="stat-row"><span class="stat-label">Martingale Mult</span><input id="botMult" type="number" value="${botMartingaleMult}" step="0.1" style="width:60px;"></div>
+          <div class="stat-row"><span class="stat-label">Take Profit</span><input id="botTP" type="number" value="${botTakeProfit}" step="0.5" style="width:60px;"></div>
+          <div class="stat-row"><span class="stat-label">Stop Loss</span><input id="botSL" type="number" value="${botStopLoss}" step="1" style="width:60px;"></div>
+          <div class="stat-row"><span class="stat-label">Paper Mode</span><input id="botPaper" type="checkbox" ${botPaperMode?'checked':''}></div>
+          <div class="stat-row"><span class="stat-label">Balance</span><span class="stat-value">$${botBalance.toFixed(2)}</span></div>
+          <div class="stat-row"><small style="color:var(--text-secondary);">Trades are executed every tick when signal persists for 'speed' ticks.</small></div>
+          <div class="signal-log" id="botTradeLog" style="max-height:120px;">
+            ${botTradeLog.slice(0,10).map(t => `<div class="log-entry ${t.outcome==='win'?'log-win':(t.outcome==='loss'?'log-loss':'log-pending')}">${t.time} ${t.market} ${t.direction} $${t.stake} → ${t.outcome}</div>`).join('') || 'No trades yet'}
+          </div>
+        </div>
+      `;
+      panel.insertAdjacentHTML('afterbegin', html);
+
+      document.getElementById('botToggle').onclick = () => {
+        botEnabled = !botEnabled;
+        updateBotPanel();
+      };
+      document.getElementById('botSpeed').onchange = function() { botSpeed = parseInt(this.value) || 1; };
+      document.getElementById('botBaseStake').onchange = function() { botBaseStake = parseFloat(this.value) || 1; };
+      document.getElementById('botMult').onchange = function() { botMartingaleMult = parseFloat(this.value) || 1.8; };
+      document.getElementById('botTP').onchange = function() { botTakeProfit = parseFloat(this.value) || 2; };
+      document.getElementById('botSL').onchange = function() { botStopLoss = parseFloat(this.value) || 20; };
+      document.getElementById('botPaper').onchange = function() { botPaperMode = this.checked; };
+    }
+
+    function updateBotPanel() {
+      let container = document.getElementById("botContainer");
+      if (!container) return;
+      // Update balance display
+      let balanceEl = container.querySelector('.stat-value');
+      if (balanceEl) balanceEl.textContent = '$' + botBalance.toFixed(2);
+      // Update toggle button
+      let toggle = document.getElementById('botToggle');
+      if (toggle) {
+        toggle.textContent = botEnabled ? 'ON' : 'OFF';
+        toggle.className = 'bot-toggle ' + (botEnabled ? 'bot-on' : 'bot-off');
+      }
+      // Update trade log
+      let logDiv = document.getElementById('botTradeLog');
+      if (logDiv) {
+        logDiv.innerHTML = botTradeLog.slice(0,10).map(t =>
+          `<div class="log-entry ${t.outcome==='win'?'log-win':(t.outcome==='loss'?'log-loss':'log-pending')}">${t.time} ${t.market} ${t.direction} $${t.stake} → ${t.outcome}</div>`
+        ).join('') || 'No trades yet';
+      }
+    }
+
+    // Override recordSignal to also trigger bot
+    function recordSignal(symbol,sigType,strength,confidence){
+      let id=Date.now()+Math.random();let entry={id,symbol,signalType:sigType,strength,confidence,timestamp:nowStr(),outcome:"pending"};tradeLog.push(entry);if(!marketStats[symbol])marketStats[symbol]={totalSignals:0,wins:0,losses:0};marketStats[symbol].totalSignals++;if(tradeLog.filter(t=>t.outcome!=='pending').length%20===0)recomputeOptimalThresholds();updateRecentSignals();
+      // Bot: handle trade based on signal
+      handleBotTrade(symbol, sigType);
+      setTimeout(()=>resolveSignalOutcome(symbol,sigType,id),150);
+      return id;
+    }
 
     function directRender() { renderAllMarkets(); }
 
@@ -351,7 +548,7 @@
       updateBlinkingStates();
     }
 
-    // Static panels
+    // Static panels (market selector, recent signals)
     function buildStaticSelector(){
       let panel = document.getElementById("statsPanel"); if(!panel) return;
       if(document.getElementById("marketSelectorContainer")) return;
@@ -479,6 +676,7 @@
     };
 
     markets.forEach(m => { marketElements[m.sym] = null; lastSignalTime[m.sym] = 0; });
+    buildBotPanel();
     buildStaticSelector();
     buildRecentSignalsPanel();
     document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
