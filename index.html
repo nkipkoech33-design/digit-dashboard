@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO — Signal‑Parity Match Fix</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
-  </script>
+  <title>Digit Analyzer PRO — Smooth & Responsive</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     :root {
       --bg: #0f172a;
@@ -129,18 +128,17 @@
     ];
 
     let ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
-    let store = {}, storeShort = {}, storeMedium = {}, storeFullHistory = {};
-    let priceMap = {}, pipMap = {}, historyLoaded = {}, lastDigitMap = {};
+    let store = {}, storeShort = {}, storeMedium = {};
+    let priceMap = {}, pipMap = {}, lastDigitMap = {};
     let audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
-    let tradeLog = [];
-    let marketStats = {};
-    let previousSignalState = {};
-    let lastSignalTime = {};
+    let tradeLog = [], marketStats = {};
+    let previousSignalState = {}, lastSignalTime = {};
     let optimalParams = { zThreshold: 1.65, maxOpposing: 14, minMargin: 3 };
     const volatilityFactors = {
       'R_10':0.8,'R_25':1.0,'R_50':1.3,'R_75':1.6,'R_100':2.0,'1HZ10V':0.9,'1HZ15V':1.0,'1HZ25V':1.2,'1HZ30V':1.3,'1HZ50V':1.5,'1HZ75V':1.8,'1HZ90V':1.9,'1HZ100V':2.0,'JD10':1.2,'JD25':1.5,'JD50':2.0,'JD75':2.5,'JD100':3.0
     };
 
+    // Lightweight ML
     class OnlineLogisticRegression {
       constructor(fc=2,lr=0.01){ this.weights=Array(fc).fill(0).map(()=>Math.random()*0.1); this.bias=0; this.lr=lr; }
       sigmoid(z){return 1/(1+Math.exp(-z));}
@@ -151,10 +149,9 @@
     let lastMLPredictions = {}, mlAccuracyHistory = {};
     let pinnedSymbols = new Set();
 
-    // Two-phase history loading
-    let phaseOneLoaded = {};
-    let phaseTwoLoaded = {};
-    let marketElements = {};
+    let phaseOneReady = {}, phaseTwoReady = {};
+    let marketContainers = {};
+    let heatmapCounters = {}, chartInstances = {};
 
     function getMLFeatures(s,eP,oP){let a=store[s];if(!a||a.length<10)return[0,0,0];let d=(eP-oP)/100,str=0,lst=a[a.length-1];for(let i=a.length-1;i>=0;i--){if(a[i]===lst)str++;else break;}return[d,Math.min(str,10)/10,volatilityFactors[s]/3];}
     function nowStr(){return new Date().toLocaleTimeString();}
@@ -163,109 +160,228 @@
     function computeBiasMomentum(s){let a=store[s];if(!a||a.length<50)return{value:0,label:'neutral'};let f1=a.slice(-50,-25),f2=a.slice(-25);let e1=f1.filter(d=>d%2===0).length/25*100,e2=f2.filter(d=>d%2===0).length/25*100;let mom=e2-e1;return{value:mom,label:mom>5?'up':(mom<-5?'down':'neutral')};}
     function detectDivergence(sy,sig,mom){if(!sig)return null;if(sig==="BUY EVEN"&&mom.label==="down")return"⚠️ Divergence: momentum falling";if(sig==="BUY ODD"&&mom.label==="up")return"⚠️ Divergence: momentum rising";if(sig==="BUY EVEN"&&mom.value<-3)return"⚠️ Divergence: weak momentum";if(sig==="BUY ODD"&&mom.value>3)return"⚠️ Divergence: weak momentum";return null;}
 
-    let chartInstances = {};
-    function drawSparkline(sym){let c=document.getElementById(`sparkline-${sym}`);if(!c)return;let a=store[sym];if(!a||a.length<10)return;let ctx=c.getContext('2d');let w=c.width=c.offsetWidth||300,h=c.height=40;ctx.clearRect(0,0,w,h);let rec=a.slice(-50);if(rec.length<2)return;let pts=[];for(let i=0;i<rec.length;i++){let sl=rec.slice(0,i+1);let ep=sl.filter(d=>d%2===0).length/sl.length*100;pts.push({x:(i/(rec.length-1))*w,y:h-(ep/100)*h});}let grad=ctx.createLinearGradient(0,0,0,h);grad.addColorStop(0,'rgba(74,222,128,0.3)');grad.addColorStop(1,'rgba(248,113,113,0.3)');ctx.fillStyle=grad;ctx.beginPath();ctx.moveTo(pts[0].x,h);for(let p of pts)ctx.lineTo(p.x,p.y);ctx.lineTo(pts[pts.length-1].x,h);ctx.closePath();ctx.fill();ctx.strokeStyle='#38bdf8';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let p of pts)ctx.lineTo(p.x,p.y);ctx.stroke();ctx.strokeStyle='#64748b';ctx.lineWidth=0.5;ctx.setLineDash([2,2]);ctx.beginPath();ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.stroke();ctx.setLineDash([]);}
+    // Lightweight sparkline – update canvas only
+    function drawSparkline(sym){
+      let canvas = document.getElementById(`sparkline-${sym}`); if(!canvas) return;
+      let a = store[sym]; if(!a||a.length<10) return;
+      let ctx = canvas.getContext('2d');
+      let w = canvas.width = canvas.offsetWidth||300, h = canvas.height = 40;
+      ctx.clearRect(0,0,w,h);
+      let rec = a.slice(-50); if(rec.length<2) return;
+      let pts = [];
+      for(let i=0;i<rec.length;i++){
+        let sl = rec.slice(0,i+1);
+        let ep = sl.filter(d=>d%2===0).length/sl.length*100;
+        pts.push({x:(i/(rec.length-1))*w, y:h-(ep/100)*h});
+      }
+      let grad = ctx.createLinearGradient(0,0,0,h);
+      grad.addColorStop(0,'rgba(74,222,128,0.3)'); grad.addColorStop(1,'rgba(248,113,113,0.3)');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.moveTo(pts[0].x, h);
+      for(let p of pts) ctx.lineTo(p.x, p.y);
+      ctx.lineTo(pts[pts.length-1].x, h); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+      for(let p of pts) ctx.lineTo(p.x, p.y); ctx.stroke();
+      ctx.strokeStyle = '#64748b'; ctx.lineWidth = 0.5; ctx.setLineDash([2,2]);
+      ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke(); ctx.setLineDash([]);
+    }
 
-    const heatmapCounters = {};
-    function updateHeatmap(sym){let canvas=document.getElementById(`heatmap-${sym}`);if(!canvas)return;let a=store[sym];if(!a||a.length<50)return;if(!heatmapCounters[sym])heatmapCounters[sym]=0;heatmapCounters[sym]++;if(heatmapCounters[sym]%5!==0)return;let recent=a.slice(-50);let matrix=Array(10).fill().map(()=>Array(50).fill(0));for(let i=0;i<recent.length;i++)matrix[recent[i]][i]=1;let existing=chartInstances[sym];if(existing){existing.data.datasets[0].data=matrix.flatMap((row,d)=>row.map((v,t)=>({x:t,y:d,v:v})));existing.update();}else{let chart=new Chart(canvas,{type:'matrix',data:{labels:Array(50).fill(''),datasets:[{data:matrix.flatMap((row,d)=>row.map((v,t)=>({x:t,y:d,v:v}))),backgroundColor(ctx){let val=ctx.raw.v;if(val===0)return'#1e293b';return`rgba(56,189,248,${0.3+val*0.7})`;},borderWidth:0,width:({chart})=>(chart.chartArea||{}).width/50,height:({chart})=>(chart.chartArea||{}).height/10,}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false,offset:true},y:{display:true,reverse:true,ticks:{stepSize:1,color:'#94a3b8'}}}}});chartInstances[sym]=chart;}}
+    // Heatmap update throttled to every 10 ticks
+    function updateHeatmap(sym){
+      let canvas = document.getElementById(`heatmap-${sym}`); if(!canvas) return;
+      let a = store[sym]; if(!a||a.length<50) return;
+      if(!heatmapCounters[sym]) heatmapCounters[sym]=0;
+      heatmapCounters[sym]++;
+      if(heatmapCounters[sym] % 10 !== 0) return;
+      let recent = a.slice(-50);
+      let matrix = Array(10).fill().map(()=>Array(50).fill(0));
+      for(let i=0;i<recent.length;i++) matrix[recent[i]][i]=1;
+      let existing = chartInstances[sym];
+      if(existing){
+        existing.data.datasets[0].data = matrix.flatMap((row,d)=>row.map((v,t)=>({x:t,y:d,v:v})));
+        existing.update('none');
+      } else {
+        let chart = new Chart(canvas, {
+          type:'matrix', data:{ labels:Array(50).fill(''),
+            datasets:[{ data:matrix.flatMap((row,d)=>row.map((v,t)=>({x:t,y:d,v:v}))),
+              backgroundColor(ctx){ let val=ctx.raw.v; return val===0?'#1e293b':`rgba(56,189,248,${0.3+val*0.7})`; },
+              borderWidth:0, width:({chart})=>(chart.chartArea||{}).width/50, height:({chart})=>(chart.chartArea||{}).height/10 }]
+          }, options:{ responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{display:false}, tooltip:{enabled:false} },
+            scales:{ x:{display:false, offset:true}, y:{display:true, reverse:true, ticks:{stepSize:1,color:'#94a3b8'}} } }
+        });
+        chartInstances[sym]=chart;
+      }
+    }
 
-    function detectConsensus(){if(!areSignalsReady())return{active:false};const signals=[];markets.forEach(m=>{let a=store[m.sym];if(!a||a.length<1000)return;let sig=getAdvancedSignal(m.sym);if(sig){let h=computeMarketHealth(m.sym,getCounts(m.sym),a.length,sig,getEvenP(m.sym),getOddP(m.sym));if(h>=50)signals.push({sym:m.sym,bias:sig,health:h});}});if(signals.length>=2){let bc={'BUY EVEN':0,'BUY ODD':0};signals.forEach(s=>bc[s.bias]++);let cb=bc['BUY EVEN']>bc['BUY ODD']?'EVEN':'ODD';if(Math.max(bc['BUY EVEN'],bc['BUY ODD'])>=2)return{active:true,bias:cb,symbols:signals.filter(s=>s.bias.includes(cb)).map(s=>s.sym)};}return{active:false};}
     function getCounts(sym){let a=store[sym];if(!a)return Array(10).fill(0);let c=Array(10).fill(0);a.forEach(d=>c[d]++);return c;}
     function getEvenP(sym){let c=getCounts(sym);let t=c.reduce((a,b)=>a+b,0);let e=c[0]+c[2]+c[4]+c[6]+c[8];return(e/t)*100;}
     function getOddP(sym){return 100-getEvenP(sym);}
     function recomputeOptimalThresholds(){const completed=tradeLog.filter(t=>t.outcome!=='pending');if(completed.length<20)return;let best={winRate:0,z:1.96,opp:14,margin:3};for(let z of[1.65,1.96,2.33,2.58])for(let o of[10,12,14,16])for(let m of[3,5,7,9]){const sub=completed.filter(t=>{let s=parseFloat(t.strength)||0,c=parseFloat(t.confidence)||0;return s>=40+(z-1.65)*30&&c>=30+(o-10)*10;});if(sub.length<5)continue;const w=sub.filter(t=>t.outcome==='win').length;const r=(w/sub.length)*100;if(r>best.winRate)best={winRate:r,z,opp:o,margin:m};}if(best.winRate>0)optimalParams={zThreshold:best.z,maxOpposing:best.opp,minMargin:best.margin};}
     function isStatisticallySignificant(e,o,t){return Math.abs(e/t-0.5)/Math.sqrt(0.25/t)>optimalParams.zThreshold;}
     function checkMultiTimeframeAlignment(sym){let S=storeShort[sym],M=storeMedium[sym],L=store[sym];if(!S||S.length<50||!M||M.length<200||!L||L.length<800)return false;const bias=a=>{let e=a.filter(d=>d%2===0).length;return e>a.length/2?"EVEN":(a.length-e>a.length/2?"ODD":null);};let bs=bias(S),bm=bias(M),bl=bias(L);let votes=[bs,bm,bl].filter(b=>b!==null);return votes.filter(v=>v==="EVEN").length>=2?"EVEN":(votes.filter(v=>v==="ODD").length>=2?"ODD":null);}
-
     function getAdvancedSignal(sym){
       let a=store[sym]; if(!a||a.length<1000)return null;
       let tf=checkMultiTimeframeAlignment(sym); if(!tf)return null;
       let cnt=getCounts(sym),t=a.length, es=cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8], os=t-es;
       if(!isStatisticallySignificant(es,os,t))return null;
-      // Ensure 1000‑tick parity matches the multi‑TF bias direction
       let ep=(es/t)*100, op=(os/t)*100;
-      if (tf === "EVEN" && ep <= op) return null;   // FIX: even must dominate
-      if (tf === "ODD"  && op <= ep) return null;   // FIX: odd must dominate
+      if (tf === "EVEN" && ep <= op) return null;
+      if (tf === "ODD"  && op <= ep) return null;
       let oppDigits = (tf==="EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
-      let allOppBelow10 = oppDigits.every(d => (cnt[d]/t)*100 < 10);
-      if(!allOppBelow10) return null;
+      if(!oppDigits.every(d=>(cnt[d]/t)*100 < 10)) return null;
       if(Math.abs(ep-op)<optimalParams.minMargin)return null;
       return tf==="EVEN"?"BUY EVEN":"BUY ODD";
     }
-
-    function areSignalsReady(){ return Object.values(phaseTwoLoaded).filter(Boolean).length === markets.length; }
+    function areSignalsReady(){ return Object.values(phaseTwoReady).filter(Boolean).length === markets.length; }
 
     function computeSignalStrength(ep,op,perc,sig,sym){if(!sig)return 0;let diff=Math.abs(ep-op);let vf=volatilityFactors[sym]||1;if(sig==="BUY EVEN"){let odd=[1,3,5,7,9];let mo=Math.max(...odd.map(d=>parseFloat(perc[d])));return Math.min(100,(diff*0.5+Math.max(0,optimalParams.maxOpposing-mo)*5)/vf);}else{let even=[0,2,4,6,8];let mo=Math.max(...even.map(d=>parseFloat(perc[d])));return Math.min(100,(diff*0.5+Math.max(0,optimalParams.maxOpposing-mo)*5)/vf);}}
     function computeConfidence(ep,op,perc,sig){if(!sig)return"—";let opp=sig==="BUY EVEN"?[1,3,5,7,9]:[0,2,4,6,8];let maxOpp=Math.max(...opp.map(d=>parseFloat(perc[d])));let margin=optimalParams.maxOpposing-maxOpp;return`${Math.min(100,Math.max(0,(margin/optimalParams.maxOpposing)*100)).toFixed(0)}%`;}
     function computeMarketHealth(sym,cnt,t,sig,ep,op){if(!store[sym]||store[sym].length<1000)return 0;let e=cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8];let z=Math.abs(e/t-0.5)/Math.sqrt(0.25/t);let sigSc=Math.min(100,(z/3)*100);let tfSc=checkMultiTimeframeAlignment(sym)?100:0;let opp=sig==="BUY EVEN"?[1,3,5,7,9]:[0,2,4,6,8];let maxOpp=Math.max(...opp.map(d=>(cnt[d]/t)*100));let oppSc=Math.max(0,100-(maxOpp/optimalParams.maxOpposing)*100);let marginSc=Math.min(100,(Math.abs(ep-op)/15)*100);return Math.round(sigSc*0.3+tfSc*0.3+oppSc*0.2+marginSc*0.2);}
     function getExitSuggestion(sym,sig,cnt,t){if(!sig)return"";let opp=sig==="BUY EVEN"?[1,3,5,7,9]:[0,2,4,6,8];let maxOpp=Math.max(...opp.map(d=>(cnt[d]/t)*100));let thr=optimalParams.maxOpposing*0.9;if(maxOpp>=thr)return`⚠️ Exit soon: opposing ${maxOpp.toFixed(1)}%`;return"🎯 Hold until opposing > "+thr.toFixed(1)+"%";}
-    function recordSignal(symbol,sigType,strength,confidence){let id=Date.now()+Math.random();let entry={id,symbol,signalType:sigType,strength,confidence,timestamp:nowStr(),outcome:"pending"};tradeLog.push(entry);if(!marketStats[symbol])marketStats[symbol]={totalSignals:0,wins:0,losses:0};marketStats[symbol].totalSignals++;if(tradeLog.filter(t=>t.outcome!=='pending').length%20===0)recomputeOptimalThresholds();updateRecentSignals();setTimeout(()=>resolveSignalOutcome(symbol,sigType,id),150);return id;}
-    function resolveSignalOutcome(symbol,pred,id){let last=lastDigitMap[symbol];if(last===undefined)return;let win=(pred==="BUY EVEN"&&last%2===0)||(pred==="BUY ODD"&&last%2!==0);let trade=tradeLog.find(t=>t.id===id);if(trade&&trade.outcome==="pending"){trade.outcome=win?"win":"loss";if(marketStats[trade.symbol]){if(win)marketStats[trade.symbol].wins++;else marketStats[trade.symbol].losses++;}let cnt=getCounts(symbol),t=cnt.reduce((a,b)=>a+b,0),ep=(cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8])/t*100;mlModel.update(getMLFeatures(symbol,ep,100-ep),win?1:0);updateRecentSignals();}}
+    function recordSignal(symbol,sigType,strength,confidence){
+      let id=Date.now()+Math.random();let entry={id,symbol,signalType:sigType,strength,confidence,timestamp:nowStr(),outcome:"pending"};
+      tradeLog.push(entry);if(!marketStats[symbol])marketStats[symbol]={totalSignals:0,wins:0,losses:0};marketStats[symbol].totalSignals++;
+      if(tradeLog.filter(t=>t.outcome!=='pending').length%20===0)recomputeOptimalThresholds();
+      updateRecentSignals();
+      setTimeout(()=>resolveSignalOutcome(symbol,sigType,id),150);
+      return id;
+    }
+    function resolveSignalOutcome(symbol,pred,id){
+      let last=lastDigitMap[symbol];if(last===undefined)return;
+      let win=(pred==="BUY EVEN"&&last%2===0)||(pred==="BUY ODD"&&last%2!==0);
+      let trade=tradeLog.find(t=>t.id===id);
+      if(trade&&trade.outcome==="pending"){
+        trade.outcome=win?"win":"loss";
+        if(marketStats[trade.symbol]){if(win)marketStats[trade.symbol].wins++;else marketStats[trade.symbol].losses++;}
+        let cnt=getCounts(symbol),t=cnt.reduce((a,b)=>a+b,0),ep=(cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8])/t*100;
+        mlModel.update(getMLFeatures(symbol,ep,100-ep),win?1:0);
+        updateRecentSignals();
+      }
+    }
 
-    function directRender() { renderAllMarkets(); }
+    // Fast per‑tick update – only price & tick strip
+    function fastUpdateMarket(sym){
+      let container = marketContainers[sym]; if(!container || !phaseOneReady[sym]) return;
+      let priceEl = container.querySelector('.price'); if(priceEl) priceEl.textContent = priceMap[sym] || "—";
+      let tickDiv = container.querySelector('.tick'); if(tickDiv && store[sym]) tickDiv.innerHTML = store[sym].slice(-50).map(d=>`<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("");
+    }
 
-    function computeMarketData(m){
-      let a=store[m.sym];
-      if (!phaseOneLoaded[m.sym]) return null;
-      let t = a.length;
-      if (t < 10) return null;
-      let cnt = getCounts(m.sym);
-      let perc = cnt.map(c => (c/t*100).toFixed(1));
-      let es = cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8], os = t-es;
-      let ep = (es/t)*100, op = (os/t)*100;
+    // Full rebuild of a single market (when signal state changes)
+    function rebuildMarketUI(sym){
+      let container = marketContainers[sym]; if(!container) return;
+      let data = computeMarketData(sym); if(!data) return;
+      let isSig = data.isSignal;
+      let barW = Math.min(100, data.strength||0), hlthW = data.health||0;
+      let mlProbPercent = (data.mlProb*100).toFixed(1);
+      let mlColor = data.mlProb>0.55?'#4ade80':(data.mlProb<0.45?'#f87171':'#facc15');
+      let sorted = [...data.cnt].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
+      let most = sorted[0].i, second = sorted[1].i, least = sorted[9].i, secondLeast = sorted[8].i;
+      let last = data.arr[data.arr.length-1], rep = data.repCount;
+      function box(i){
+        let cls = ""; if(i===most)cls="most";else if(i===second)cls="second";else if(i===least)cls="least";else if(i===secondLeast)cls="secondLeast";
+        let pointer = (i===last)?`<div class="pointer ${i%2===0?'even':'odd'}">●</div>`:"";
+        let flash = (data.lastDigit===i)?"flash":"", repeatFx = (i===last&&rep>=2)?"repeat":"", counter = (i===last&&rep>=2)?`<div class="repeat-count">x${rep}</div>`:"";
+        return `<div class="box ${cls} ${flash} ${repeatFx}">${pointer}${counter}<div class="digit">${i}</div><div class="percent">${data.perc[i]}%</div></div>`;
+      }
+      let ticks = data.arr.slice(-50).map(d=>`<span class="${d%2===0?'e':'o'}">${d%2===0?'E':'O'}</span>`).join("");
+      let mom = data.momentum, momClass = mom.label==='up'?'momentum-up':(mom.label==='down'?'momentum-down':'momentum-neutral');
+      let momText = mom.label==='up'?`📈 EVENS RISING +${mom.value.toFixed(1)}%`:(mom.label==='down'?`📉 ODDS RISING ${mom.value.toFixed(1)}%`:`➖ steady ${mom.value.toFixed(1)}%`);
+      let momentumHtml = `<span class="momentum-badge ${momClass}">${momText}</span>`;
+      let trendHtml=''; if(data.trendChanged) trendHtml = !isSig&&previousSignalState[sym]?'<span class="stop-signal">⛔ SIGNAL ENDED</span>':'<span class="trend-change">🔄 NEW SIGNAL</span>';
+      let reversalHtml = data.reversal?`<span class="reversal-warning">${data.reversal}</span>`:'';
+      let divergenceHtml = data.divergence?`<span class="divergence-badge">${data.divergence}</span>`:'';
+      let mlAccHtml = `<span class="ml-accuracy-badge" style="color:${data.mlAccuracy>50?'var(--good)':'var(--bad)'}">📊 ML Acc: ${data.mlAccuracy.toFixed(1)}%</span>`;
+      let pin = `<span class="pin-star ${pinnedSymbols.has(sym)?'pinned':''}" onclick="window.pinMarketPermanent('${sym}')">⭐</span>`;
+      container.className = "market " + (isSig?"signal":"") + (pinnedSymbols.has(sym)?" pinned":"");
+      container.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+          <div><b>${data.name} ${pin}</b> <span class="small-badge" style="background:${data.regime.color}">🌊 ${data.regime.type}</span>${trendHtml}${reversalHtml}${divergenceHtml}${momentumHtml}</div>
+          <div style="display:flex;align-items:center;">
+            <span class="small-badge">❤️ ${hlthW}%</span><div class="health-bar-bg"><div class="health-bar-fill" style="width:${hlthW}%;"></div></div>
+            <span class="ml-prob" style="color:${mlColor}">🤖 ML: ${mlProbPercent}% even</span>${mlAccHtml}
+          </div>
+        </div>
+        <div class="price">${data.price}</div>
+        <div class="win">🎲 EVEN ${data.evenP.toFixed(1)}% | ODD ${data.oddP.toFixed(1)}%</div>
+        <div class="metrics">
+          <div class="metric-item"><span class="metric-label">💪 STRENGTH</span><span class="strength-value">${data.strength.toFixed(1)}%</span>
+          <div class="strength-bar-bg"><div class="strength-bar-fill" style="width:${barW}%;"></div></div></div>
+          <div class="metric-item"><span class="metric-label">🎯 CONFIDENCE</span><span class="confidence-value">${data.confidence}</span>
+          ${isSig?'<span class="confidence-badge" style="background:#22c55e20;">🔥 ACTIVE</span>':'<span class="confidence-badge" style="background:#334155;">⚡ IDLE</span>'}</div>
+        </div>
+        ${isSig?`<div class="signal-text ${data.signalType==='BUY EVEN'?'buy-even':'buy-odd'}">🚀 ${data.signalType} (strength ${data.strength.toFixed(1)}% | conf ${data.confidence}) <span class="exit-suggestion">${data.exitMsg}</span></div>`:''}
+        <canvas id="sparkline-${sym}" class="sparkline-canvas"></canvas>
+        <div style="height:80px;margin:5px 0;"><canvas id="heatmap-${sym}" width="200" height="80"></canvas></div>
+        <div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
+        <div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
+        <div class="tick">${ticks}</div>
+      `;
+      setTimeout(()=>{ drawSparkline(sym); updateHeatmap(sym); }, 10);
+    }
+
+    function computeMarketData(sym){
+      let a = store[sym]; if(!phaseOneReady[sym]) return null;
+      let t = a.length; if(t<10) return null;
+      let cnt = getCounts(sym), perc = cnt.map(c=>(c/t*100).toFixed(1));
+      let es = cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8], os = t-es, ep = (es/t)*100, op = (os/t)*100;
       let sig = null, isSig = false, strength = 0, confidence = "—", health = 0;
-      if (phaseTwoLoaded[m.sym]) {
-        sig = getAdvancedSignal(m.sym);
-        isSig = sig !== null;
-        if (isSig) {
-          strength = computeSignalStrength(ep,op,perc,sig,m.sym);
+      if(phaseTwoReady[sym]){
+        sig = getAdvancedSignal(sym); isSig = sig!==null;
+        if(isSig){
+          strength = computeSignalStrength(ep,op,perc,sig,sym);
           confidence = computeConfidence(ep,op,perc,sig);
-          if (!window._lastSignalTick || window._lastSignalTick !== lastDigitMap[m.sym]) {
-            window._lastSignalTick = lastDigitMap[m.sym];
-            recordSignal(m.sym, sig, strength.toFixed(1), confidence);
+          if(!window._lastSignalTick || window._lastSignalTick !== lastDigitMap[sym]){
+            window._lastSignalTick = lastDigitMap[sym];
+            recordSignal(sym, sig, strength.toFixed(1), confidence);
           }
           audio.play();
         }
-        health = computeMarketHealth(m.sym,cnt,t,sig,ep,op);
+        health = computeMarketHealth(sym,cnt,t,sig,ep,op);
       }
-      let exitMsg = isSig ? getExitSuggestion(m.sym,sig,cnt,t) : "";
-      let regime = classifyRegime(m.sym);
-      let reversal = isSig ? detectReversalPattern(m.sym,cnt,t,ep,op) : null;
-      let features = getMLFeatures(m.sym,ep,op);
+      let exitMsg = isSig?getExitSuggestion(sym,sig,cnt,t):"";
+      let regime = classifyRegime(sym);
+      let reversal = isSig?detectReversalPattern(sym,cnt,t,ep,op):null;
+      let features = getMLFeatures(sym,ep,op);
       let mlProb = mlModel.predict(features);
-      let momentum = computeBiasMomentum(m.sym);
-      let divergence = isSig ? detectDivergence(m.sym,sig,momentum) : null;
-      let mlAcc = computeMLAccuracy(m.sym);
-      recordMLPrediction(m.sym, mlProb);
-      if (isSig) lastSignalTime[m.sym] = Date.now();
-      else if (!lastSignalTime[m.sym]) lastSignalTime[m.sym] = 0;
-      let prevState = previousSignalState[m.sym] || false;
-      let trendChanged = (prevState !== isSig);
-      previousSignalState[m.sym] = isSig;
-      let sortScore = pinnedSymbols.has(m.sym) ? Infinity : (isSig ? 1e9+(strength*(parseFloat(confidence)||0)/100) : lastSignalTime[m.sym]||0);
-      return {
-        sym:m.sym, name:m.name, price:priceMap[m.sym]||"—", evenP:ep, oddP:op,
+      let momentum = computeBiasMomentum(sym);
+      let divergence = isSig?detectDivergence(sym,sig,momentum):null;
+      let mlAcc = computeMLAccuracy(sym);
+      recordMLPrediction(sym,mlProb);
+      if(isSig) lastSignalTime[sym] = Date.now(); else if(!lastSignalTime[sym]) lastSignalTime[sym]=0;
+      let prevState = previousSignalState[sym]||false;
+      let trendChanged = (prevState!==isSig); previousSignalState[sym]=isSig;
+      let sortScore = pinnedSymbols.has(sym)?Infinity:(isSig?1e9+(strength*(parseFloat(confidence)||0)/100):lastSignalTime[sym]||0);
+      return{
+        sym, name: markets.find(m=>m.sym===sym).name, price: priceMap[sym]||"—", evenP:ep, oddP:op,
         signalType:sig, isSignal:isSig, strength, confidence, health, exitMsg,
         regime, reversal, mlProb, momentum, divergence, mlAccuracy:mlAcc,
-        perc, cnt, arr:a, lastDigit:lastDigitMap[m.sym],
-        repCount: (()=>{ let c=0,ld=a[a.length-1];for(let i=a.length-1;i>=0;i--){if(a[i]===ld)c++;else break;}return c;})(),
+        perc, cnt, arr:a, lastDigit: lastDigitMap[sym],
+        repCount: (()=>{let c=0,ld=a[a.length-1];for(let i=a.length-1;i>=0;i--){if(a[i]===ld)c++;else break;}return c;})(),
         trendChanged, sortScore
       };
     }
 
-    function renderAllMarkets(){
+    // Only re‑render the visible markets when selection changes
+    function refreshVisibleMarkets(){
       let wrap = document.getElementById("markets"); if(!wrap) return;
-      let visible = [];
-      let checkboxes = document.querySelectorAll('#marketSelectorList .market-checkbox');
-      if (checkboxes.length === 0) {
-        visible = markets.map(m => m.sym);
-      } else {
-        checkboxes.forEach(cb => { if(cb.checked) visible.push(cb.dataset.sym); });
-      }
-      let arr = [];
-      markets.forEach(m => { if(!visible.includes(m.sym)) return; let d = computeMarketData(m); if(d) arr.push(d); });
-      arr.sort((a,b) => b.sortScore - a.sortScore);
-
+      let visible = []; document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb=>{if(cb.checked)visible.push(cb.dataset.sym);});
+      if(!visible.length) visible = markets.map(m=>m.sym);
+      let arr = []; markets.forEach(m=>{if(!visible.includes(m.sym))return;let d=computeMarketData(m.sym);if(d)arr.push(d);});
+      arr.sort((a,b)=>b.sortScore-a.sortScore);
+      let desiredIds = arr.map(d=>`market-${d.sym}`);
+      Array.from(wrap.children).filter(el=>el.id.startsWith('market-')&&!desiredIds.includes(el.id)).forEach(el=>el.remove());
+      desiredIds.forEach((id,idx)=>{
+        let sym = id.replace('market-','');
+        let container = document.getElementById(id);
+        if(!container){container=document.createElement('div');container.id=id;container.className='market';wrap.appendChild(container);}
+        if(wrap.children[idx]!==container) wrap.insertBefore(container,wrap.children[idx]||null);
+        marketContainers[sym] = container;
+        let data = arr.find(d=>d.sym===sym);
+        if(data) rebuildMarketUI(sym);
+      });
+      updateBlinkingStates();
       let oldAlert = document.getElementById('consensusAlert'); if(oldAlert) oldAlert.remove();
       if(areSignalsReady()){
         let consensus = detectConsensus();
@@ -275,213 +391,129 @@
           wrap.prepend(ad);
         }
       }
-
-      let existingIds = Array.from(wrap.children).filter(el => el.id.startsWith('market-')).map(el => el.id);
-      let desiredIds = arr.map(d => `market-${d.sym}`);
-      existingIds.forEach(id => { if(!desiredIds.includes(id)) { let el = document.getElementById(id); if(el) el.remove(); } });
-      desiredIds.forEach((id, idx) => {
-        let sym = id.replace('market-','');
-        let container = document.getElementById(id);
-        if(!container){ container = document.createElement('div'); container.id = id; container.className = 'market'; wrap.appendChild(container); }
-        let currentPos = Array.from(wrap.children).indexOf(container);
-        if(currentPos !== idx && idx < wrap.children.length) {
-          wrap.insertBefore(container, wrap.children[idx] || null);
-        }
-        marketElements[sym] = container;
-      });
-      arr.forEach((data, idx) => {
-        let container = marketElements[data.sym]; if(!container) return;
-        let isSig = data.isSignal;
-        let barWidth = Math.min(100, data.strength);
-        let healthWidth = data.health;
-        let mlProbPercent = (data.mlProb*100).toFixed(1);
-        let mlColor = data.mlProb>0.55 ? '#4ade80' : (data.mlProb<0.45 ? '#f87171' : '#facc15');
-        let sorted = [...data.cnt].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
-        let most=sorted[0].i, second=sorted[1].i, least=sorted[9].i, secondLeast=sorted[8].i;
-        let last=data.arr[data.arr.length-1], rep=data.repCount;
-        function box(i){
-          let cls=""; if(i===most)cls="most";else if(i===second)cls="second";else if(i===least)cls="least";else if(i===secondLeast)cls="secondLeast";
-          let pointer=(i===last)?`<div class="pointer ${i%2==0?'even':'odd'}">●</div>`:"";
-          let flash=(data.lastDigit===i)?"flash":"", repeatFx=(i===last&&rep>=2)?"repeat":"", counter=(i===last&&rep>=2)?`<div class="repeat-count">x${rep}</div>`:"";
-          return `<div class="box ${cls} ${flash} ${repeatFx}">${pointer}${counter}<div class="digit">${i}</div><div class="percent">${data.perc[i]}%</div></div>`;
-        }
-        let ticks = data.arr.slice(-50).map(d => `<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("");
-        let mom = data.momentum;
-        let momClass = mom.label==='up'?'momentum-up':(mom.label==='down'?'momentum-down':'momentum-neutral');
-        let momText = mom.label==='up'?`📈 EVENS RISING +${mom.value.toFixed(1)}%`:(mom.label==='down'?`📉 ODDS RISING ${mom.value.toFixed(1)}%`:`➖ steady ${mom.value.toFixed(1)}%`);
-        let momentumHtml = `<span class="momentum-badge ${momClass}">${momText}</span>`;
-        let trendHtml=''; if(data.trendChanged){trendHtml=!isSig&&previousSignalState[data.sym]?'<span class="stop-signal">⛔ SIGNAL ENDED</span>':'<span class="trend-change">🔄 NEW SIGNAL</span>';}
-        let reversalHtml = data.reversal?`<span class="reversal-warning">${data.reversal}</span>`:'';
-        let divergenceHtml = data.divergence?`<span class="divergence-badge">${data.divergence}</span>`:'';
-        let mlAccHtml = `<span class="ml-accuracy-badge" style="color:${data.mlAccuracy>50?'var(--good)':'var(--bad)'}">📊 ML Acc: ${data.mlAccuracy.toFixed(1)}%</span>`;
-        let pinStarHtml = `<span class="pin-star ${pinnedSymbols.has(data.sym)?'pinned':''}" onclick="window.pinMarketPermanent('${data.sym}')">⭐</span>`;
-        container.className = "market " + (isSig?"signal":"") + (pinnedSymbols.has(data.sym)?" pinned":"");
-        if(idx===0 && isSig && !pinnedSymbols.has(data.sym)) container.classList.add("ranked-first");
-        container.innerHTML = `
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;">
-            <div>
-              <b>${data.name} ${pinStarHtml}</b>
-              <span class="small-badge" style="background:${data.regime.color}">🌊 ${data.regime.type}</span>
-              ${trendHtml}${reversalHtml}${divergenceHtml}${momentumHtml}
-            </div>
-            <div style="display:flex;align-items:center;">
-              <span class="small-badge">❤️ ${data.health}%</span>
-              <div class="health-bar-bg"><div class="health-bar-fill" style="width:${healthWidth}%;"></div></div>
-              <span class="ml-prob" style="color:${mlColor}">🤖 ML: ${mlProbPercent}% even</span>
-              ${mlAccHtml}
-            </div>
-          </div>
-          <div class="price">${data.price}</div>
-          <div class="win">🎲 EVEN ${data.evenP.toFixed(1)}% | ODD ${data.oddP.toFixed(1)}%</div>
-          <div class="metrics">
-            <div class="metric-item"><span class="metric-label">💪 STRENGTH</span><span class="strength-value">${data.strength.toFixed(1)}%</span>
-            <div class="strength-bar-bg"><div class="strength-bar-fill" style="width:${barWidth}%;"></div></div></div>
-            <div class="metric-item"><span class="metric-label">🎯 CONFIDENCE</span><span class="confidence-value">${data.confidence}</span>
-            ${isSig?'<span class="confidence-badge" style="background:#22c55e20;">🔥 ACTIVE</span>':'<span class="confidence-badge" style="background:#334155;">⚡ IDLE</span>'}</div>
-          </div>
-          ${isSig ? `<div class="signal-text ${data.signalType==='BUY EVEN'?'buy-even':'buy-odd'}">🚀 ${data.signalType} (strength ${data.strength.toFixed(1)}% | conf ${data.confidence}) <span class="exit-suggestion">${data.exitMsg}</span></div>` : ''}
-          <canvas id="sparkline-${data.sym}" class="sparkline-canvas"></canvas>
-          <div style="height:80px;margin:5px 0;"><canvas id="heatmap-${data.sym}" width="200" height="80" style="width:100%;height:100%;"></canvas></div>
-          <div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
-          <div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
-          <div class="tick">${ticks}</div>
-        `;
-        setTimeout(()=>{ drawSparkline(data.sym); updateHeatmap(data.sym); }, 10);
-      });
-      updateBlinkingStates();
-    }
-
-    // Static panels
-    function buildStaticSelector(){
-      let panel = document.getElementById("statsPanel"); if(!panel) return;
-      if(document.getElementById("marketSelectorContainer")) return;
-      let html = `<div class="stats-panel" id="marketSelectorContainer">
-        <div class="stats-title">📋 Market Selection</div>
-        <div id="marketSelectorList" class="market-selector-list">
-          ${markets.map(m => `
-            <div class="market-list-item" id="item-${m.sym}" onclick="window.pinMarketPermanent('${m.sym}')">
-              <input type="checkbox" class="market-checkbox" data-sym="${m.sym}" checked>
-              <span>${m.name}</span>
-            </div>`).join('')}
-        </div>
-        <div style="margin-top:8px;display:flex;gap:6px;">
-          <button id="selectAll">All</button>
-          <button id="deselectAll">None</button>
-        </div>
-      </div>`;
-      panel.insertAdjacentHTML('afterbegin', html);
-      document.getElementById('selectAll').onclick = () => { document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.checked=true); directRender(); };
-      document.getElementById('deselectAll').onclick = () => { document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.checked=false); directRender(); };
-      document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb => cb.addEventListener('change', ()=>directRender()));
     }
 
     function updateBlinkingStates(){
-      markets.forEach(m => {
-        let item = document.getElementById(`item-${m.sym}`);
-        if(!item) return;
-        let hasSignal = false;
-        if(store[m.sym] && store[m.sym].length >= 1000 && phaseTwoLoaded[m.sym]){
-          hasSignal = getAdvancedSignal(m.sym) !== null;
-        }
-        item.classList.toggle('blinking', hasSignal);
+      markets.forEach(m=>{
+        let item = document.getElementById(`item-${m.sym}`); if(!item)return;
+        let hasSig = phaseTwoReady[m.sym]?getAdvancedSignal(m.sym)!==null:false;
+        item.classList.toggle('blinking',hasSig);
       });
     }
 
+    // Static panels (only once)
+    function buildStaticSelector(){
+      let panel = document.getElementById("statsPanel"); if(!panel||document.getElementById("marketSelectorContainer"))return;
+      let html = `<div class="stats-panel" id="marketSelectorContainer"><div class="stats-title">📋 Market Selection</div><div id="marketSelectorList" class="market-selector-list">${markets.map(m=>`<div class="market-list-item" id="item-${m.sym}" onclick="window.pinMarketPermanent('${m.sym}')"><input type="checkbox" class="market-checkbox" data-sym="${m.sym}" checked><span>${m.name}</span></div>`).join('')}</div><div style="margin-top:8px;display:flex;gap:6px;"><button id="selectAll">All</button><button id="deselectAll">None</button></div></div>`;
+      panel.insertAdjacentHTML('afterbegin',html);
+      document.getElementById('selectAll').onclick=()=>{document.querySelectorAll('.market-checkbox').forEach(cb=>cb.checked=true);refreshVisibleMarkets();};
+      document.getElementById('deselectAll').onclick=()=>{document.querySelectorAll('.market-checkbox').forEach(cb=>cb.checked=false);refreshVisibleMarkets();};
+      document.querySelectorAll('.market-checkbox').forEach(cb=>cb.addEventListener('change',refreshVisibleMarkets));
+    }
     function buildRecentSignalsPanel(){
-      let panel = document.getElementById("statsPanel"); if(!panel || document.getElementById("recentSignalsContainer")) return;
-      panel.insertAdjacentHTML('beforeend', `<div class="stats-panel" id="recentSignalsContainer">
-        <div class="stats-title">📋 RECENT SIGNALS (click to pin)</div>
-        <div class="signal-log" id="recentSignalsLog">No signals yet</div>
-      </div>`);
+      let panel = document.getElementById("statsPanel"); if(!panel||document.getElementById("recentSignalsContainer"))return;
+      panel.insertAdjacentHTML('beforeend',`<div class="stats-panel" id="recentSignalsContainer"><div class="stats-title">📋 RECENT SIGNALS</div><div class="signal-log" id="recentSignalsLog">No signals yet</div></div>`);
     }
-
     function updateRecentSignals(){
-      let logContainer = document.getElementById("recentSignalsLog"); if(!logContainer) return;
-      let recentHtml = tradeLog.slice(-10).reverse().map(log => {
-        let outcomeClass = log.outcome==="win"?"log-win":(log.outcome==="loss"?"log-loss":"log-pending");
-        let outcomeText = log.outcome==="win"?"✓ WIN":(log.outcome==="loss"?"✗ LOSS":"⌛ pending");
-        return `<div class="log-entry" onclick="window.pinMarketPermanent('${log.symbol}')" title="Click to pin ${log.symbol}">
-          <span>${log.timestamp}</span> 
-          <span>${log.symbol}</span> 
-          <span>${log.signalType}</span>
-          <span class="${outcomeClass}">${outcomeText}</span>
-          <span>💪${log.strength}%</span>
-        </div>`;
-      }).join("");
-      logContainer.innerHTML = recentHtml || "<div>No signals yet</div>";
+      let log = document.getElementById("recentSignalsLog"); if(!log)return;
+      log.innerHTML = tradeLog.slice(-10).reverse().map(l=>{
+        let oc=l.outcome==="win"?"log-win":(l.outcome==="loss"?"log-loss":"log-pending");
+        let ot=l.outcome==="win"?"✓ WIN":(l.outcome==="loss"?"✗ LOSS":"⌛ pending");
+        return `<div class="log-entry" onclick="window.pinMarketPermanent('${l.symbol}')">${l.timestamp} ${l.symbol} ${l.signalType} <span class="${oc}">${ot}</span> 💪${l.strength}%</div>`;
+      }).join('')||'No signals yet';
     }
 
-    window.pinMarketPermanent = (sym) => { if(pinnedSymbols.has(sym)) pinnedSymbols.delete(sym); else pinnedSymbols.add(sym); directRender(); };
-    function recordMLPrediction(sym,prob){ lastMLPredictions[sym]={prob,timestamp:Date.now()}; }
-    function computeMLAccuracy(sym){ if(!mlAccuracyHistory[sym]) return 0; let a = mlAccuracyHistory[sym].slice(-50); return a.length?(a.filter(x=>x).length/a.length)*100:0; }
+    window.pinMarketPermanent = (sym)=>{if(pinnedSymbols.has(sym))pinnedSymbols.delete(sym);else pinnedSymbols.add(sym);refreshVisibleMarkets();};
+    function recordMLPrediction(sym,prob){lastMLPredictions[sym]={prob,timestamp:Date.now()};}
+    function computeMLAccuracy(sym){if(!mlAccuracyHistory[sym])return 0;let a=mlAccuracyHistory[sym].slice(-50);return a.length?(a.filter(x=>x).length/a.length)*100:0;}
 
-    // WebSocket
-    ws.onopen = () => {
+    // WebSocket – phased loading
+    ws.onopen = ()=>{
       ws.send(JSON.stringify({authorize:token}));
-      markets.forEach(m => {
-        store[m.sym] = []; storeShort[m.sym] = []; storeMedium[m.sym] = []; storeFullHistory[m.sym] = [];
-        phaseOneLoaded[m.sym] = false; phaseTwoLoaded[m.sym] = false;
-        ws.send(JSON.stringify({ticks_history:m.sym, count:200, end:"latest", style:"ticks"}));
-        ws.send(JSON.stringify({ticks:m.sym, subscribe:1}));
+      markets.forEach(m=>{
+        store[m.sym]=[];storeShort[m.sym]=[];storeMedium[m.sym]=[];
+        phaseOneReady[m.sym]=false;phaseTwoReady[m.sym]=false;
+        ws.send(JSON.stringify({ticks_history:m.sym,count:200,end:"latest",style:"ticks"}));
+        ws.send(JSON.stringify({ticks:m.sym,subscribe:1}));
       });
     };
-
-    ws.onmessage = (msg) => {
+    ws.onmessage = (msg)=>{
       let d = JSON.parse(msg.data);
-      if (d.history) {
+      if(d.history){
         let s = d.echo_req.ticks_history;
-        let pip = pipMap[s] || 2;
-        let prices = d.history.prices.map(p => parseFloat(p).toFixed(pip));
-        let digits = prices.map(p => parseInt(p.slice(-1)));
-        if (!phaseOneLoaded[s]) {
-          store[s] = digits.slice(-200);
-          storeShort[s] = digits.slice(-100);
-          storeMedium[s] = digits.slice(-200);
-          phaseOneLoaded[s] = true;
-          ws.send(JSON.stringify({ticks_history:s, count:1000, end:"latest", style:"ticks"}));
-        } else if (!phaseTwoLoaded[s]) {
-          store[s] = digits.slice(-1000);
-          storeShort[s] = digits.slice(-100);
-          storeMedium[s] = digits.slice(-500);
-          phaseTwoLoaded[s] = true;
-          historyLoaded[s] = true;
+        let pip = pipMap[s]||2;
+        let prices = d.history.prices.map(p=>parseFloat(p).toFixed(pip));
+        let digits = prices.map(p=>parseInt(p.slice(-1)));
+        if(!phaseOneReady[s]){
+          store[s]=digits.slice(-200);storeShort[s]=digits.slice(-100);storeMedium[s]=digits.slice(-200);
+          phaseOneReady[s]=true;
+          ws.send(JSON.stringify({ticks_history:s,count:1000,end:"latest",style:"ticks"}));
+          // create placeholder
+          let wrap = document.getElementById("markets");
+          if(!document.getElementById(`market-${s}`)){
+            let div = document.createElement('div');div.id=`market-${s}`;div.className='market';
+            div.innerHTML = `<div class="price">Loading...</div>`;wrap.appendChild(div);marketContainers[s]=div;
+          }
+        } else if(!phaseTwoReady[s]){
+          store[s]=digits.slice(-1000);storeShort[s]=digits.slice(-100);storeMedium[s]=digits.slice(-500);
+          phaseTwoReady[s]=true;
+          rebuildMarketUI(s);
+          if(areSignalsReady()) refreshVisibleMarkets();
         } else {
-          store[s] = digits.slice(-1000);
-          storeShort[s] = digits.slice(-100);
-          storeMedium[s] = digits.slice(-500);
+          store[s]=digits.slice(-1000);storeShort[s]=digits.slice(-100);storeMedium[s]=digits.slice(-500);
         }
-        storeFullHistory[s] = digits;
-        directRender();
       }
-      if (d.tick) {
+      if(d.tick){
         let s = d.tick.symbol;
         pipMap[s] = d.tick.pip_size;
         let price = parseFloat(d.tick.quote).toFixed(pipMap[s]);
         let digit = parseInt(price.slice(-1));
-        priceMap[s] = price;
-        lastDigitMap[s] = digit;
-        if (!phaseOneLoaded[s]) return;
-        store[s].push(digit); storeShort[s].push(digit); storeMedium[s].push(digit);
-        storeFullHistory[s].push(digit);
-        if (store[s].length > 1000) store[s].shift();
-        if (storeShort[s].length > 100) storeShort[s].shift();
-        if (storeMedium[s].length > 500) storeMedium[s].shift();
-        if (storeFullHistory[s].length > 5000) storeFullHistory[s].shift();
+        priceMap[s] = price; lastDigitMap[s] = digit;
+        if(!phaseOneReady[s]) return;
+        store[s].push(digit);storeShort[s].push(digit);storeMedium[s].push(digit);
+        if(store[s].length>1000)store[s].shift();if(storeShort[s].length>100)storeShort[s].shift();if(storeMedium[s].length>500)storeMedium[s].shift();
+        // ML accuracy
         let lastPred = lastMLPredictions[s];
-        if (lastPred) {
-          let predEven = lastPred.prob > 0.5, actualEven = digit%2===0;
-          if (!mlAccuracyHistory[s]) mlAccuracyHistory[s] = [];
-          mlAccuracyHistory[s].push(predEven === actualEven);
-          if (mlAccuracyHistory[s].length > 50) mlAccuracyHistory[s].shift();
+        if(lastPred){
+          let predEven = lastPred.prob>0.5, actualEven = digit%2===0;
+          if(!mlAccuracyHistory[s])mlAccuracyHistory[s]=[];
+          mlAccuracyHistory[s].push(predEven===actualEven);
+          if(mlAccuracyHistory[s].length>50)mlAccuracyHistory[s].shift();
         }
-        directRender();
+        // Fast update
+        fastUpdateMarket(s);
+        drawSparkline(s);
+        updateHeatmap(s);
+        // Rebuild whole UI only if signal may have changed
+        if(phaseTwoReady[s]){
+          let oldSig = previousSignalState[s]||false;
+          let newSig = getAdvancedSignal(s)!==null;
+          if(oldSig!==newSig){
+            rebuildMarketUI(s);
+            updateBlinkingStates();
+          } else {
+            // update strength/confidence text only (since they change every tick)
+            let container = marketContainers[s];
+            if(container){
+              let strengthEl = container.querySelector('.strength-value');
+              let confEl = container.querySelector('.confidence-value');
+              if(strengthEl && confEl){
+                let data = computeMarketData(s);
+                if(data){
+                  strengthEl.textContent = data.strength.toFixed(1)+'%';
+                  confEl.textContent = data.confidence;
+                }
+              }
+            }
+          }
+        }
       }
     };
 
-    markets.forEach(m => { marketElements[m.sym] = null; lastSignalTime[m.sym] = 0; });
+    markets.forEach(m=>{marketContainers[m.sym]=null;lastSignalTime[m.sym]=0;});
     buildStaticSelector();
     buildRecentSignalsPanel();
-    document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
+    document.getElementById('themeToggle').onclick=()=>document.body.classList.toggle('light');
   })();
 </script>
 </body>
