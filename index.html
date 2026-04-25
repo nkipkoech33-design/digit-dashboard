@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO — Momentum + Sparkline + Persistent Ranking</title>
+  <title>Digit Analyzer PRO — Clickable Signals + Live Reorder</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
   </script>
   <style>
@@ -15,6 +15,7 @@
 
     .market{border:1px solid #1e293b;padding:6px;border-radius:6px;transition:0.1s;}
     .signal{animation:blink 0.6s infinite;border:2px solid #facc15;}
+    .market.pinned { box-shadow: 0 0 15px #facc15; }
     @keyframes blink{0%{opacity:1;}50%{opacity:0.6;}100%{opacity:1;}}
 
     .price{text-align:center;font-size:22px;color:#38bdf8;font-weight:bold;}
@@ -107,7 +108,8 @@
     .winrate-good{color:#4ade80;}
     .winrate-bad{color:#f87171;}
     .signal-log{font-size:11px;max-height:200px;overflow-y:auto;}
-    .log-entry{padding:4px;border-bottom:1px solid #1e293b;font-family:monospace;}
+    .log-entry{padding:4px;border-bottom:1px solid #1e293b;font-family:monospace; cursor:pointer; transition:0.2s;}
+    .log-entry:hover{background:#1e293b;}
     .log-win{color:#4ade80;}
     .log-loss{color:#f87171;}
     .log-pending{color:#facc15;}
@@ -122,8 +124,6 @@
     .health-bar-bg { width: 60px; background: #334155; border-radius: 20px; height: 6px; overflow: hidden; display: inline-block; margin-left: 5px; }
     .health-bar-fill { background: linear-gradient(90deg, #ef4444, #facc15, #4ade80); height: 6px; width: 0%; border-radius: 20px; }
     .exit-suggestion { font-size: 11px; background: #1e293b; padding: 3px 8px; border-radius: 16px; margin-left: 8px; }
-    .correlation-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px,1fr)); gap: 4px; font-size: 10px; }
-    .corr-cell { padding: 4px; text-align: center; border-radius: 4px; }
     .replay-controls { background: #1e293b; padding: 8px; border-radius: 8px; margin-bottom: 10px; }
     .slider { width: 100%; }
     .small-badge { font-size: 10px; padding: 2px 6px; border-radius: 12px; background: #334155; }
@@ -135,24 +135,12 @@
     .reversal-warning { background: #7f1d1d; color: white; padding: 2px 6px; border-radius: 12px; font-size: 10px; margin-left: 5px; }
     .ml-prob { font-size: 12px; background: #1e293b; padding: 2px 8px; border-radius: 16px; }
 
-    /* Momentum badge */
-    .momentum-badge {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 12px;
-      margin-left: 5px;
-      background: #1e293b;
-    }
+    .momentum-badge { font-size: 11px; padding: 2px 8px; border-radius: 12px; margin-left: 5px; background: #1e293b; }
     .momentum-up { color: #4ade80; }
     .momentum-down { color: #f87171; }
     .momentum-neutral { color: #94a3b8; }
 
-    /* Sparkline canvas */
-    .sparkline-canvas {
-      width: 100%;
-      height: 40px;
-      margin: 5px 0;
-    }
+    .sparkline-canvas { width: 100%; height: 40px; margin: 5px 0; }
 
     @media(max-width:1200px){
         .left{width:100%;}
@@ -200,10 +188,7 @@
     // ==== GLOBAL STATE ====
     let ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
     
-    let store = {};          // 1000 ticks
-    let storeShort = {};     // 100 ticks
-    let storeMedium = {};    // 500 ticks
-    let storeFullHistory = {};
+    let store = {}, storeShort = {}, storeMedium = {}, storeFullHistory = {};
     let priceMap = {}, pipMap = {}, historyLoaded = {}, lastDigitMap = {};
     let audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
 
@@ -212,7 +197,7 @@
 
     let previousSignalState = {};
     let marketTrendChangeFlag = {};
-    let lastSignalTime = {};   // for ranking persistence
+    let lastSignalTime = {};
 
     let replayMode = false, replayIndex = 0, replaySnapshot = {};
 
@@ -225,12 +210,11 @@
       'JD10': 1.2, 'JD25': 1.5, 'JD50': 2.0, 'JD75': 2.5, 'JD100': 3.0
     };
 
-    // ==== ONLINE LOGISTIC REGRESSION (ML) ====
+    // ==== ML MODEL ====
     class OnlineLogisticRegression {
       constructor(featureCount = 2, learningRate = 0.01) {
         this.weights = Array(featureCount).fill(0).map(() => Math.random() * 0.1);
-        this.bias = 0;
-        this.lr = learningRate;
+        this.bias = 0; this.lr = learningRate;
       }
       sigmoid(z) { return 1 / (1 + Math.exp(-z)); }
       predict(features) {
@@ -241,27 +225,19 @@
       update(features, label) {
         let pred = this.predict(features);
         let error = label - pred;
-        for (let i=0; i<features.length; i++) {
-          this.weights[i] += this.lr * error * features[i];
-        }
+        for (let i=0; i<features.length; i++) this.weights[i] += this.lr * error * features[i];
         this.bias += this.lr * error;
       }
     }
-
     let mlModel = new OnlineLogisticRegression(3);
 
     function getMLFeatures(sym, evenP, oddP) {
       let arr = store[sym];
       if (!arr || arr.length < 10) return [0,0,0];
       let diff = (evenP - oddP) / 100;
-      let streak = 0;
-      let last = arr[arr.length-1];
-      for (let i=arr.length-1; i>=0; i--) {
-        if (arr[i] === last) streak++; else break;
-      }
-      let normStreak = Math.min(streak, 10) / 10;
-      let vol = volatilityFactors[sym] / 3;
-      return [diff, normStreak, vol];
+      let streak = 0, last = arr[arr.length-1];
+      for (let i=arr.length-1; i>=0; i--) { if (arr[i] === last) streak++; else break; }
+      return [diff, Math.min(streak,10)/10, volatilityFactors[sym]/3];
     }
 
     function nowStr() { return new Date().toLocaleTimeString(); }
@@ -269,15 +245,15 @@
     // ==== MARKET REGIME ====
     function classifyRegime(sym) {
       let arr = store[sym];
-      if (!arr || arr.length < 50) return { type: 'Unknown', color: '#64748b' };
+      if (!arr || arr.length < 50) return { type:'Unknown', color:'#64748b' };
       let recent = arr.slice(-50);
       let parity = recent.map(d => d%2===0 ? 0 : 1);
       let mean = parity.reduce((a,b)=>a+b,0)/parity.length;
       let variance = parity.reduce((a,b)=>a+Math.pow(b-mean,2),0)/parity.length;
       let std = Math.sqrt(variance);
-      if (std < 0.35) return { type: 'Calm', color: '#15803d' };
-      if (std > 0.48) return { type: 'Trending', color: '#1d4ed8' };
-      return { type: 'Choppy', color: '#b45309' };
+      if (std < 0.35) return { type:'Calm', color:'#15803d' };
+      if (std > 0.48) return { type:'Trending', color:'#1d4ed8' };
+      return { type:'Choppy', color:'#b45309' };
     }
 
     // ==== PATTERN REVERSAL ====
@@ -286,21 +262,18 @@
       if (!arr || arr.length < 30) return null;
       let recent = arr.slice(-30);
       let evenCount = recent.filter(d => d%2===0).length;
-      let oddCount = recent.length - evenCount;
       let biasNow = evenP > oddP ? 'EVEN' : 'ODD';
-      let biasRecent = evenCount > oddCount ? 'EVEN' : 'ODD';
+      let biasRecent = evenCount > recent.length/2 ? 'EVEN' : 'ODD';
       if (biasNow !== biasRecent) return '⚠️ Bias shift imminent';
-      let windowSize = 10;
       let evenPercHistory = [];
-      for (let i=0; i<=arr.length-windowSize; i+=5) {
-        let slice = arr.slice(i, i+windowSize);
-        let e = slice.filter(d=>d%2===0).length / windowSize * 100;
-        evenPercHistory.push(e);
+      for (let i=0; i<=arr.length-10; i+=5) {
+        let slice = arr.slice(i, i+10);
+        evenPercHistory.push(slice.filter(d=>d%2===0).length/10*100);
       }
       if (evenPercHistory.length >= 3) {
         let last3 = evenPercHistory.slice(-3);
-        if (last3[0] > last3[1] && last3[2] > last3[1] && Math.abs(last3[0]-last3[2]) < 2) return '📉 Double top in even%';
-        if (last3[0] < last3[1] && last3[2] < last3[1] && Math.abs(last3[0]-last3[2]) < 2) return '📈 Double bottom in even%';
+        if (last3[0] > last3[1] && last3[2] > last3[1] && Math.abs(last3[0]-last3[2])<2) return '📉 Double top in even%';
+        if (last3[0] < last3[1] && last3[2] < last3[1] && Math.abs(last3[0]-last3[2])<2) return '📈 Double bottom in even%';
       }
       return null;
     }
@@ -308,117 +281,84 @@
     // ==== BIAS MOMENTUM ====
     function computeBiasMomentum(sym) {
       let arr = store[sym];
-      if (!arr || arr.length < 50) return { value: 0, label: 'neutral' };
+      if (!arr || arr.length < 50) return { value:0, label:'neutral' };
       let half = 25;
-      let firstHalf = arr.slice(-50, -25);
-      let secondHalf = arr.slice(-25);
-      let evenFirst = firstHalf.filter(d => d%2===0).length / half * 100;
-      let evenSecond = secondHalf.filter(d => d%2===0).length / half * 100;
+      let firstHalf = arr.slice(-50,-25), secondHalf = arr.slice(-25);
+      let evenFirst = firstHalf.filter(d=>d%2===0).length/half*100;
+      let evenSecond = secondHalf.filter(d=>d%2===0).length/half*100;
       let mom = evenSecond - evenFirst;
       let label = mom > 5 ? 'up' : (mom < -5 ? 'down' : 'neutral');
-      return { value: mom, label };
+      return { value:mom, label };
     }
 
-    // ==== SPARKLINE (rolling even% over last 50 ticks) ====
+    // ==== SPARKLINE ====
     function drawSparkline(sym) {
       let canvas = document.getElementById(`sparkline-${sym}`);
       if (!canvas) return;
       let arr = store[sym];
       if (!arr || arr.length < 10) return;
-      let windowSize = 50;
-      let recent = arr.slice(-windowSize);
       let ctx = canvas.getContext('2d');
-      let w = canvas.width = canvas.offsetWidth || 300;
-      let h = canvas.height = 40;
-      ctx.clearRect(0, 0, w, h);
-
+      let w = canvas.width = canvas.offsetWidth || 300, h = canvas.height = 40;
+      ctx.clearRect(0,0,w,h);
+      let recent = arr.slice(-50);
       if (recent.length < 2) return;
-
       let points = [];
-      for (let i = 0; i < recent.length; i++) {
-        let slice = recent.slice(0, i+1);
-        let evenP = slice.filter(d => d%2===0).length / slice.length * 100;
-        points.push({ x: (i / (recent.length-1)) * w, y: h - (evenP / 100) * h });
+      for (let i=0; i<recent.length; i++) {
+        let slice = recent.slice(0,i+1);
+        let evenP = slice.filter(d=>d%2===0).length/slice.length*100;
+        points.push({ x: (i/(recent.length-1))*w, y: h - (evenP/100)*h });
       }
-
-      // Gradient fill
-      let gradient = ctx.createLinearGradient(0, 0, 0, h);
-      gradient.addColorStop(0, 'rgba(74,222,128,0.3)');
-      gradient.addColorStop(1, 'rgba(248,113,113,0.3)');
+      let gradient = ctx.createLinearGradient(0,0,0,h);
+      gradient.addColorStop(0,'rgba(74,222,128,0.3)');
+      gradient.addColorStop(1,'rgba(248,113,113,0.3)');
       ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.moveTo(points[0].x, h);
+      ctx.beginPath(); ctx.moveTo(points[0].x, h);
       for (let p of points) ctx.lineTo(p.x, p.y);
-      ctx.lineTo(points[points.length-1].x, h);
-      ctx.closePath();
-      ctx.fill();
-
-      // Line
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(points[0].x, points[0].y);
-      for (let p of points) ctx.lineTo(p.x, p.y);
-      ctx.stroke();
-
-      // 50% baseline
-      ctx.strokeStyle = '#64748b';
-      ctx.lineWidth = 0.5;
-      ctx.setLineDash([2, 2]);
-      ctx.beginPath();
-      ctx.moveTo(0, h/2);
-      ctx.lineTo(w, h/2);
-      ctx.stroke();
+      ctx.lineTo(points[points.length-1].x, h); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y);
+      for (let p of points) ctx.lineTo(p.x, p.y); ctx.stroke();
+      ctx.strokeStyle = '#64748b'; ctx.lineWidth = 0.5; ctx.setLineDash([2,2]);
+      ctx.beginPath(); ctx.moveTo(0,h/2); ctx.lineTo(w,h/2); ctx.stroke();
       ctx.setLineDash([]);
     }
 
-    // ==== HEATMAP (throttled) ====
+    // ==== HEATMAP ====
     const heatmapUpdateCounters = {};
     function renderHeatmap(sym) {
       let canvas = document.getElementById(`heatmap-${sym}`);
       if (!canvas) return;
-      let ctx = canvas.getContext('2d');
       let arr = store[sym];
       if (!arr || arr.length < 50) return;
       if (!heatmapUpdateCounters[sym]) heatmapUpdateCounters[sym] = 0;
       heatmapUpdateCounters[sym]++;
       if (heatmapUpdateCounters[sym] % 3 !== 0) return;
-      
       let recent = arr.slice(-50);
       let matrix = Array(10).fill().map(() => Array(50).fill(0));
-      for (let i=0; i<recent.length; i++) {
-        let digit = recent[i];
-        matrix[digit][i] = 1;
-      }
+      for (let i=0; i<recent.length; i++) matrix[recent[i]][i] = 1;
       let existingChart = Chart.getChart(canvas);
       if (existingChart) existingChart.destroy();
-      
-      new Chart(ctx, {
+      new Chart(canvas, {
         type: 'matrix',
         data: {
           labels: Array(50).fill(''),
           datasets: [{
             label: 'Digit',
-            data: matrix.flatMap((row, d) => row.map((v, t) => ({ x: t, y: d, v: v }))),
+            data: matrix.flatMap((row,d)=> row.map((v,t)=>({x:t, y:d, v:v}))),
             backgroundColor(ctx) {
               let value = ctx.raw.v;
               if (value === 0) return '#1e293b';
-              let alpha = 0.3 + value * 0.7;
-              return `rgba(56, 189, 248, ${alpha})`;
+              return `rgba(56,189,248,${0.3+value*0.7})`;
             },
             borderWidth: 0,
-            width: ({ chart }) => (chart.chartArea || {}).width / 50,
-            height: ({ chart }) => (chart.chartArea || {}).height / 10,
+            width: ({chart}) => (chart.chartArea||{}).width/50,
+            height: ({chart}) => (chart.chartArea||{}).height/10,
           }]
         },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false }, tooltip: { enabled: false } },
-          scales: {
-            x: { display: false, offset: true },
-            y: { display: true, reverse: true, ticks: { stepSize: 1, color: '#94a3b8' } }
-          }
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend:{display:false}, tooltip:{enabled:false} },
+          scales: { x:{display:false, offset:true}, y:{display:true, reverse:true, ticks:{stepSize:1, color:'#94a3b8'}} }
         }
       });
     }
@@ -432,19 +372,19 @@
         let signal = getAdvancedSignal(m.sym);
         if (signal) {
           let health = computeMarketHealth(m.sym, getCounts(m.sym), arr.length, signal, getEvenP(m.sym), getOddP(m.sym));
-          if (health >= 50) signals.push({ sym: m.sym, bias: signal, health });
+          if (health >= 50) signals.push({ sym:m.sym, bias:signal, health });
         }
       });
       if (signals.length >= 2) {
-        let biasCount = { 'BUY EVEN': 0, 'BUY ODD': 0 };
+        let biasCount = { 'BUY EVEN':0, 'BUY ODD':0 };
         signals.forEach(s => biasCount[s.bias]++);
         let consensusBias = biasCount['BUY EVEN'] > biasCount['BUY ODD'] ? 'EVEN' : 'ODD';
         let count = Math.max(biasCount['BUY EVEN'], biasCount['BUY ODD']);
         if (count >= 2) {
-          return { active: true, bias: consensusBias, symbols: signals.filter(s => s.bias.includes(consensusBias)).map(s=>s.sym) };
+          return { active:true, bias:consensusBias, symbols: signals.filter(s=>s.bias.includes(consensusBias)).map(s=>s.sym) };
         }
       }
-      return { active: false };
+      return { active:false };
     }
 
     function getCounts(sym) {
@@ -467,59 +407,49 @@
       return (odd/total)*100;
     }
 
-    // ==== DYNAMIC THRESHOLD UPDATE (kept for internal use, not displayed) ====
+    // ==== DYNAMIC THRESHOLDS (internal) ====
     function recomputeOptimalThresholds() {
       const completed = tradeLog.filter(t => t.outcome !== 'pending');
       if (completed.length < 20) return;
-      let best = { winRate: 0, z: 1.96, opp: 12, margin: 5 };
-      for (let z of [1.65, 1.96, 2.33, 2.58]) {
-        for (let opp of [10, 12, 14, 16]) {
-          for (let margin of [3, 5, 7, 9]) {
+      let best = { winRate:0, z:1.96, opp:12, margin:5 };
+      for (let z of [1.65,1.96,2.33,2.58]) {
+        for (let opp of [10,12,14,16]) {
+          for (let margin of [3,5,7,9]) {
             const subset = completed.filter(t => {
-              const str = parseFloat(t.strength) || 0;
-              const conf = parseFloat(t.confidence) || 0;
-              const minStrength = 40 + (z-1.65)*30;
-              const minConf = 30 + (opp-10)*10;
-              return str >= minStrength && conf >= minConf;
+              const str = parseFloat(t.strength)||0, conf = parseFloat(t.confidence)||0;
+              return str >= 40+(z-1.65)*30 && conf >= 30+(opp-10)*10;
             });
             if (subset.length < 5) continue;
-            const wins = subset.filter(t => t.outcome === 'win').length;
-            const rate = (wins / subset.length) * 100;
-            if (rate > best.winRate) { best = { winRate: rate, z, opp, margin }; }
+            const wins = subset.filter(t=>t.outcome==='win').length;
+            const rate = (wins/subset.length)*100;
+            if (rate > best.winRate) best = { winRate:rate, z, opp, margin };
           }
         }
       }
-      if (best.winRate > 0) optimalParams = { zThreshold: best.z, maxOpposing: best.opp, minMargin: best.margin };
+      if (best.winRate > 0) optimalParams = { zThreshold:best.z, maxOpposing:best.opp, minMargin:best.margin };
     }
 
     // ==== SIGNAL DETECTION ====
     function isStatisticallySignificant(evenCount, oddCount, total) {
-      let observed = evenCount / total;
-      let expected = 0.5;
-      let stdErr = Math.sqrt(0.5 * 0.5 / total);
-      let z = Math.abs(observed - expected) / stdErr;
+      let observed = evenCount/total, expected = 0.5;
+      let z = Math.abs(observed-expected)/Math.sqrt(0.5*0.5/total);
       return z > optimalParams.zThreshold;
     }
 
     function checkMultiTimeframeAlignment(sym) {
       let arrShort = storeShort[sym], arrMed = storeMedium[sym], arrLong = store[sym];
-      if (!arrShort || arrShort.length < 50) return false;
-      if (!arrMed || arrMed.length < 200) return false;
-      if (!arrLong || arrLong.length < 800) return false;
+      if (!arrShort || arrShort.length<50) return false;
+      if (!arrMed || arrMed.length<200) return false;
+      if (!arrLong || arrLong.length<800) return false;
       function getParityBias(arr) {
-        let evens = arr.filter(d => d%2===0).length;
+        let evens = arr.filter(d=>d%2===0).length;
         let odds = arr.length - evens;
-        if (evens > odds) return "EVEN";
-        if (odds > evens) return "ODD";
-        return null;
+        if (evens > odds) return "EVEN"; if (odds > evens) return "ODD"; return null;
       }
       let biasShort = getParityBias(arrShort), biasMed = getParityBias(arrMed), biasLong = getParityBias(arrLong);
-      let votes = [biasShort, biasMed, biasLong].filter(b => b !== null);
-      let evenVotes = votes.filter(v => v === "EVEN").length;
-      let oddVotes = votes.filter(v => v === "ODD").length;
-      if (evenVotes >= 2) return "EVEN";
-      if (oddVotes >= 2) return "ODD";
-      return null;
+      let votes = [biasShort, biasMed, biasLong].filter(b=>b!==null);
+      let evenVotes = votes.filter(v=>v==="EVEN").length, oddVotes = votes.filter(v=>v==="ODD").length;
+      if (evenVotes >= 2) return "EVEN"; if (oddVotes >= 2) return "ODD"; return null;
     }
 
     function getAdvancedSignal(sym) {
@@ -527,80 +457,70 @@
       if (!arr || arr.length < 1000) return null;
       let tfBias = checkMultiTimeframeAlignment(sym);
       if (!tfBias) return null;
-      let counts = getCounts(sym);
-      let total = arr.length;
+      let counts = getCounts(sym), total = arr.length;
       let evenSum = counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
       let oddSum = total - evenSum;
       if (!isStatisticallySignificant(evenSum, oddSum, total)) return null;
-      let opposingDigits = (tfBias === "EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
-      let maxOpposing = Math.max(...opposingDigits.map(d => (counts[d]/total)*100));
+      let opposingDigits = (tfBias==="EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
+      let maxOpposing = Math.max(...opposingDigits.map(d=>(counts[d]/total)*100));
       if (maxOpposing >= optimalParams.maxOpposing) return null;
       let evenP = (evenSum/total)*100, oddP = (oddSum/total)*100;
-      let margin = Math.abs(evenP - oddP);
-      if (margin < optimalParams.minMargin) return null;
-      return tfBias === "EVEN" ? "BUY EVEN" : "BUY ODD";
+      if (Math.abs(evenP-oddP) < optimalParams.minMargin) return null;
+      return tfBias==="EVEN" ? "BUY EVEN" : "BUY ODD";
     }
 
     function computeSignalStrength(evenP, oddP, perc, signalType, sym) {
       if (!signalType) return 0;
-      let diff = Math.abs(evenP - oddP);
-      let volFactor = volatilityFactors[sym] || 1.0;
+      let diff = Math.abs(evenP-oddP);
+      let volFactor = volatilityFactors[sym]||1;
       if (signalType === "BUY EVEN") {
         let oddDigits = [1,3,5,7,9];
-        let maxOpposing = Math.max(...oddDigits.map(d => parseFloat(perc[d])));
+        let maxOpposing = Math.max(...oddDigits.map(d=>parseFloat(perc[d])));
         let distanceToMax = Math.max(0, optimalParams.maxOpposing - maxOpposing);
-        let composite = (diff * 0.5 + distanceToMax * 5) / volFactor;
-        return Math.min(100, composite);
+        return Math.min(100, (diff*0.5 + distanceToMax*5)/volFactor);
       } else {
         let evenDigits = [0,2,4,6,8];
-        let maxOpposing = Math.max(...evenDigits.map(d => parseFloat(perc[d])));
+        let maxOpposing = Math.max(...evenDigits.map(d=>parseFloat(perc[d])));
         let distanceToMax = Math.max(0, optimalParams.maxOpposing - maxOpposing);
-        let composite = (diff * 0.5 + distanceToMax * 5) / volFactor;
-        return Math.min(100, composite);
+        return Math.min(100, (diff*0.5 + distanceToMax*5)/volFactor);
       }
     }
 
     function computeConfidence(evenP, oddP, perc, signalType) {
       if (!signalType) return "—";
-      let opposing = (signalType === "BUY EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
-      let maxOpposing = Math.max(...opposing.map(d => parseFloat(perc[d])));
+      let opposing = signalType==="BUY EVEN" ? [1,3,5,7,9] : [0,2,4,6,8];
+      let maxOpposing = Math.max(...opposing.map(d=>parseFloat(perc[d])));
       let margin = optimalParams.maxOpposing - maxOpposing;
-      let rawConf = (margin / optimalParams.maxOpposing) * 100;
-      rawConf = Math.min(100, Math.max(0, rawConf));
-      return `${rawConf.toFixed(0)}%`;
+      let rawConf = (margin/optimalParams.maxOpposing)*100;
+      return `${Math.min(100, Math.max(0, rawConf)).toFixed(0)}%`;
     }
 
     function computeMarketHealth(sym, counts, total, signalType, evenP, oddP) {
       if (!store[sym] || store[sym].length < 1000) return 0;
       let evenSum = counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
-      let oddSum = total - evenSum;
-      let observed = evenSum / total;
-      let expected = 0.5;
-      let stdErr = Math.sqrt(0.5 * 0.5 / total);
-      let z = Math.abs(observed - expected) / stdErr;
-      let sigScore = Math.min(100, (z / 3) * 100);
-      let tfBias = checkMultiTimeframeAlignment(sym);
-      let tfScore = tfBias ? 100 : 0;
-      let opposing = (signalType === "BUY EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
-      let maxOpposing = Math.max(...opposing.map(d => (counts[d]/total)*100));
-      let oppScore = Math.max(0, 100 - (maxOpposing / optimalParams.maxOpposing) * 100);
-      let margin = Math.abs(evenP - oddP);
-      let marginScore = Math.min(100, (margin / 15) * 100);
-      return Math.round(sigScore * 0.3 + tfScore * 0.3 + oppScore * 0.2 + marginScore * 0.2);
+      let observed = evenSum/total, expected = 0.5;
+      let z = Math.abs(observed-expected)/Math.sqrt(0.5*0.5/total);
+      let sigScore = Math.min(100, (z/3)*100);
+      let tfScore = checkMultiTimeframeAlignment(sym) ? 100 : 0;
+      let opposing = signalType==="BUY EVEN" ? [1,3,5,7,9] : [0,2,4,6,8];
+      let maxOpposing = Math.max(...opposing.map(d=>(counts[d]/total)*100));
+      let oppScore = Math.max(0, 100 - (maxOpposing/optimalParams.maxOpposing)*100);
+      let marginScore = Math.min(100, (Math.abs(evenP-oddP)/15)*100);
+      return Math.round(sigScore*0.3 + tfScore*0.3 + oppScore*0.2 + marginScore*0.2);
     }
 
     function getExitSuggestion(sym, signalType, counts, total) {
       if (!signalType) return "";
-      let opposing = (signalType === "BUY EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
-      let maxOpposing = Math.max(...opposing.map(d => (counts[d]/total)*100));
-      let threshold = optimalParams.maxOpposing * 0.9;
+      let opposing = signalType==="BUY EVEN" ? [1,3,5,7,9] : [0,2,4,6,8];
+      let maxOpposing = Math.max(...opposing.map(d=>(counts[d]/total)*100));
+      let threshold = optimalParams.maxOpposing*0.9;
       if (maxOpposing >= threshold) return `⚠️ Exit soon: opposing ${maxOpposing.toFixed(1)}%`;
-      return "🎯 Hold until opposing > " + threshold.toFixed(1) + "%";
+      return "🎯 Hold until opposing > "+threshold.toFixed(1)+"%";
     }
 
     function recordSignal(symbol, signalType, strength, confidence) {
-      let id = Date.now() + Math.random();
-      let entry = { id, symbol, signalType, strength, confidence, timestamp: nowStr(), outcome: "pending" };
+      let id = Date.now()+Math.random();
+      let entry = { id, symbol, signalType, strength, confidence, timestamp: nowStr(), outcome:"pending" };
       tradeLog.push(entry);
       if (!marketStats[symbol]) marketStats[symbol] = { totalSignals:0, wins:0, losses:0 };
       marketStats[symbol].totalSignals++;
@@ -613,22 +533,19 @@
     function resolveSignalOutcome(symbol, predictedType, tradeId) {
       let lastDigit = lastDigitMap[symbol];
       if (lastDigit === undefined) return;
-      let isEven = lastDigit % 2 === 0;
-      let predictedEven = (predictedType === "BUY EVEN");
+      let isEven = lastDigit%2===0;
+      let predictedEven = predictedType==="BUY EVEN";
       let win = (predictedEven && isEven) || (!predictedEven && !isEven);
-      let trade = tradeLog.find(t => t.id === tradeId);
-      if (trade && trade.outcome === "pending") {
+      let trade = tradeLog.find(t=>t.id===tradeId);
+      if (trade && trade.outcome==="pending") {
         trade.outcome = win ? "win" : "loss";
         if (marketStats[trade.symbol]) {
           if (win) marketStats[trade.symbol].wins++;
           else marketStats[trade.symbol].losses++;
         }
-        let counts = getCounts(symbol);
-        let total = counts.reduce((a,b)=>a+b,0);
+        let counts = getCounts(symbol), total = counts.reduce((a,b)=>a+b,0);
         let evenP = (counts[0]+counts[2]+counts[4]+counts[6]+counts[8])/total*100;
-        let oddP = 100 - evenP;
-        let features = getMLFeatures(symbol, evenP, oddP);
-        mlModel.update(features, win ? 1 : 0);
+        mlModel.update(getMLFeatures(symbol, evenP, 100-evenP), win?1:0);
         throttledStatsUpdate();
       }
     }
@@ -641,23 +558,20 @@
       renderReplayControls();
     }
     function exitReplayMode() { replayMode = false; renderReplayControls(); renderAllMarkets(); }
-    function replayTick(forward = true) {
+    function replayTick(forward=true) {
       if (!replayMode) return;
-      const maxLen = Math.max(...Object.values(replaySnapshot).map(a => a.length));
-      if (forward && replayIndex < maxLen - 1) replayIndex++;
+      const maxLen = Math.max(...Object.values(replaySnapshot).map(a=>a.length));
+      if (forward && replayIndex < maxLen-1) replayIndex++;
       else if (!forward && replayIndex > 0) replayIndex--;
       markets.forEach(m => {
         let hist = replaySnapshot[m.sym];
         if (hist) {
           let slice = hist.slice(0, replayIndex+1);
-          store[m.sym] = slice.slice(-1000);
-          storeShort[m.sym] = slice.slice(-100);
-          storeMedium[m.sym] = slice.slice(-500);
+          store[m.sym] = slice.slice(-1000); storeShort[m.sym] = slice.slice(-100); storeMedium[m.sym] = slice.slice(-500);
           if (slice.length) lastDigitMap[m.sym] = slice[slice.length-1];
         }
       });
-      renderAllMarkets();
-      renderReplayControls();
+      renderAllMarkets(); renderReplayControls();
     }
     function renderReplayControls() {
       let container = document.getElementById('replayBar');
@@ -667,10 +581,10 @@
         container.id = 'replayBar';
         leftDiv.prepend(container);
       }
-      const maxLen = Math.max(...Object.values(replaySnapshot).map(a => a.length||0));
+      const maxLen = Math.max(...Object.values(replaySnapshot).map(a=>a.length||0));
       container.innerHTML = `
         <div class="replay-controls">
-          <button id="replayBtn">${replayMode ? 'Exit Replay' : 'Replay Mode'}</button>
+          <button id="replayBtn">${replayMode?'Exit Replay':'Replay Mode'}</button>
           ${replayMode ? `
             <button id="replayPrev">◀ Prev</button>
             <button id="replayNext">Next ▶</button>
@@ -681,15 +595,29 @@
       `;
       document.getElementById('replayBtn').onclick = () => replayMode ? exitReplayMode() : enterReplayMode();
       if (replayMode) {
-        document.getElementById('replayPrev').onclick = () => replayTick(false);
-        document.getElementById('replayNext').onclick = () => replayTick(true);
+        document.getElementById('replayPrev').onclick = ()=> replayTick(false);
+        document.getElementById('replayNext').onclick = ()=> replayTick(true);
         document.getElementById('replaySlider').oninput = (e) => { replayIndex = parseInt(e.target.value); replayTick(); };
       }
     }
 
-    // ==== RENDERING ====
+    // ==== RENDERING (WITH DOM REORDER) ====
     let renderScheduled = false;
     let marketElements = {};
+    let pinnedMarket = null;   // symbol pinned by click
+
+    function pinMarket(sym) {
+      pinnedMarket = sym;
+      scheduleRender();
+      // Scroll to the pinned market after render
+      setTimeout(() => {
+        let el = marketElements[sym];
+        if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+      }, 100);
+      // Clear pin after 4 seconds to resume normal sorting
+      clearTimeout(window._pinTimer);
+      window._pinTimer = setTimeout(() => { pinnedMarket = null; scheduleRender(); }, 4000);
+    }
 
     function scheduleRender() {
       if (renderScheduled) return;
@@ -704,12 +632,12 @@
       let wrap = document.getElementById("markets");
       if (!wrap) return;
       
+      // Ensure all market divs exist
       markets.forEach(m => {
         if (!marketElements[m.sym]) {
           let div = document.createElement("div");
           div.id = `market-${m.sym}`;
           div.className = "market";
-          wrap.appendChild(div);
           marketElements[m.sym] = div;
         }
       });
@@ -735,7 +663,7 @@
             window._lastSignalTick = lastDigitMap[m.sym];
             recordSignal(m.sym, signalType, strength.toFixed(1), confidence);
           }
-          if (isSignal) audio.play();
+          audio.play();
         }
         health = computeMarketHealth(m.sym, counts, total, signalType, evenP, oddP);
         let exitMsg = getExitSuggestion(m.sym, signalType, counts, total);
@@ -745,21 +673,19 @@
         mlProb = mlModel.predict(features);
         let momentum = computeBiasMomentum(m.sym);
         
-        // Ranking persistence
-        if (isSignal) {
-          lastSignalTime[m.sym] = Date.now();
-        } else if (!lastSignalTime[m.sym]) {
-          lastSignalTime[m.sym] = 0;
-        }
-        if (!previousSignalState[m.sym] && isSignal) {
-          lastSignalTime[m.sym] = Date.now();
-        }
+        // Ranking: pinned market gets Infinity, else active first, else recency
+        if (isSignal) lastSignalTime[m.sym] = Date.now();
+        else if (!lastSignalTime[m.sym]) lastSignalTime[m.sym] = 0;
+        if (!previousSignalState[m.sym] && isSignal) lastSignalTime[m.sym] = Date.now();
         let prevState = previousSignalState[m.sym] || false;
         let trendChanged = (prevState !== isSignal);
         if (trendChanged) marketTrendChangeFlag[m.sym] = Date.now();
         previousSignalState[m.sym] = isSignal;
         
-        let sortScore = isSignal ? 1e9 + (strength * (parseFloat(confidence) || 0) / 100) : (lastSignalTime[m.sym] || 0);
+        let sortScore;
+        if (pinnedMarket === m.sym) sortScore = Infinity;
+        else if (isSignal) sortScore = 1e9 + (strength * (parseFloat(confidence)||0)/100);
+        else sortScore = lastSignalTime[m.sym] || 0;
         
         marketDataArray.push({
           sym: m.sym, name: m.name, price: priceMap[m.sym] || "—",
@@ -771,23 +697,22 @@
         });
       });
       
-      marketDataArray.sort((a,b) => {
-        if (a.isSignal && !b.isSignal) return -1;
-        if (!a.isSignal && b.isSignal) return 1;
-        if (a.isSignal && b.isSignal) return b.sortScore - a.sortScore;
-        if (a.sortScore !== b.sortScore) return b.sortScore - a.sortScore;
-        return a.name.localeCompare(b.name);
-      });
+      // Sort
+      marketDataArray.sort((a,b) => b.sortScore - a.sortScore);
       
+      // DOM reorder: clear wrap and re-append in sorted order
+      let consensusAlert = document.getElementById('consensusAlert');
+      // Remove all children but keep consensus alert if present
+      while (wrap.firstChild) wrap.removeChild(wrap.firstChild);
+      
+      // Re-append consensus alert if still active
       let consensus = detectConsensus();
-      let oldAlert = document.getElementById('consensusAlert');
-      if (oldAlert) oldAlert.remove();
       if (consensus.active) {
         let alertDiv = document.createElement('div');
         alertDiv.id = 'consensusAlert';
         alertDiv.className = 'consensus-alert';
         alertDiv.innerHTML = `🤝 CONSENSUS SIGNAL: ${consensus.bias} bias across ${consensus.symbols.join(', ')} (${consensus.symbols.length} markets)`;
-        wrap.prepend(alertDiv);
+        wrap.appendChild(alertDiv);
       }
       
       marketDataArray.forEach((data, idx) => {
@@ -817,7 +742,6 @@
           return `<div class="box ${cls} ${flash} ${repeatFx}">${pointer}${counter}<div class="digit">${i}</div><div class="percent">${data.perc[i]}%</div></div>`;
         }
         
-        // 50-tick letters
         let ticks = data.arr.slice(-50).map(d => `<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("");
         
         let mom = data.momentum;
@@ -833,8 +757,8 @@
         }
         let reversalHtml = data.reversal ? `<span class="reversal-warning">${data.reversal}</span>` : '';
         
-        container.className = "market " + (isSignal ? "signal" : "");
-        if (idx === 0 && isSignal) container.classList.add("ranked-first");
+        container.className = "market " + (isSignal ? "signal" : "") + (pinnedMarket === data.sym ? " pinned" : "");
+        if (idx === 0 && isSignal && !pinnedMarket) container.classList.add("ranked-first");
         
         container.innerHTML = `
           <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap;">
@@ -865,6 +789,7 @@
           <div class="tick">${ticks}</div>
         `;
         
+        wrap.appendChild(container);
         setTimeout(() => {
           drawSparkline(data.sym);
           renderHeatmap(data.sym);
@@ -875,6 +800,7 @@
       if (!replayMode) renderReplayControls();
     }
 
+    // ==== STATS PANEL (with clickable recent signals) ====
     let statsUpdateScheduled = false;
     function throttledStatsUpdate() {
       if (statsUpdateScheduled) return;
@@ -885,7 +811,6 @@
       }, 200);
     }
 
-    // ==== STATS PANEL (without self-learning optimizer & correlation heatmap) ====
     function renderStatsPanel() {
       let panel = document.getElementById("statsPanel");
       if (!panel) return;
@@ -909,7 +834,13 @@
       let recentHtml = tradeLog.slice(-10).reverse().map(log => {
         let outcomeClass = log.outcome === "win" ? "log-win" : (log.outcome === "loss" ? "log-loss" : "log-pending");
         let outcomeText = log.outcome === "win" ? "✓ WIN" : (log.outcome === "loss" ? "✗ LOSS" : "⌛ pending");
-        return `<div class="log-entry"><span>${log.timestamp}</span> <span>${log.symbol}</span> <span>${log.signalType}</span><span class="${outcomeClass}">${outcomeText}</span><span>💪${log.strength}%</span></div>`;
+        return `<div class="log-entry" onclick="pinMarket('${log.symbol}')" title="Click to bring ${log.symbol} to top">
+          <span>${log.timestamp}</span> 
+          <span>${log.symbol}</span> 
+          <span>${log.signalType}</span>
+          <span class="${outcomeClass}">${outcomeText}</span>
+          <span>💪${log.strength}%</span>
+        </div>`;
       }).join("");
       
       panel.innerHTML = `
@@ -923,11 +854,14 @@
           <div class="stat-row"><span class="stat-label">🤖 ML weights:</span><span class="stat-value">${mlModel.weights.map(w=>w.toFixed(3)).join(', ')}</span></div>
         </div>
         <div class="stats-panel">
-          <div class="stats-title">📋 RECENT SIGNALS</div>
+          <div class="stats-title">📋 RECENT SIGNALS (click to jump)</div>
           <div class="signal-log">${recentHtml || "<div>No signals yet</div>"}</div>
         </div>
       `;
     }
+
+    // Expose pinMarket globally for onclick
+    window.pinMarket = pinMarket;
 
     // ==== WEBSOCKET ====
     ws.onopen = () => {
