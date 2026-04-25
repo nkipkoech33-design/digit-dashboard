@@ -1,65 +1,415 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO — Fast + Auto Bot</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <style>
-    :root { --bg:#0f172a;--surface:#1e293b;--border:#1e293b;--text:white;--text-secondary:#94a3b8;--accent:#facc15;--good:#4ade80;--bad:#f87171;--highlight:#38bdf8;--bar-bg:#334155; }
-    body.light { --bg:#f8fafc;--surface:#e2e8f0;--border:#cbd5e1;--text:#0f172a;--text-secondary:#475569;--accent:#eab308;--good:#16a34a;--bad:#dc2626;--highlight:#0284c7;--bar-bg:#cbd5e1; }
-    body { background:var(--bg);color:var(--text);font-family:Arial,sans-serif;margin:0;padding-top:40px; }
-    .wrapper { display:flex; height:calc(100vh - 40px); }
-    .left { width:70%; padding:10px; display:flex; flex-direction:column; gap:8px; overflow-y:auto; }
-    .right { width:30%; border-left:1px solid var(--border); padding:10px; background:var(--bg); overflow-y:auto; }
-    .market { border:1px solid var(--border); padding:6px; border-radius:6px; background:var(--bg); }
-    .signal { animation:blink 0.6s infinite; border:2px solid var(--accent); }
-    @keyframes blink { 0%{opacity:1;}50%{opacity:0.6;}100%{opacity:1;} }
-    .price { text-align:center; font-size:22px; color:var(--highlight); font-weight:bold; }
-    .win { text-align:center; font-size:12px; }
-    .metrics { display:flex;justify-content:space-between;align-items:center;gap:12px;background:rgba(15,23,42,0.7);padding:6px 10px;border-radius:12px;margin:8px 0 6px 0;font-size:12px;flex-wrap:wrap; }
-    .metric-item { display:flex;align-items:center;gap:6px;background:var(--surface);padding:3px 10px;border-radius:20px; }
-    .strength-bar-bg { width:70px;background:var(--bar-bg);border-radius:20px;height:6px;overflow:hidden; }
-    .strength-bar-fill { background:linear-gradient(90deg,var(--accent),#f97316);height:6px;width:0%;border-radius:20px; }
-    .grid { display:grid;grid-template-columns:repeat(5,2.5cm);gap:10px;justify-content:center;margin-top:8px; }
-    .box { width:2.5cm;height:2.5cm;display:flex;flex-direction:column;justify-content:center;align-items:center;border-radius:6px;border:1px solid var(--border);background:var(--surface);position:relative; }
-    .most{background:green;}.second{background:blue;}.secondLeast{background:orange;}.least{background:red;}
-    .digit { font-size:48px;font-weight:bold; }
-    .tick { display:grid;grid-template-columns:repeat(50,1fr);font-size:10px;margin-top:8px;text-align:center; }
-    .e{color:lime;}.o{color:red;}
-    .signal-text { text-align:center;font-weight:bold;margin-top:4px; }
-    .buy-even{color:lime;}.buy-odd{color:red;}
-    .stats-panel { background:var(--surface);border-radius:12px;padding:12px;margin-bottom:15px;border:1px solid var(--border); }
-    .stats-title { font-size:16px;font-weight:bold;border-bottom:1px solid var(--bar-bg);padding-bottom:6px;margin-bottom:10px;color:var(--text-secondary); }
-    .stat-row { display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px; }
-    .stat-label { color:var(--text-secondary); }
-    .stat-value { font-weight:bold;color:var(--accent); }
-    .signal-log { font-size:11px;max-height:150px;overflow-y:auto; }
-    .log-entry { padding:4px;border-bottom:1px solid var(--border);font-family:monospace;cursor:pointer; }
-    .log-entry:hover { background:var(--surface); }
-    .log-win{color:var(--good);}.log-loss{color:var(--bad);}.log-pending{color:var(--accent);}
-    #topbar { position:fixed;top:0;left:0;right:0;background:var(--surface);padding:6px 10px;display:flex;justify-content:flex-end;z-index:20;border-bottom:1px solid var(--border); }
-    .market-list-item { display:flex;align-items:center;gap:6px;font-size:13px;padding:2px 0;cursor:pointer; }
-    .market-list-item.blinking { animation:listBlink 0.8s infinite; }
-    @keyframes listBlink { 0%{color:var(--text);}50%{color:var(--accent);}100%{color:var(--text);} }
-    .bot-toggle { padding:4px 12px;border-radius:16px;cursor:pointer;font-weight:bold;border:none; }
-    .bot-on{background:var(--good);color:black;}.bot-off{background:var(--bad);color:white;}
-    .pin-star { cursor:pointer;color:var(--text-secondary); }
-    .pin-star.pinned { color:var(--accent); }
-    @media(max-width:1200px){ .left{width:100%;}.right{display:none;} .grid{grid-template-columns:repeat(5,2.2cm);}.box{width:2.2cm;height:2.2cm;}.digit{font-size:36px;} }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digit Analyzer PRO — Instant + Bot</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --border: #1e293b;
+            --text: white;
+            --text-secondary: #94a3b8;
+            --accent: #facc15;
+            --good: #4ade80;
+            --bad: #f87171;
+            --highlight: #38bdf8;
+            --bar-bg: #334155;
+        }
+        body.light {
+            --bg: #f8fafc;
+            --surface: #e2e8f0;
+            --border: #cbd5e1;
+            --text: #0f172a;
+            --text-secondary: #475569;
+            --accent: #eab308;
+            --good: #16a34a;
+            --bad: #dc2626;
+            --highlight: #0284c7;
+            --bar-bg: #cbd5e1;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding-top: 40px;
+        }
+        .wrapper {
+            display: flex;
+            height: calc(100vh - 40px);
+        }
+        .left {
+            width: 70%;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+        }
+        .right {
+            width: 30%;
+            border-left: 1px solid var(--border);
+            padding: 10px;
+            background: var(--bg);
+            overflow-y: auto;
+        }
+
+        .market {
+            border: 1px solid var(--border);
+            padding: 6px;
+            border-radius: 6px;
+            background: var(--bg);
+        }
+        .signal {
+            animation: blink 0.6s infinite;
+            border: 2px solid var(--accent);
+        }
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        .price {
+            text-align: center;
+            font-size: 22px;
+            color: var(--highlight);
+            font-weight: bold;
+        }
+        .win {
+            text-align: center;
+            font-size: 12px;
+        }
+        .metrics {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            background: rgba(15, 23, 42, 0.7);
+            padding: 6px 10px;
+            border-radius: 12px;
+            margin: 8px 0 6px 0;
+            font-size: 12px;
+            flex-wrap: wrap;
+        }
+        .metric-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--surface);
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+        .strength-bar-bg {
+            width: 70px;
+            background: var(--bar-bg);
+            border-radius: 20px;
+            height: 6px;
+            overflow: hidden;
+        }
+        .strength-bar-fill {
+            background: linear-gradient(90deg, var(--accent), #f97316);
+            height: 6px;
+            width: 0%;
+            border-radius: 20px;
+        }
+        .confidence-badge {
+            padding: 2px 8px;
+            border-radius: 16px;
+            font-weight: bold;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 2.5cm);
+            gap: 10px;
+            justify-content: center;
+            margin-top: 8px;
+        }
+        .box {
+            width: 2.5cm;
+            height: 2.5cm;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+        }
+        .most { background: green; }
+        .second { background: blue; }
+        .secondLeast { background: orange; }
+        .least { background: red; }
+        .digit {
+            font-size: 48px;
+            font-weight: bold;
+        }
+        .percent {
+            font-size: 13px;
+        }
+
+        .pointer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 42px;
+            font-weight: bold;
+            animation: pulse 0.6s infinite;
+        }
+        .pointer.even { color: lime; }
+        .pointer.odd { color: red; }
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.25); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+        .flash { animation: flash 0.25s; }
+        @keyframes flash {
+            0% { box-shadow: 0 0 25px white; }
+            100% { box-shadow: none; }
+        }
+        .repeat { box-shadow: 0 0 20px yellow; }
+        .repeat-count {
+            position: absolute;
+            top: 4px;
+            right: 6px;
+            color: yellow;
+            font-weight: bold;
+        }
+
+        .tick {
+            display: grid;
+            grid-template-columns: repeat(50, 1fr);
+            font-size: 10px;
+            margin-top: 8px;
+            text-align: center;
+        }
+        .e { color: lime; }
+        .o { color: red; }
+        .signal-text {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        .buy-even { color: lime; }
+        .buy-odd { color: red; }
+
+        .stats-panel {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border);
+        }
+        .stats-title {
+            font-size: 16px;
+            font-weight: bold;
+            border-bottom: 1px solid var(--bar-bg);
+            padding-bottom: 6px;
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .stat-label { color: var(--text-secondary); }
+        .stat-value {
+            font-weight: bold;
+            color: var(--accent);
+        }
+        .signal-log {
+            font-size: 11px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            padding: 4px;
+            border-bottom: 1px solid var(--border);
+            font-family: monospace;
+            cursor: pointer;
+        }
+        .log-entry:hover { background: var(--surface); }
+        .log-win { color: var(--good); }
+        .log-loss { color: var(--bad); }
+        .log-pending { color: var(--accent); }
+
+        .market.ranked-first { border-left: 4px solid var(--accent); }
+        .trend-change {
+            background: rgba(239, 68, 68, 0.2);
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 11px;
+            color: var(--bad);
+            margin-left: 8px;
+            animation: fadeOut 3s forwards;
+        }
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            70% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        .stop-signal {
+            background: #7f1d1d;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 16px;
+            font-weight: bold;
+            font-size: 11px;
+        }
+        .exit-suggestion {
+            font-size: 11px;
+            background: var(--surface);
+            padding: 3px 8px;
+            border-radius: 16px;
+            margin-left: 8px;
+        }
+        .small-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 12px;
+            background: var(--surface);
+        }
+        .regime-calm { background: #15803d; }
+        .regime-choppy { background: #b45309; }
+        .regime-trending { background: #1d4ed8; }
+        .consensus-alert {
+            background: var(--accent);
+            color: #0f172a;
+            padding: 8px;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .reversal-warning {
+            background: #7f1d1d;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 10px;
+            margin-left: 5px;
+        }
+        .ml-prob {
+            font-size: 12px;
+            background: var(--surface);
+            padding: 2px 8px;
+            border-radius: 16px;
+        }
+        .momentum-badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 5px;
+            background: var(--surface);
+        }
+        .momentum-up { color: var(--good); }
+        .momentum-down { color: var(--bad); }
+        .momentum-neutral { color: var(--text-secondary); }
+        .sparkline-canvas {
+            width: 100%;
+            height: 40px;
+            margin: 5px 0;
+        }
+
+        #topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            padding: 6px 10px;
+            display: flex;
+            justify-content: flex-end;
+            z-index: 20;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .pin-star {
+            cursor: pointer;
+            color: var(--text-secondary);
+            margin-left: 6px;
+        }
+        .pin-star.pinned { color: var(--accent); }
+        .divergence-badge {
+            background: #7f1d1d;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 10px;
+            margin-left: 5px;
+        }
+        .ml-accuracy-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 12px;
+            background: var(--surface);
+        }
+
+        .market-list-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            padding: 2px 0;
+            cursor: pointer;
+        }
+        .market-list-item.blinking {
+            animation: listBlink 0.8s infinite;
+        }
+        @keyframes listBlink {
+            0% { color: var(--text); }
+            50% { color: var(--accent); }
+            100% { color: var(--text); }
+        }
+
+        .bot-toggle {
+            padding: 4px 12px;
+            border-radius: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            border: none;
+        }
+        .bot-on {
+            background: var(--good);
+            color: black;
+        }
+        .bot-off {
+            background: var(--bad);
+            color: white;
+        }
+
+        @media (max-width: 1200px) {
+            .left { width: 100%; }
+            .right { display: none; }
+            .grid { grid-template-columns: repeat(5, 2.2cm); }
+            .box { width: 2.2cm; height: 2.2cm; }
+            .digit { font-size: 36px; }
+        }
+    </style>
 </head>
 <body>
-<div id="topbar"><button id="themeToggle">🌓 Theme</button></div>
+<div id="topbar">
+    <button id="themeToggle">🌓 Theme</button>
+</div>
 <div class="wrapper">
-  <div class="left" id="markets"></div>
-  <div class="right" id="statsPanel"></div>
+    <div class="left" id="markets"></div>
+    <div class="right" id="statsPanel"></div>
 </div>
 
 <script>
-  (function(){
-    let token = "PUT_TOKEN_HERE";
-    const markets = [
+  (function() {
+    // ========== CONFIGURATION ==========
+    const TOKEN = "PUT_TOKEN_HERE";
+    const MARKETS = [
       {sym:"R_10",name:"Volatility 10 Index"},{sym:"R_25",name:"Volatility 25 Index"},{sym:"R_50",name:"Volatility 50 Index"},
       {sym:"R_75",name:"Volatility 75 Index"},{sym:"R_100",name:"Volatility 100 Index"},
       {sym:"1HZ10V",name:"Volatility 10 (1s)"},{sym:"1HZ15V",name:"Volatility 15 (1s)"},{sym:"1HZ25V",name:"Volatility 25 (1s)"},
@@ -69,394 +419,686 @@
       {sym:"JD75",name:"Jump 75 Index"},{sym:"JD100",name:"Jump 100 Index"}
     ];
 
-    // ---- BOT SETTINGS ----
-    let botEnabled = false, botSpeed = 1, botMartingaleMult = 1.8, botTakeProfit = 2, botStopLoss = 20;
-    let botBaseStake = 1, botPaperMode = true, botBalance = 1000;
+    // ========== BOT SETTINGS ==========
+    let botEnabled = false;
+    let botSpeed = 1;                // how many consecutive signal ticks before entry
+    let botMartingaleMult = 1.8;
+    let botTakeProfit = 2;
+    let botStopLoss = 20;
+    let botBaseStake = 1;
+    let botPaperMode = true;
+    let botBalance = 1000;
     let botTradeLog = [];
-    let botState = {};
-    let signalStreakMap = {};
+    let botState = {};              // per-symbol martingale state
+    let signalStreakMap = {};       // per-symbol streak counter
 
-    // ---- GLOBAL STATE ----
-    let ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
-    let store = {}, storeShort = {}, storeMedium = {}, storeFullHistory = {};
-    let priceMap = {}, pipMap = {}, historyLoaded = {}, lastDigitMap = {};
-    let audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
-    let tradeLog = [];
-    let marketStats = {};
-    let previousSignalState = {};
-    let lastSignalTime = {};
-    let optimalParams = { zThreshold: 1.65, maxOpposing: 14, minMargin: 3 };
+    // ========== GLOBAL STATE ==========
+    const ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
+    const store = {}, storeShort = {}, storeMedium = {}, storeFullHistory = {};
+    const priceMap = {}, pipMap = {}, historyLoaded = {}, lastDigitMap = {};
+    const audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+    const tradeLog = [];
+    const marketStats = {};
+    const previousSignalState = {};
+    const lastSignalTime = {};
+    const pinnedSymbols = new Set();
+    const optimalParams = { zThreshold: 1.65, maxOpposing: 14, minMargin: 3 };
     const volatilityFactors = {
-      'R_10':0.8,'R_25':1.0,'R_50':1.3,'R_75':1.6,'R_100':2.0,'1HZ10V':0.9,'1HZ15V':1.0,'1HZ25V':1.2,'1HZ30V':1.3,'1HZ50V':1.5,'1HZ75V':1.8,'1HZ90V':1.9,'1HZ100V':2.0,'JD10':1.2,'JD25':1.5,'JD50':2.0,'JD75':2.5,'JD100':3.0
+      'R_10':0.8,'R_25':1.0,'R_50':1.3,'R_75':1.6,'R_100':2.0,
+      '1HZ10V':0.9,'1HZ15V':1.0,'1HZ25V':1.2,'1HZ30V':1.3,'1HZ50V':1.5,
+      '1HZ75V':1.8,'1HZ90V':1.9,'1HZ100V':2.0,
+      'JD10':1.2,'JD25':1.5,'JD50':2.0,'JD75':2.5,'JD100':3.0
     };
 
-    class OnlineLogisticRegression { /* same as before */
-      constructor(fc=2,lr=0.01){ this.weights=Array(fc).fill(0).map(()=>Math.random()*0.1); this.bias=0; this.lr=lr; }
-      sigmoid(z){return 1/(1+Math.exp(-z));}
-      predict(f){let z=this.bias;for(let i=0;i<f.length;i++)z+=this.weights[i]*f[i];return this.sigmoid(z);}
-      update(f,label){let p=this.predict(f);let e=label-p;for(let i=0;i<f.length;i++)this.weights[i]+=this.lr*e*f[i];this.bias+=this.lr*e;}
+    // Lightweight ML model
+    class OnlineLogisticRegression {
+      constructor(fc=2, lr=0.01) {
+        this.weights = Array(fc).fill(0).map(() => Math.random() * 0.1);
+        this.bias = 0;
+        this.lr = lr;
+      }
+      sigmoid(z) { return 1 / (1 + Math.exp(-z)); }
+      predict(f) { let z = this.bias; for (let i = 0; i < f.length; i++) z += this.weights[i] * f[i]; return this.sigmoid(z); }
+      update(f, label) {
+        let p = this.predict(f);
+        let err = label - p;
+        for (let i = 0; i < f.length; i++) this.weights[i] += this.lr * err * f[i];
+        this.bias += this.lr * err;
+      }
     }
-    let mlModel = new OnlineLogisticRegression(3);
-    let lastMLPredictions = {}, mlAccuracyHistory = {};
-    let pinnedSymbols = new Set();
+    const mlModel = new OnlineLogisticRegression(3);
+    const lastMLPredictions = {};
+    const mlAccuracyHistory = {};
 
-    let phaseOneReady = {}, phaseTwoReady = {};
-    let marketContainers = {}; // DOM references
+    // Two‑phase history loading
+    const phaseOneReady = {};   // 200 ticks ready
+    const phaseTwoReady = {};   // 1000 ticks ready
+    const marketContainers = {};
 
-    // ---- CORE FUNCTIONS ----
-    function getMLFeatures(s,eP,oP){let a=store[s];if(!a||a.length<10)return[0,0,0];let d=(eP-oP)/100,str=0,lst=a[a.length-1];for(let i=a.length-1;i>=0;i--){if(a[i]===lst)str++;else break;}return[d,Math.min(str,10)/10,volatilityFactors[s]/3];}
-    function nowStr(){return new Date().toLocaleTimeString();}
-    function classifyRegime(s){let a=store[s];if(!a||a.length<50)return{type:'Unknown',color:'#64748b'};let r=a.slice(-50).map(d=>d%2===0?0:1);let m=r.reduce((a,b)=>a+b,0)/r.length;let std=Math.sqrt(r.reduce((a,b)=>a+Math.pow(b-m,2),0)/r.length);if(std<0.35)return{type:'Calm',color:'#15803d'};if(std>0.48)return{type:'Trending',color:'#1d4ed8'};return{type:'Choppy',color:'#b45309'};}
-    function detectReversalPattern(s,cnt,total,ep,op){let a=store[s];if(!a||a.length<30)return null;let r=a.slice(-30);let ec=r.filter(d=>d%2===0).length;let bNow=ep>op?'EVEN':'ODD';if(bNow!==(ec>15?'EVEN':'ODD'))return'⚠️ Bias shift imminent';let eph=[];for(let i=0;i<=a.length-10;i+=5)eph.push(a.slice(i,i+10).filter(d=>d%2===0).length/10*100);if(eph.length>=3){let l3=eph.slice(-3);if(l3[0]>l3[1]&&l3[2]>l3[1]&&Math.abs(l3[0]-l3[2])<2)return'📉 Double top in even%';if(l3[0]<l3[1]&&l3[2]<l3[1]&&Math.abs(l3[0]-l3[2])<2)return'📈 Double bottom in even%';}return null;}
-    function computeBiasMomentum(s){let a=store[s];if(!a||a.length<50)return{value:0,label:'neutral'};let f1=a.slice(-50,-25),f2=a.slice(-25);let e1=f1.filter(d=>d%2===0).length/25*100,e2=f2.filter(d=>d%2===0).length/25*100;let mom=e2-e1;return{value:mom,label:mom>5?'up':(mom<-5?'down':'neutral')};}
-    function detectDivergence(sy,sig,mom){if(!sig)return null;if(sig==="BUY EVEN"&&mom.label==="down")return"⚠️ Divergence: momentum falling";if(sig==="BUY ODD"&&mom.label==="up")return"⚠️ Divergence: momentum rising";if(sig==="BUY EVEN"&&mom.value<-3)return"⚠️ Divergence: weak momentum";if(sig==="BUY ODD"&&mom.value>3)return"⚠️ Divergence: weak momentum";return null;}
+    // ========== UTILITY FUNCTIONS ==========
+    function nowStr() { return new Date().toLocaleTimeString(); }
+    function getMLFeatures(s, evenP, oddP) {
+      let a = store[s]; if (!a || a.length < 10) return [0,0,0];
+      let diff = (evenP - oddP) / 100;
+      let streak = 0, last = a[a.length-1];
+      for (let i = a.length-1; i >= 0; i--) { if (a[i] === last) streak++; else break; }
+      return [diff, Math.min(streak,10)/10, volatilityFactors[s]/3];
+    }
+    function getCounts(sym) {
+      let a = store[sym]; if (!a) return new Array(10).fill(0);
+      let c = new Array(10).fill(0); a.forEach(d => c[d]++); return c;
+    }
+    function getEvenP(sym) { let c = getCounts(sym); let t = c.reduce((a,b)=>a+b,0); let e = c[0]+c[2]+c[4]+c[6]+c[8]; return (e/t)*100; }
+    function getOddP(sym) { return 100 - getEvenP(sym); }
 
-    let chartInstances = {};
-    function drawSparkline(sym){let c=document.getElementById(`sparkline-${sym}`);if(!c)return;let a=store[sym];if(!a||a.length<10)return;let ctx=c.getContext('2d');let w=c.width=c.offsetWidth||300,h=c.height=40;ctx.clearRect(0,0,w,h);let rec=a.slice(-50);if(rec.length<2)return;let pts=[];for(let i=0;i<rec.length;i++){let sl=rec.slice(0,i+1);let ep=sl.filter(d=>d%2===0).length/sl.length*100;pts.push({x:(i/(rec.length-1))*w,y:h-(ep/100)*h});}let grad=ctx.createLinearGradient(0,0,0,h);grad.addColorStop(0,'rgba(74,222,128,0.3)');grad.addColorStop(1,'rgba(248,113,113,0.3)');ctx.fillStyle=grad;ctx.beginPath();ctx.moveTo(pts[0].x,h);for(let p of pts)ctx.lineTo(p.x,p.y);ctx.lineTo(pts[pts.length-1].x,h);ctx.closePath();ctx.fill();ctx.strokeStyle='#38bdf8';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let p of pts)ctx.lineTo(p.x,p.y);ctx.stroke();ctx.strokeStyle='#64748b';ctx.lineWidth=0.5;ctx.setLineDash([2,2]);ctx.beginPath();ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.stroke();ctx.setLineDash([]);}
+    // Signal detection core (unchanged rules)
+    function getAdvancedSignal(sym) {
+      let a = store[sym]; if (!a || a.length < 1000) return null;
+      let tf = checkMultiTimeframeAlignment(sym); if (!tf) return null;
+      let cnt = getCounts(sym), t = a.length;
+      let es = cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8], os = t - es;
+      if (!isStatisticallySignificant(es, os, t)) return null;
+      let ep = (es/t)*100, op = (os/t)*100;
+      // Force signal direction to match 1000‑tick dominance
+      if (tf === "EVEN" && ep <= op) return null;
+      if (tf === "ODD"  && op <= ep) return null;
+      let oppDigits = (tf === "EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
+      if (!oppDigits.every(d => (cnt[d]/t)*100 < 10)) return null;
+      if (Math.abs(ep - op) < optimalParams.minMargin) return null;
+      return tf === "EVEN" ? "BUY EVEN" : "BUY ODD";
+    }
+    function areSignalsReady() { return Object.values(phaseTwoReady).filter(Boolean).length === MARKETS.length; }
 
+    // Sparkline & Heatmap
+    const chartInstances = {};
+    function drawSparkline(sym) {
+      let canvas = document.getElementById(`sparkline-${sym}`);
+      if (!canvas) return;
+      let a = store[sym]; if (!a || a.length < 10) return;
+      let ctx = canvas.getContext('2d');
+      let w = canvas.width = canvas.offsetWidth || 300, h = canvas.height = 40;
+      ctx.clearRect(0,0,w,h);
+      let rec = a.slice(-50); if (rec.length < 2) return;
+      let pts = [];
+      for (let i = 0; i < rec.length; i++) {
+        let sl = rec.slice(0, i+1);
+        let evp = sl.filter(d => d%2===0).length / sl.length * 100;
+        pts.push({x: (i/(rec.length-1))*w, y: h - (evp/100)*h});
+      }
+      let grad = ctx.createLinearGradient(0,0,0,h);
+      grad.addColorStop(0, 'rgba(74,222,128,0.3)'); grad.addColorStop(1, 'rgba(248,113,113,0.3)');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.moveTo(pts[0].x, h);
+      for (let p of pts) ctx.lineTo(p.x, p.y);
+      ctx.lineTo(pts[pts.length-1].x, h); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+      for (let p of pts) ctx.lineTo(p.x, p.y); ctx.stroke();
+      ctx.strokeStyle = '#64748b'; ctx.lineWidth = 0.5; ctx.setLineDash([2,2]);
+      ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
+      ctx.setLineDash([]);
+    }
     const heatmapCounters = {};
-    function updateHeatmap(sym){
-      let canvas=document.getElementById(`heatmap-${sym}`);if(!canvas)return;let a=store[sym];if(!a||a.length<50)return;
-      if(!heatmapCounters[sym])heatmapCounters[sym]=0;
+    function updateHeatmap(sym) {
+      let canvas = document.getElementById(`heatmap-${sym}`);
+      if (!canvas) return;
+      let a = store[sym]; if (!a || a.length < 50) return;
+      if (!heatmapCounters[sym]) heatmapCounters[sym] = 0;
       heatmapCounters[sym]++;
-      if(heatmapCounters[sym]%10!==0)return; // throttle
-      let recent=a.slice(-50);let matrix=Array(10).fill().map(()=>Array(50).fill(0));
-      for(let i=0;i<recent.length;i++)matrix[recent[i]][i]=1;
-      let existing=chartInstances[sym];
-      if(existing){existing.data.datasets[0].data=matrix.flatMap((row,d)=>row.map((v,t)=>({x:t,y:d,v:v})));existing.update('none');}
-      else{let chart=new Chart(canvas,{type:'matrix',data:{labels:Array(50).fill(''),datasets:[{data:matrix.flatMap((row,d)=>row.map((v,t)=>({x:t,y:d,v:v}))),backgroundColor(ctx){let val=ctx.raw.v;if(val===0)return'#1e293b';return`rgba(56,189,248,${0.3+val*0.7})`;},borderWidth:0,width:({chart})=>(chart.chartArea||{}).width/50,height:({chart})=>(chart.chartArea||{}).height/10}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false,offset:true},y:{display:true,reverse:true,ticks:{stepSize:1,color:'#94a3b8'}}}}});chartInstances[sym]=chart;}
+      if (heatmapCounters[sym] % 10 !== 0) return;
+      let recent = a.slice(-50);
+      let matrix = Array(10).fill().map(() => Array(50).fill(0));
+      for (let i = 0; i < recent.length; i++) matrix[recent[i]][i] = 1;
+      let existing = chartInstances[sym];
+      if (existing) {
+        existing.data.datasets[0].data = matrix.flatMap((row, d) => row.map((v, t) => ({x:t, y:d, v:v})));
+        existing.update('none');
+      } else {
+        let chart = new Chart(canvas, {
+          type: 'matrix',
+          data: {
+            labels: Array(50).fill(''),
+            datasets: [{
+              data: matrix.flatMap((row, d) => row.map((v, t) => ({x:t, y:d, v:v}))),
+              backgroundColor(ctx) {
+                let val = ctx.raw.v;
+                if (val === 0) return '#1e293b';
+                return `rgba(56,189,248,${0.3 + val * 0.7})`;
+              },
+              borderWidth: 0,
+              width: ({chart}) => (chart.chartArea || {}).width / 50,
+              height: ({chart}) => (chart.chartArea || {}).height / 10,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            scales: {
+              x: { display: false, offset: true },
+              y: { display: true, reverse: true, ticks: { stepSize: 1, color: '#94a3b8' } }
+            }
+          }
+        });
+        chartInstances[sym] = chart;
+      }
     }
 
-    function detectConsensus(){/* same */return{active:false};}
-    function getCounts(sym){let a=store[sym];if(!a)return Array(10).fill(0);let c=Array(10).fill(0);a.forEach(d=>c[d]++);return c;}
-    function getEvenP(sym){let c=getCounts(sym);let t=c.reduce((a,b)=>a+b,0);let e=c[0]+c[2]+c[4]+c[6]+c[8];return(e/t)*100;}
-    function getOddP(sym){return 100-getEvenP(sym);}
-    function recomputeOptimalThresholds(){/* same */}
-    function isStatisticallySignificant(e,o,t){return Math.abs(e/t-0.5)/Math.sqrt(0.25/t)>optimalParams.zThreshold;}
-    function checkMultiTimeframeAlignment(sym){let S=storeShort[sym],M=storeMedium[sym],L=store[sym];if(!S||S.length<50||!M||M.length<200||!L||L.length<800)return false;const bias=a=>{let e=a.filter(d=>d%2===0).length;return e>a.length/2?"EVEN":(a.length-e>a.length/2?"ODD":null);};let bs=bias(S),bm=bias(M),bl=bias(L);let votes=[bs,bm,bl].filter(b=>b!==null);return votes.filter(v=>v==="EVEN").length>=2?"EVEN":(votes.filter(v=>v==="ODD").length>=2?"ODD":null);}
-    function getAdvancedSignal(sym){
-      let a=store[sym];if(!a||a.length<1000)return null;
-      let tf=checkMultiTimeframeAlignment(sym);if(!tf)return null;
-      let cnt=getCounts(sym),t=a.length,es=cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8],os=t-es;
-      if(!isStatisticallySignificant(es,os,t))return null;
-      let ep=(es/t)*100,op=(os/t)*100;
-      if(tf==="EVEN"&&ep<=op)return null;
-      if(tf==="ODD"&&op<=ep)return null;
-      let opp=(tf==="EVEN")?[1,3,5,7,9]:[0,2,4,6,8];
-      if(!opp.every(d=>(cnt[d]/t)*100<10))return null;
-      if(Math.abs(ep-op)<optimalParams.minMargin)return null;
-      return tf==="EVEN"?"BUY EVEN":"BUY ODD";
-    }
-    function areSignalsReady(){return Object.values(phaseTwoReady).filter(Boolean).length===markets.length;}
+    // ========== MARTINGALE BOT LOGIC ==========
+    function handleBotTrade(symbol, signalType) {
+      if (!botEnabled || !phaseTwoReady[symbol]) return;
 
-    // ---- BOT LOGIC ----
-    function handleBotTrade(sym, signalType){
-      if(!botEnabled||!phaseTwoReady[sym])return;
-      if(!signalStreakMap[sym])signalStreakMap[sym]={lastSignalType:null,count:0};
-      let s=signalStreakMap[sym];
-      if(s.lastSignalType!==signalType){s.lastSignalType=signalType;s.count=1;}else s.count++;
-      if(s.count<botSpeed)return;
-      if(!botState[sym])botState[sym]={currentStake:botBaseStake,totalProfit:0,totalLoss:0,active:true};
-      let st=botState[sym];if(!st.active)return;
-      let dir=signalType==="BUY EVEN"?"DIGITEVEN":"DIGITODD";
-      let stake=st.currentStake;
-      let actualWin=(dir==="DIGITEVEN"&&lastDigitMap[sym]%2===0)||(dir==="DIGITODD"&&lastDigitMap[sym]%2!==0);
-      let outcome=actualWin?"win":"loss";
-      if(botPaperMode){
-        if(actualWin){botBalance+=stake*0.96;st.totalProfit+=stake*0.96;}
-        else{botBalance-=stake;st.totalLoss+=stake;}
-      }else{
-        ws.send(JSON.stringify({buy:1,price:stake,parameters:{contract_type:dir,symbol:sym,duration:1,duration_unit:"t",basis:"stake",amount:stake,currency:"USD"}}));
+      // Track signal streak
+      if (!signalStreakMap[symbol]) signalStreakMap[symbol] = { lastSignalType: null, count: 0 };
+      let s = signalStreakMap[symbol];
+      if (s.lastSignalType !== signalType) { s.lastSignalType = signalType; s.count = 1; }
+      else { s.count++; }
+      if (s.count < botSpeed) return;
+
+      // Get martingale state
+      if (!botState[symbol]) botState[symbol] = { currentStake: botBaseStake, totalProfit: 0, totalLoss: 0, active: true };
+      let st = botState[symbol];
+      if (!st.active) return;
+
+      let direction = signalType === "BUY EVEN" ? "DIGITEVEN" : "DIGITODD";
+      let stake = st.currentStake;
+      let lastDigit = lastDigitMap[symbol];
+      if (lastDigit === undefined) return;
+      let actualWin = (direction === "DIGITEVEN" && lastDigit % 2 === 0) ||
+                      (direction === "DIGITODD" && lastDigit % 2 !== 0);
+      let outcome = actualWin ? "win" : "loss";
+
+      // Paper trading or real trade
+      if (botPaperMode) {
+        const payout = 1.96; // Deriv's actual payout for digit odd/even
+        if (actualWin) {
+          let profit = stake * (payout - 1);
+          botBalance += profit;
+          st.totalProfit += profit;
+        } else {
+          botBalance -= stake;
+          st.totalLoss += stake;
+        }
+      } else {
+        ws.send(JSON.stringify({
+          buy: 1,
+          price: stake,
+          parameters: {
+            contract_type: direction,
+            symbol: symbol,
+            duration: 1,
+            duration_unit: "t",
+            basis: "stake",
+            amount: stake,
+            currency: "USD"
+          }
+        }));
       }
-      let entry={time:nowStr(),market:sym,direction:dir,stake,outcome,balance:botBalance.toFixed(2)};
-      botTradeLog.unshift(entry);if(botTradeLog.length>50)botTradeLog.pop();
-      if(outcome==="win"){
-        if(st.totalProfit>=botTakeProfit){st.totalProfit=0;st.totalLoss=0;st.currentStake=botBaseStake;}
-        else st.currentStake=botBaseStake;
-      }else{
-        if(st.totalLoss>=botStopLoss){st.active=false;}
-        else st.currentStake=+(st.currentStake*botMartingaleMult).toFixed(2);
+
+      // Record trade
+      let entry = { time: nowStr(), market: symbol, direction, stake, outcome, balance: botBalance.toFixed(2) };
+      botTradeLog.unshift(entry);
+      if (botTradeLog.length > 50) botTradeLog.pop();
+
+      // Martingale logic
+      if (outcome === "win") {
+        if (st.totalProfit >= botTakeProfit) {
+          // Profit target reached → reset sequence
+          st.totalProfit = 0;
+          st.totalLoss = 0;
+          st.currentStake = botBaseStake;
+        } else {
+          st.currentStake = botBaseStake; // reset to base after a win
+        }
+      } else { // loss
+        if (st.totalLoss >= botStopLoss) {
+          st.active = false; // stop trading this market
+        } else {
+          st.currentStake = +(st.currentStake * botMartingaleMult).toFixed(2);
+        }
       }
+
       updateBotPanel();
     }
 
-    // ---- RENDERING ----
-    function buildMarketUI(sym, data){
+    // ========== UI UPDATE FUNCTIONS ==========
+    function updateBotPanel() {
+      let toggle = document.getElementById('botToggle');
+      if (toggle) {
+        toggle.textContent = botEnabled ? 'ON' : 'OFF';
+        toggle.className = 'bot-toggle ' + (botEnabled ? 'bot-on' : 'bot-off');
+      }
+      let bal = document.getElementById('botBalanceDisplay');
+      if (bal) bal.textContent = '$' + botBalance.toFixed(2);
+      let logDiv = document.getElementById('botTradeLog');
+      if (logDiv) {
+        logDiv.innerHTML = botTradeLog.slice(0, 10).map(t =>
+          `<div class="log-entry ${t.outcome==='win' ? 'log-win' : (t.outcome==='loss' ? 'log-loss' : 'log-pending')}">
+            ${t.time} ${t.market} ${t.direction} $${t.stake} → ${t.outcome}
+          </div>`
+        ).join('') || 'No trades yet';
+      }
+    }
+
+    function updateRecentSignals() {
+      let log = document.getElementById('recentSignalsLog');
+      if (!log) return;
+      log.innerHTML = tradeLog.slice(-10).reverse().map(l => {
+        let oc = l.outcome === "win" ? "log-win" : (l.outcome === "loss" ? "log-loss" : "log-pending");
+        let ot = l.outcome === "win" ? "✓ WIN" : (l.outcome === "loss" ? "✗ LOSS" : "⌛ pending");
+        return `<div class="log-entry" onclick="window.pinMarketPermanent('${l.symbol}')">
+          ${l.timestamp} ${l.symbol} ${l.signalType} <span class="${oc}">${ot}</span> 💪${l.strength}%
+        </div>`;
+      }).join('') || 'No signals yet';
+    }
+
+    // ========== BUILD FULL MARKET UI (called after 1000 ticks) ==========
+    function buildMarketUI(sym, data) {
       let container = marketContainers[sym];
-      if(!container||!data)return;
-      let isSig=data.isSignal;
-      let barW=Math.min(100,data.strength||0);
-      let hlthW=data.health||0;
-      let mlProbPercent=(data.mlProb*100).toFixed(1);
-      let mlColor=data.mlProb>0.55?'#4ade80':(data.mlProb<0.45?'#f87171':'#facc15');
-      let sorted=[...data.cnt].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
-      let most=sorted[0].i,second=sorted[1].i,least=sorted[9].i,secondLeast=sorted[8].i;
-      let last=data.arr[data.arr.length-1],rep=data.repCount;
-      function box(i){
-        let cls="";if(i===most)cls="most";else if(i===second)cls="second";else if(i===least)cls="least";else if(i===secondLeast)cls="secondLeast";
-        let pointer=(i===last)?`<div class="pointer ${i%2==0?'even':'odd'}">●</div>`:"";
-        let flash=(data.lastDigit===i)?"flash":"", repeatFx=(i===last&&rep>=2)?"repeat":"", counter=(i===last&&rep>=2)?`<div class="repeat-count">x${rep}</div>`:"";
+      if (!container || !data) return;
+      let isSig = data.isSignal;
+      let barW = Math.min(100, data.strength || 0);
+      let hlthW = data.health || 0;
+      let mlProbPercent = (data.mlProb * 100).toFixed(1);
+      let mlColor = data.mlProb > 0.55 ? '#4ade80' : (data.mlProb < 0.45 ? '#f87171' : '#facc15');
+      let sorted = [...data.cnt].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
+      let most = sorted[0].i, second = sorted[1].i, least = sorted[9].i, secondLeast = sorted[8].i;
+      let last = data.arr[data.arr.length-1], rep = data.repCount;
+
+      function box(i) {
+        let cls = "";
+        if (i === most) cls = "most";
+        else if (i === second) cls = "second";
+        else if (i === least) cls = "least";
+        else if (i === secondLeast) cls = "secondLeast";
+        let pointer = (i === last) ? `<div class="pointer ${i%2===0 ? 'even' : 'odd'}">●</div>` : "";
+        let flash = (data.lastDigit === i) ? "flash" : "";
+        let repeatFx = (i === last && rep >= 2) ? "repeat" : "";
+        let counter = (i === last && rep >= 2) ? `<div class="repeat-count">x${rep}</div>` : "";
         return `<div class="box ${cls} ${flash} ${repeatFx}">${pointer}${counter}<div class="digit">${i}</div><div class="percent">${data.perc[i]}%</div></div>`;
       }
-      let ticks=data.arr.slice(-50).map(d=>`<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("");
-      let mom=data.momentum, momClass=mom.label==='up'?'momentum-up':(mom.label==='down'?'momentum-down':'momentum-neutral');
-      let momText=mom.label==='up'?`📈 EVENS RISING +${mom.value.toFixed(1)}%`:(mom.label==='down'?`📉 ODDS RISING ${mom.value.toFixed(1)}%`:`➖ steady ${mom.value.toFixed(1)}%`);
-      let trend=''; if(data.trendChanged) trend=!isSig&&previousSignalState[sym]?'<span class="stop-signal">⛔ SIGNAL ENDED</span>':'<span class="trend-change">🔄 NEW SIGNAL</span>';
-      let reversalHtml=data.reversal?`<span class="reversal-warning">${data.reversal}</span>`:'';
-      let divHtml=data.divergence?`<span class="divergence-badge">${data.divergence}</span>`:'';
-      let mlAccHtml=`<span class="ml-accuracy-badge" style="color:${data.mlAccuracy>50?'var(--good)':'var(--bad)'}">📊 ML Acc: ${data.mlAccuracy.toFixed(1)}%</span>`;
-      let pin=`<span class="pin-star ${pinnedSymbols.has(sym)?'pinned':''}" onclick="window.pinMarketPermanent('${sym}')">⭐</span>`;
-      container.className="market "+(isSig?"signal":"")+(pinnedSymbols.has(sym)?" pinned":"");
-      container.innerHTML=`
+
+      let ticks = data.arr.slice(-50).map(d => `<span class="${d%2===0 ? 'e' : 'o'}">${d%2===0 ? 'E' : 'O'}</span>`).join("");
+      let mom = data.momentum;
+      let momClass = mom.label === 'up' ? 'momentum-up' : (mom.label === 'down' ? 'momentum-down' : 'momentum-neutral');
+      let momText = mom.label === 'up' ? `📈 EVENS RISING +${mom.value.toFixed(1)}%` :
+                    (mom.label === 'down' ? `📉 ODDS RISING ${mom.value.toFixed(1)}%` : `➖ steady ${mom.value.toFixed(1)}%`);
+      let trendHtml = '';
+      if (data.trendChanged) {
+        trendHtml = !isSig && previousSignalState[sym] ? '<span class="stop-signal">⛔ SIGNAL ENDED</span>' : '<span class="trend-change">🔄 NEW SIGNAL</span>';
+      }
+      let reversalHtml = data.reversal ? `<span class="reversal-warning">${data.reversal}</span>` : '';
+      let divergenceHtml = data.divergence ? `<span class="divergence-badge">${data.divergence}</span>` : '';
+      let mlAccHtml = `<span class="ml-accuracy-badge" style="color:${data.mlAccuracy > 50 ? 'var(--good)' : 'var(--bad)'}">📊 ML Acc: ${data.mlAccuracy.toFixed(1)}%</span>`;
+      let pinStarHtml = `<span class="pin-star ${pinnedSymbols.has(sym) ? 'pinned' : ''}" onclick="window.pinMarketPermanent('${sym}')">⭐</span>`;
+
+      container.className = "market " + (isSig ? "signal" : "") + (pinnedSymbols.has(sym) ? " pinned" : "");
+      container.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;">
-          <div><b>${data.name} ${pin}</b> <span class="small-badge" style="background:${data.regime.color}">🌊 ${data.regime.type}</span>${trend}${reversalHtml}${divHtml} <span class="momentum-badge ${momClass}">${momText}</span></div>
-          <div><span class="small-badge">❤️ ${hlthW}%</span><div class="health-bar-bg"><div class="health-bar-fill" style="width:${hlthW}%;"></div></div><span class="ml-prob" style="color:${mlColor}">🤖 ML: ${mlProbPercent}% even</span>${mlAccHtml}</div>
+          <div>
+            <b>${data.name} ${pinStarHtml}</b>
+            <span class="small-badge" style="background:${data.regime.color}">🌊 ${data.regime.type}</span>
+            ${trendHtml} ${reversalHtml} ${divergenceHtml}
+            <span class="momentum-badge ${momClass}">${momText}</span>
+          </div>
+          <div style="display:flex;align-items:center;">
+            <span class="small-badge">❤️ ${hlthW}%</span>
+            <div class="health-bar-bg"><div class="health-bar-fill" style="width:${hlthW}%;"></div></div>
+            <span class="ml-prob" style="color:${mlColor}">🤖 ML: ${mlProbPercent}% even</span>
+            ${mlAccHtml}
+          </div>
         </div>
         <div class="price">${data.price}</div>
         <div class="win">🎲 EVEN ${data.evenP.toFixed(1)}% | ODD ${data.oddP.toFixed(1)}%</div>
         <div class="metrics">
-          <div class="metric-item"><span class="metric-label">💪 STRENGTH</span><span class="strength-value">${data.strength.toFixed(1)}%</span><div class="strength-bar-bg"><div class="strength-bar-fill" style="width:${barW}%;"></div></div></div>
-          <div class="metric-item"><span class="metric-label">🎯 CONFIDENCE</span><span class="confidence-value">${data.confidence}</span>${isSig?'<span class="confidence-badge" style="background:#22c55e20;">🔥 ACTIVE</span>':'<span class="confidence-badge" style="background:#334155;">⚡ IDLE</span>'}</div>
+          <div class="metric-item"><span class="metric-label">💪 STRENGTH</span><span class="strength-value">${data.strength.toFixed(1)}%</span>
+          <div class="strength-bar-bg"><div class="strength-bar-fill" style="width:${barW}%;"></div></div></div>
+          <div class="metric-item"><span class="metric-label">🎯 CONFIDENCE</span><span class="confidence-value">${data.confidence}</span>
+          ${isSig ? '<span class="confidence-badge" style="background:#22c55e20;">🔥 ACTIVE</span>' : '<span class="confidence-badge" style="background:#334155;">⚡ IDLE</span>'}</div>
         </div>
-        ${isSig?`<div class="signal-text ${data.signalType==='BUY EVEN'?'buy-even':'buy-odd'}">🚀 ${data.signalType} (strength ${data.strength.toFixed(1)}% | conf ${data.confidence}) <span class="exit-suggestion">${data.exitMsg}</span></div>`:''}
+        ${isSig ? `<div class="signal-text ${data.signalType==='BUY EVEN'?'buy-even':'buy-odd'}">🚀 ${data.signalType} (strength ${data.strength.toFixed(1)}% | conf ${data.confidence}) <span class="exit-suggestion">${data.exitMsg}</span></div>` : ''}
         <canvas id="sparkline-${sym}" class="sparkline-canvas"></canvas>
         <div style="height:80px;margin:5px 0;"><canvas id="heatmap-${sym}" width="200" height="80"></canvas></div>
         <div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
         <div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
         <div class="tick">${ticks}</div>
       `;
-      setTimeout(()=>{drawSparkline(sym); updateHeatmap(sym);},10);
+      setTimeout(() => {
+        drawSparkline(sym);
+        updateHeatmap(sym);
+      }, 10);
     }
 
-    function computeFullMarketData(sym){
-      let a=store[sym];if(!phaseOneReady[sym])return null;
-      let t=a.length;if(t<10)return null;
-      let cnt=getCounts(sym);
-      let perc=cnt.map(c=>(c/t*100).toFixed(1));
-      let es=cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8],os=t-es;
-      let ep=(es/t)*100,op=(os/t)*100;
-      let sig=null,isSig=false,strength=0,confidence="—",health=0;
-      if(phaseTwoReady[sym]){
-        sig=getAdvancedSignal(sym); isSig=sig!==null;
-        if(isSig){
-          strength=computeSignalStrength(ep,op,perc,sig,sym);
-          confidence=computeConfidence(ep,op,perc,sig);
-          if(!window._lastSignalTick||window._lastSignalTick!==lastDigitMap[sym]){
-            window._lastSignalTick=lastDigitMap[sym];
-            recordSignal(sym,sig,strength.toFixed(1),confidence);
-          }
-        }
-        health=computeMarketHealth(sym,cnt,t,sig,ep,op);
+    // ========== FAST PER‑TICK UPDATE ==========
+    function fastUpdateMarket(sym) {
+      if (!phaseOneReady[sym]) return;
+      let container = marketContainers[sym];
+      if (!container) return;
+      let priceEl = container.querySelector('.price');
+      if (priceEl) priceEl.textContent = priceMap[sym] || "—";
+      let tickDiv = container.querySelector('.tick');
+      if (tickDiv && store[sym]) {
+        tickDiv.innerHTML = store[sym].slice(-50).map(d => `<span class="${d%2===0?'e':'o'}">${d%2===0?'E':'O'}</span>`).join('');
       }
-      let exitMsg=isSig?getExitSuggestion(sym,sig,cnt,t):"";
-      let regime=classifyRegime(sym);
-      let reversal=isSig?detectReversalPattern(sym,cnt,t,ep,op):null;
-      let features=getMLFeatures(sym,ep,op);
-      let mlProb=mlModel.predict(features);
-      let momentum=computeBiasMomentum(sym);
-      let divergence=isSig?detectDivergence(sym,sig,momentum):null;
-      let mlAcc=computeMLAccuracy(sym);
-      recordMLPrediction(sym,mlProb);
-      if(isSig)lastSignalTime[sym]=Date.now();else if(!lastSignalTime[sym])lastSignalTime[sym]=0;
-      let prevState=previousSignalState[sym]||false;
-      let trendChanged=(prevState!==isSig);previousSignalState[sym]=isSig;
-      let sortScore=pinnedSymbols.has(sym)?Infinity:(isSig?1e9+(strength*(parseFloat(confidence)||0)/100):lastSignalTime[sym]||0);
-      return{
-        sym,signalType:sig,isSignal:isSig,strength,confidence,health,exitMsg,
-        regime,reversal,mlProb,momentum,divergence,mlAccuracy:mlAcc,
-        perc,cnt,arr:a,lastDigit:lastDigitMap[sym],repCount:(()=>{let c=0,ld=a[a.length-1];for(let i=a.length-1;i>=0;i--){if(a[i]===ld)c++;else break;}return c;})(),
-        trendChanged,sortScore,price:priceMap[sym]||"—",evenP:ep,oddP:op,name:markets.find(m=>m.sym===sym).name
+    }
+
+    // ========== FULL DATA COMPUTATION ==========
+    function computeFullMarketData(sym) {
+      let a = store[sym];
+      if (!phaseOneReady[sym]) return null;
+      let t = a.length; if (t < 10) return null;
+      let cnt = getCounts(sym);
+      let perc = cnt.map(c => ((c/t)*100).toFixed(1));
+      let es = cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8], os = t - es;
+      let ep = (es/t)*100, op = (os/t)*100;
+      let sig = null, isSig = false, strength = 0, confidence = "—", health = 0;
+
+      if (phaseTwoReady[sym]) {
+        sig = getAdvancedSignal(sym);
+        isSig = sig !== null;
+        if (isSig) {
+          strength = computeSignalStrength(ep, op, perc, sig, sym);
+          confidence = computeConfidence(ep, op, perc, sig);
+          if (!window._lastSignalTick || window._lastSignalTick !== lastDigitMap[sym]) {
+            window._lastSignalTick = lastDigitMap[sym];
+            recordSignal(sym, sig, strength.toFixed(1), confidence);
+          }
+          audio.play();
+        }
+        health = computeMarketHealth(sym, cnt, t, sig, ep, op);
+      }
+
+      let exitMsg = isSig ? getExitSuggestion(sym, sig, cnt, t) : "";
+      let regime = classifyRegime(sym);
+      let reversal = isSig ? detectReversalPattern(sym, cnt, t, ep, op) : null;
+      let features = getMLFeatures(sym, ep, op);
+      let mlProb = mlModel.predict(features);
+      let momentum = computeBiasMomentum(sym);
+      let divergence = isSig ? detectDivergence(sym, sig, momentum) : null;
+      let mlAcc = computeMLAccuracy(sym);
+      recordMLPrediction(sym, mlProb);
+
+      if (isSig) lastSignalTime[sym] = Date.now();
+      else if (!lastSignalTime[sym]) lastSignalTime[sym] = 0;
+      let prevState = previousSignalState[sym] || false;
+      let trendChanged = (prevState !== isSig);
+      previousSignalState[sym] = isSig;
+
+      let sortScore = pinnedSymbols.has(sym) ? Infinity :
+        (isSig ? 1e9 + (strength * (parseFloat(confidence) || 0) / 100) : lastSignalTime[sym] || 0);
+
+      return {
+        sym, name: MARKETS.find(m => m.sym === sym).name, price: priceMap[sym] || "—",
+        evenP: ep, oddP: op, signalType: sig, isSignal: isSig, strength, confidence, health, exitMsg,
+        regime, reversal, mlProb, momentum, divergence, mlAccuracy: mlAcc,
+        perc, cnt, arr: a, lastDigit: lastDigitMap[sym],
+        repCount: (() => { let c = 0, ld = a[a.length-1]; for (let i = a.length-1; i >= 0; i--) { if (a[i] === ld) c++; else break; } return c; })(),
+        trendChanged, sortScore
       };
     }
 
-    function refreshVisibleMarkets(){
-      let wrap=document.getElementById("markets");if(!wrap)return;
-      let visible=[];document.querySelectorAll('#marketSelectorList .market-checkbox').forEach(cb=>{if(cb.checked)visible.push(cb.dataset.sym);});
-      if(!visible.length)visible=markets.map(m=>m.sym);
-      let arr=[];markets.forEach(m=>{if(!visible.includes(m.sym))return;let d=computeFullMarketData(m.sym);if(d)arr.push(d);});
-      arr.sort((a,b)=>b.sortScore-a.sortScore);
-      let desiredIds=arr.map(d=>`market-${d.sym}`);
-      // remove hidden
-      Array.from(wrap.children).filter(el=>el.id.startsWith('market-')&&!desiredIds.includes(el.id)).forEach(el=>el.remove());
-      desiredIds.forEach((id,idx)=>{
-        let sym=id.replace('market-','');
-        let container=document.getElementById(id);
-        if(!container){container=document.createElement('div');container.id=id;container.className='market';wrap.appendChild(container);}
-        if(wrap.children[idx]!==container)wrap.insertBefore(container,wrap.children[idx]||null);
-        marketContainers[sym]=container;
-        let data=arr.find(d=>d.sym===sym);
-        if(data)buildMarketUI(sym,data);
+    // ========== FULL RE‑RENDER (visible markets only) ==========
+    function refreshVisibleMarkets() {
+      let wrap = document.getElementById("markets"); if (!wrap) return;
+      let visible = [];
+      let checks = document.querySelectorAll('#marketSelectorList .market-checkbox');
+      if (checks.length) checks.forEach(cb => { if (cb.checked) visible.push(cb.dataset.sym); });
+      else visible = MARKETS.map(m => m.sym);
+
+      let arr = [];
+      MARKETS.forEach(m => {
+        if (!visible.includes(m.sym)) return;
+        let d = computeFullMarketData(m.sym);
+        if (d) arr.push(d);
+      });
+      arr.sort((a, b) => b.sortScore - a.sortScore);
+
+      let desiredIds = arr.map(d => `market-${d.sym}`);
+      // Remove hidden containers
+      Array.from(wrap.children).filter(el => el.id.startsWith('market-') && !desiredIds.includes(el.id)).forEach(el => el.remove());
+      // Create / reorder
+      desiredIds.forEach((id, idx) => {
+        let sym = id.replace('market-', '');
+        let container = document.getElementById(id);
+        if (!container) {
+          container = document.createElement('div');
+          container.id = id;
+          container.className = 'market';
+          wrap.appendChild(container);
+        }
+        if (wrap.children[idx] !== container) wrap.insertBefore(container, wrap.children[idx] || null);
+        marketContainers[sym] = container;
+        let data = arr.find(d => d.sym === sym);
+        if (data) buildMarketUI(sym, data);
       });
       updateBlinkingStates();
-      // consensus
-      let oldAlert=document.getElementById('consensusAlert');if(oldAlert)oldAlert.remove();
-      if(areSignalsReady()){
-        let consensus=detectConsensus();
-        if(consensus.active){
-          let ad=document.createElement('div');ad.id='consensusAlert';ad.className='consensus-alert';
-          ad.innerHTML=`🤝 CONSENSUS SIGNAL: ${consensus.bias} bias across ${consensus.symbols.join(', ')} (${consensus.symbols.length} markets)`;
+
+      let oldAlert = document.getElementById('consensusAlert'); if (oldAlert) oldAlert.remove();
+      if (areSignalsReady()) {
+        let consensus = detectConsensus();
+        if (consensus.active) {
+          let ad = document.createElement('div'); ad.id = 'consensusAlert'; ad.className = 'consensus-alert';
+          ad.innerHTML = `🤝 CONSENSUS SIGNAL: ${consensus.bias} bias across ${consensus.symbols.join(', ')} (${consensus.symbols.length} markets)`;
           wrap.prepend(ad);
         }
       }
     }
 
-    // per‑tick fast update
-    function fastUpdateMarket(sym){
-      if(!phaseOneReady[sym])return;
-      let container=marketContainers[sym];if(!container)return;
-      // update price
-      let priceEl=container.querySelector('.price');if(priceEl)priceEl.textContent=priceMap[sym]||"—";
-      // update tick strip
-      let tickDiv=container.querySelector('.tick');if(tickDiv&&store[sym]){
-        tickDiv.innerHTML=store[sym].slice(-50).map(d=>`<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join('');
-      }
+    function updateBlinkingStates() {
+      MARKETS.forEach(m => {
+        let item = document.getElementById(`item-${m.sym}`);
+        if (!item) return;
+        let hasSig = phaseTwoReady[m.sym] ? getAdvancedSignal(m.sym) !== null : false;
+        item.classList.toggle('blinking', hasSig);
+      });
     }
 
-    function recordSignal(symbol,sigType,strength,confidence){
-      let id=Date.now()+Math.random();let entry={id,symbol,signalType:sigType,strength,confidence,timestamp:nowStr(),outcome:"pending"};
-      tradeLog.push(entry);if(!marketStats[symbol])marketStats[symbol]={totalSignals:0,wins:0,losses:0};
+    // ========== SIGNAL RECORDING (also triggers bot) ==========
+    function recordSignal(symbol, sigType, strength, confidence) {
+      let id = Date.now() + Math.random();
+      let entry = { id, symbol, signalType: sigType, strength, confidence, timestamp: nowStr(), outcome: "pending" };
+      tradeLog.push(entry);
+      if (!marketStats[symbol]) marketStats[symbol] = { totalSignals: 0, wins: 0, losses: 0 };
       marketStats[symbol].totalSignals++;
-      if(tradeLog.filter(t=>t.outcome!=='pending').length%20===0)recomputeOptimalThresholds();
+      if (tradeLog.filter(t => t.outcome !== 'pending').length % 20 === 0) recomputeOptimalThresholds();
       updateRecentSignals();
-      handleBotTrade(symbol,sigType);
-      setTimeout(()=>resolveSignalOutcome(symbol,sigType,id),150);
+      handleBotTrade(symbol, sigType);
+      setTimeout(() => resolveSignalOutcome(symbol, sigType, id), 150);
       return id;
     }
-    function resolveSignalOutcome(symbol,pred,id){let last=lastDigitMap[symbol];if(last===undefined)return;let win=(pred==="BUY EVEN"&&last%2===0)||(pred==="BUY ODD"&&last%2!==0);let trade=tradeLog.find(t=>t.id===id);if(trade&&trade.outcome==="pending"){trade.outcome=win?"win":"loss";if(marketStats[trade.symbol]){if(win)marketStats[trade.symbol].wins++;else marketStats[trade.symbol].losses++;}let cnt=getCounts(symbol),t=cnt.reduce((a,b)=>a+b,0),ep=(cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8])/t*100;mlModel.update(getMLFeatures(symbol,ep,100-ep),win?1:0);updateRecentSignals();}}
-
-    // Bot UI
-    function buildBotPanel(){
-      let panel=document.getElementById("statsPanel");if(!panel||document.getElementById("botContainer"))return;
-      let html=`<div class="stats-panel" id="botContainer"><div class="stats-title">🤖 MARTINGALE BOT</div>
-        <div class="stat-row"><span class="stat-label">Status</span><button id="botToggle" class="bot-toggle ${botEnabled?'bot-on':'bot-off'}">${botEnabled?'ON':'OFF'}</button></div>
-        <div class="stat-row"><span class="stat-label">Speed (ticks)</span><input id="botSpeed" type="number" value="${botSpeed}" min="1" style="width:60px;"></div>
-        <div class="stat-row"><span class="stat-label">Base Stake</span><input id="botBaseStake" type="number" value="${botBaseStake}" step="0.1" style="width:60px;"></div>
-        <div class="stat-row"><span class="stat-label">Martingale Mult</span><input id="botMult" type="number" value="${botMartingaleMult}" step="0.1" style="width:60px;"></div>
-        <div class="stat-row"><span class="stat-label">Take Profit</span><input id="botTP" type="number" value="${botTakeProfit}" step="0.5" style="width:60px;"></div>
-        <div class="stat-row"><span class="stat-label">Stop Loss</span><input id="botSL" type="number" value="${botStopLoss}" step="1" style="width:60px;"></div>
-        <div class="stat-row"><span class="stat-label">Paper Mode</span><input id="botPaper" type="checkbox" ${botPaperMode?'checked':''}></div>
-        <div class="stat-row"><span class="stat-label">Balance</span><span class="stat-value" id="botBalanceDisplay">$${botBalance.toFixed(2)}</span></div>
-        <div class="signal-log" id="botTradeLog" style="max-height:120px;">${botTradeLog.slice(0,10).map(t=>`<div class="log-entry ${t.outcome==='win'?'log-win':(t.outcome==='loss'?'log-loss':'log-pending')}">${t.time} ${t.market} ${t.direction} $${t.stake} → ${t.outcome}</div>`).join('')||'No trades yet'}</div>
-      </div>`;
-      panel.insertAdjacentHTML('afterbegin',html);
-      document.getElementById('botToggle').onclick=()=>{botEnabled=!botEnabled;updateBotPanel();};
-      document.getElementById('botSpeed').onchange=function(){botSpeed=parseInt(this.value)||1;};
-      document.getElementById('botBaseStake').onchange=function(){botBaseStake=parseFloat(this.value)||1;};
-      document.getElementById('botMult').onchange=function(){botMartingaleMult=parseFloat(this.value)||1.8;};
-      document.getElementById('botTP').onchange=function(){botTakeProfit=parseFloat(this.value)||2;};
-      document.getElementById('botSL').onchange=function(){botStopLoss=parseFloat(this.value)||20;};
-      document.getElementById('botPaper').onchange=function(){botPaperMode=this.checked;};
-    }
-    function updateBotPanel(){
-      let toggle=document.getElementById('botToggle');if(toggle){toggle.textContent=botEnabled?'ON':'OFF';toggle.className='bot-toggle '+(botEnabled?'bot-on':'bot-off');}
-      let bal=document.getElementById('botBalanceDisplay');if(bal)bal.textContent='$'+botBalance.toFixed(2);
-      let logDiv=document.getElementById('botTradeLog');if(logDiv)logDiv.innerHTML=botTradeLog.slice(0,10).map(t=>`<div class="log-entry ${t.outcome==='win'?'log-win':(t.outcome==='loss'?'log-loss':'log-pending')}">${t.time} ${t.market} ${t.direction} $${t.stake} → ${t.outcome}</div>`).join('')||'No trades yet';
+    function resolveSignalOutcome(symbol, pred, id) {
+      let last = lastDigitMap[symbol]; if (last === undefined) return;
+      let win = (pred === "BUY EVEN" && last % 2 === 0) || (pred === "BUY ODD" && last % 2 !== 0);
+      let trade = tradeLog.find(t => t.id === id);
+      if (trade && trade.outcome === "pending") {
+        trade.outcome = win ? "win" : "loss";
+        if (marketStats[trade.symbol]) {
+          if (win) marketStats[trade.symbol].wins++; else marketStats[trade.symbol].losses++;
+        }
+        let cnt = getCounts(symbol), t = cnt.reduce((a,b)=>a+b,0), ep = (cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8])/t*100;
+        mlModel.update(getMLFeatures(symbol, ep, 100-ep), win ? 1 : 0);
+        updateRecentSignals();
+      }
     }
 
-    // Market selector & recent signals
-    function buildStaticSelector(){
-      let panel=document.getElementById("statsPanel");if(!panel||document.getElementById("marketSelectorContainer"))return;
-      let html=`<div class="stats-panel" id="marketSelectorContainer"><div class="stats-title">📋 Market Selection</div><div id="marketSelectorList" class="market-selector-list">${markets.map(m=>`<div class="market-list-item" id="item-${m.sym}" onclick="window.pinMarketPermanent('${m.sym}')"><input type="checkbox" class="market-checkbox" data-sym="${m.sym}" checked><span>${m.name}</span></div>`).join('')}</div><div style="margin-top:8px;display:flex;gap:6px;"><button id="selectAll">All</button><button id="deselectAll">None</button></div></div>`;
-      panel.insertAdjacentHTML('afterbegin',html);
-      document.getElementById('selectAll').onclick=()=>{document.querySelectorAll('.market-checkbox').forEach(cb=>cb.checked=true);refreshVisibleMarkets();};
-      document.getElementById('deselectAll').onclick=()=>{document.querySelectorAll('.market-checkbox').forEach(cb=>cb.checked=false);refreshVisibleMarkets();};
-      document.querySelectorAll('.market-checkbox').forEach(cb=>cb.addEventListener('change',refreshVisibleMarkets));
-    }
-    function updateBlinkingStates(){markets.forEach(m=>{let item=document.getElementById(`item-${m.sym}`);if(item){let hasSignal=getAdvancedSignal(m.sym)!==null;item.classList.toggle('blinking',hasSignal);}});}
-    function buildRecentSignalsPanel(){
-      let panel=document.getElementById("statsPanel");if(!panel||document.getElementById("recentSignalsContainer"))return;
-      panel.insertAdjacentHTML('beforeend',`<div class="stats-panel" id="recentSignalsContainer"><div class="stats-title">📋 RECENT SIGNALS</div><div class="signal-log" id="recentSignalsLog">No signals yet</div></div>`);
-    }
-    function updateRecentSignals(){
-      let log=document.getElementById("recentSignalsLog");if(!log)return;
-      log.innerHTML=tradeLog.slice(-10).reverse().map(log=>{
-        let oc=log.outcome==="win"?"log-win":(log.outcome==="loss"?"log-loss":"log-pending");
-        let ot=log.outcome==="win"?"✓ WIN":(log.outcome==="loss"?"✗ LOSS":"⌛ pending");
-        return `<div class="log-entry" onclick="window.pinMarketPermanent('${log.symbol}')">${log.timestamp} ${log.symbol} ${log.signalType} <span class="${oc}">${ot}</span> 💪${log.strength}%</div>`;
-      }).join('')||'No signals yet';
+    // ========== STATIC SECTIONS ==========
+    function buildStaticPanels() {
+      let panel = document.getElementById('statsPanel');
+      if (!panel) return;
+
+      // Market selector (only once)
+      if (!document.getElementById('marketSelectorContainer')) {
+        let selHtml = `<div class="stats-panel" id="marketSelectorContainer">
+          <div class="stats-title">📋 Market Selection</div>
+          <div id="marketSelectorList" class="market-selector-list">
+            ${MARKETS.map(m => `
+              <div class="market-list-item" id="item-${m.sym}" onclick="window.pinMarketPermanent('${m.sym}')">
+                <input type="checkbox" class="market-checkbox" data-sym="${m.sym}" checked>
+                <span>${m.name}</span>
+              </div>`).join('')}
+          </div>
+          <div style="margin-top:8px;display:flex;gap:6px;">
+            <button id="selectAll">All</button>
+            <button id="deselectAll">None</button>
+          </div>
+        </div>`;
+        panel.insertAdjacentHTML('afterbegin', selHtml);
+        document.getElementById('selectAll').onclick = () => {
+          document.querySelectorAll('.market-checkbox').forEach(cb => cb.checked = true);
+          refreshVisibleMarkets();
+        };
+        document.getElementById('deselectAll').onclick = () => {
+          document.querySelectorAll('.market-checkbox').forEach(cb => cb.checked = false);
+          refreshVisibleMarkets();
+        };
+        document.querySelectorAll('.market-checkbox').forEach(cb => cb.addEventListener('change', refreshVisibleMarkets));
+      }
+
+      // Recent signals panel (only once)
+      if (!document.getElementById('recentSignalsContainer')) {
+        panel.insertAdjacentHTML('beforeend', `<div class="stats-panel" id="recentSignalsContainer">
+          <div class="stats-title">📋 RECENT SIGNALS</div>
+          <div class="signal-log" id="recentSignalsLog">No signals yet</div>
+        </div>`);
+      }
+
+      // Bot panel (only once)
+      if (!document.getElementById('botContainer')) {
+        let botHtml = `<div class="stats-panel" id="botContainer">
+          <div class="stats-title">🤖 MARTINGALE BOT</div>
+          <div class="stat-row"><span class="stat-label">Status</span><button id="botToggle" class="bot-toggle ${botEnabled?'bot-on':'bot-off'}">${botEnabled?'ON':'OFF'}</button></div>
+          <div class="stat-row"><span class="stat-label">Speed (ticks)</span><input id="botSpeed" type="number" value="${botSpeed}" min="1" style="width:60px;"></div>
+          <div class="stat-row"><span class="stat-label">Base Stake</span><input id="botBaseStake" type="number" value="${botBaseStake}" step="0.1" style="width:60px;"></div>
+          <div class="stat-row"><span class="stat-label">Martingale ×</span><input id="botMult" type="number" value="${botMartingaleMult}" step="0.1" style="width:60px;"></div>
+          <div class="stat-row"><span class="stat-label">Take Profit</span><input id="botTP" type="number" value="${botTakeProfit}" step="0.5" style="width:60px;"></div>
+          <div class="stat-row"><span class="stat-label">Stop Loss</span><input id="botSL" type="number" value="${botStopLoss}" step="1" style="width:60px;"></div>
+          <div class="stat-row"><span class="stat-label">Paper Mode</span><input id="botPaper" type="checkbox" ${botPaperMode?'checked':''}></div>
+          <div class="stat-row"><span class="stat-label">Balance</span><span class="stat-value" id="botBalanceDisplay">$${botBalance.toFixed(2)}</span></div>
+          <div class="signal-log" id="botTradeLog" style="max-height:120px;">No trades yet</div>
+        </div>`;
+        panel.insertAdjacentHTML('afterbegin', botHtml);
+        document.getElementById('botToggle').onclick = () => { botEnabled = !botEnabled; updateBotPanel(); };
+        document.getElementById('botSpeed').onchange = function() { botSpeed = parseInt(this.value) || 1; };
+        document.getElementById('botBaseStake').onchange = function() { botBaseStake = parseFloat(this.value) || 1; };
+        document.getElementById('botMult').onchange = function() { botMartingaleMult = parseFloat(this.value) || 1.8; };
+        document.getElementById('botTP').onchange = function() { botTakeProfit = parseFloat(this.value) || 2; };
+        document.getElementById('botSL').onchange = function() { botStopLoss = parseFloat(this.value) || 20; };
+        document.getElementById('botPaper').onchange = function() { botPaperMode = this.checked; };
+      }
     }
 
-    window.pinMarketPermanent=(sym)=>{if(pinnedSymbols.has(sym))pinnedSymbols.delete(sym);else pinnedSymbols.add(sym);refreshVisibleMarkets();};
-    function recordMLPrediction(sym,prob){lastMLPredictions[sym]={prob,timestamp:Date.now()};}
-    function computeMLAccuracy(sym){if(!mlAccuracyHistory[sym])return 0;let a=mlAccuracyHistory[sym].slice(-50);return a.length?(a.filter(x=>x).length/a.length)*100:0;}
+    // Global pinning
+    window.pinMarketPermanent = (sym) => {
+      if (pinnedSymbols.has(sym)) pinnedSymbols.delete(sym);
+      else pinnedSymbols.add(sym);
+      refreshVisibleMarkets();
+    };
 
-    // WebSocket
-    ws.onopen=()=>{
-      ws.send(JSON.stringify({authorize:token}));
-      markets.forEach(m=>{
-        store[m.sym]=[];storeShort[m.sym]=[];storeMedium[m.sym]=[];storeFullHistory[m.sym]=[];
-        phaseOneReady[m.sym]=false;phaseTwoReady[m.sym]=false;
-        ws.send(JSON.stringify({ticks_history:m.sym,count:200,end:"latest",style:"ticks"}));
-        ws.send(JSON.stringify({ticks:m.sym,subscribe:1}));
+    // ML helpers
+    function recordMLPrediction(sym, prob) { lastMLPredictions[sym] = { prob, timestamp: Date.now() }; }
+    function computeMLAccuracy(sym) {
+      if (!mlAccuracyHistory[sym]) return 0;
+      let arr = mlAccuracyHistory[sym].slice(-50);
+      return arr.length ? (arr.filter(x => x).length / arr.length) * 100 : 0;
+    }
+
+    // ========== WEBSOCKET ==========
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ authorize: TOKEN }));
+      MARKETS.forEach(m => {
+        store[m.sym] = []; storeShort[m.sym] = []; storeMedium[m.sym] = []; storeFullHistory[m.sym] = [];
+        phaseOneReady[m.sym] = false; phaseTwoReady[m.sym] = false;
+        ws.send(JSON.stringify({ ticks_history: m.sym, count: 200, end: "latest", style: "ticks" }));
+        ws.send(JSON.stringify({ ticks: m.sym, subscribe: 1 }));
       });
     };
-    ws.onmessage=(msg)=>{
-      let d=JSON.parse(msg.data);
-      if(d.history){
-        let s=d.echo_req.ticks_history;let pip=pipMap[s]||2;
-        let prices=d.history.prices.map(p=>parseFloat(p).toFixed(pip));
-        let digits=prices.map(p=>parseInt(p.slice(-1)));
-        if(!phaseOneReady[s]){
-          store[s]=digits.slice(-200);storeShort[s]=digits.slice(-100);storeMedium[s]=digits.slice(-200);
-          phaseOneReady[s]=true;
-          ws.send(JSON.stringify({ticks_history:s,count:1000,end:"latest",style:"ticks"}));
-          // create market container if not exists and insert into DOM
-          let wrap=document.getElementById("markets");
-          if(!document.getElementById(`market-${s}`)){
-            let div=document.createElement('div');div.id=`market-${s}`;div.className='market';
+
+    ws.onmessage = (msg) => {
+      let d = JSON.parse(msg.data);
+      if (d.history) {
+        let s = d.echo_req.ticks_history;
+        let pip = pipMap[s] || 2;
+        let prices = d.history.prices.map(p => parseFloat(p).toFixed(pip));
+        let digits = prices.map(p => parseInt(p.slice(-1)));
+
+        if (!phaseOneReady[s]) {
+          store[s] = digits.slice(-200);
+          storeShort[s] = digits.slice(-100);
+          storeMedium[s] = digits.slice(-200);
+          phaseOneReady[s] = true;
+          // request full 1000
+          ws.send(JSON.stringify({ ticks_history: s, count: 1000, end: "latest", style: "ticks" }));
+          // create placeholder container
+          let wrap = document.getElementById("markets");
+          if (!document.getElementById(`market-${s}`)) {
+            let div = document.createElement('div');
+            div.id = `market-${s}`;
+            div.className = 'market';
+            div.innerHTML = `<div class="price">Loading...</div>`;
             wrap.appendChild(div);
-            marketContainers[s]=div;
-            // quick placeholder
-            div.innerHTML=`<div class="price">Loading...</div>`;
+            marketContainers[s] = div;
           }
-        }else if(!phaseTwoReady[s]){
-          store[s]=digits.slice(-1000);storeShort[s]=digits.slice(-100);storeMedium[s]=digits.slice(-500);
-          phaseTwoReady[s]=true;historyLoaded[s]=true;
-          // refresh this market UI
-          let data=computeFullMarketData(s);if(data)buildMarketUI(s,data);
-          if(areSignalsReady())refreshVisibleMarkets(); // final initial full refresh
-        }else{
-          store[s]=digits.slice(-1000);storeShort[s]=digits.slice(-100);storeMedium[s]=digits.slice(-500);
+        } else if (!phaseTwoReady[s]) {
+          store[s] = digits.slice(-1000);
+          storeShort[s] = digits.slice(-100);
+          storeMedium[s] = digits.slice(-500);
+          phaseTwoReady[s] = true;
+          historyLoaded[s] = true;
+          let data = computeFullMarketData(s);
+          if (data) buildMarketUI(s, data);
+          if (areSignalsReady()) refreshVisibleMarkets();
+        } else {
+          store[s] = digits.slice(-1000);
+          storeShort[s] = digits.slice(-100);
+          storeMedium[s] = digits.slice(-500);
         }
-        storeFullHistory[s]=digits;
+        storeFullHistory[s] = digits;
       }
-      if(d.tick){
-        let s=d.tick.symbol;pipMap[s]=d.tick.pip_size;
-        let price=parseFloat(d.tick.quote).toFixed(pipMap[s]);
-        let digit=parseInt(price.slice(-1));
-        priceMap[s]=price;lastDigitMap[s]=digit;
-        if(!phaseOneReady[s])return;
-        store[s].push(digit);storeShort[s].push(digit);storeMedium[s].push(digit);storeFullHistory[s].push(digit);
-        if(store[s].length>1000)store[s].shift();
-        if(storeShort[s].length>100)storeShort[s].shift();
-        if(storeMedium[s].length>500)storeMedium[s].shift();
-        if(storeFullHistory[s].length>5000)storeFullHistory[s].shift();
-        // ML accuracy
-        let lastPred=lastMLPredictions[s];
-        if(lastPred){
-          let predEven=lastPred.prob>0.5,actualEven=digit%2===0;
-          if(!mlAccuracyHistory[s])mlAccuracyHistory[s]=[];
-          mlAccuracyHistory[s].push(predEven===actualEven);
-          if(mlAccuracyHistory[s].length>50)mlAccuracyHistory[s].shift();
+
+      if (d.tick) {
+        let s = d.tick.symbol;
+        pipMap[s] = d.tick.pip_size;
+        let price = parseFloat(d.tick.quote).toFixed(pipMap[s]);
+        let digit = parseInt(price.slice(-1));
+        priceMap[s] = price;
+        lastDigitMap[s] = digit;
+        if (!phaseOneReady[s]) return;
+
+        // Push tick
+        store[s].push(digit); storeShort[s].push(digit); storeMedium[s].push(digit); storeFullHistory[s].push(digit);
+        if (store[s].length > 1000) store[s].shift();
+        if (storeShort[s].length > 100) storeShort[s].shift();
+        if (storeMedium[s].length > 500) storeMedium[s].shift();
+        if (storeFullHistory[s].length > 5000) storeFullHistory[s].shift();
+
+        // ML accuracy update
+        let lastPred = lastMLPredictions[s];
+        if (lastPred) {
+          let predEven = lastPred.prob > 0.5, actualEven = digit % 2 === 0;
+          if (!mlAccuracyHistory[s]) mlAccuracyHistory[s] = [];
+          mlAccuracyHistory[s].push(predEven === actualEven);
+          if (mlAccuracyHistory[s].length > 50) mlAccuracyHistory[s].shift();
         }
-        // fast UI update
+
+        // Fast UI update
         fastUpdateMarket(s);
         drawSparkline(s);
         updateHeatmap(s);
-        // full data update if signal might change
-        if(phaseTwoReady[s]){
-          let data=computeFullMarketData(s);
-          if(data)buildMarketUI(s,data); // always rebuild for simplicity, but fast enough
+
+        // Full update (only if signal could change)
+        if (phaseTwoReady[s]) {
+          let data = computeFullMarketData(s);
+          if (data) buildMarketUI(s, data);
           updateBlinkingStates();
         }
       }
     };
 
-    // initialization
-    buildBotPanel();
-    buildStaticSelector();
-    buildRecentSignalsPanel();
-    document.getElementById('themeToggle').onclick=()=>document.body.classList.toggle('light');
+    // Initialize
+    window.addEventListener('load', () => {
+      buildStaticPanels();
+      document.getElementById('themeToggle').addEventListener('click', () => document.body.classList.toggle('light'));
+    });
   })();
 </script>
 </body>
