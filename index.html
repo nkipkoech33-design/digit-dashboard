@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO — Optimized + Real‑Time Sync</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <title>Digit Analyzer PRO — Momentum + Sparkline + Persistent Ranking</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+  </script>
   <style>
     /* ==== ORIGINAL STYLES (PRESERVED) ==== */
     body{background:#0f172a;color:white;font-family:Arial;margin:0;}
@@ -134,6 +135,25 @@
     .reversal-warning { background: #7f1d1d; color: white; padding: 2px 6px; border-radius: 12px; font-size: 10px; margin-left: 5px; }
     .ml-prob { font-size: 12px; background: #1e293b; padding: 2px 8px; border-radius: 16px; }
 
+    /* Momentum badge */
+    .momentum-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      margin-left: 5px;
+      background: #1e293b;
+    }
+    .momentum-up { color: #4ade80; }
+    .momentum-down { color: #f87171; }
+    .momentum-neutral { color: #94a3b8; }
+
+    /* Sparkline canvas */
+    .sparkline-canvas {
+      width: 100%;
+      height: 40px;
+      margin: 5px 0;
+    }
+
     @media(max-width:1200px){
         .left{width:100%;}
         .right{display:none;}
@@ -192,6 +212,7 @@
 
     let previousSignalState = {};
     let marketTrendChangeFlag = {};
+    let lastSignalTime = {};   // timestamp of last time signal was active (or ended) for ranking
 
     let replayMode = false, replayIndex = 0, replaySnapshot = {};
 
@@ -284,6 +305,73 @@
       return null;
     }
 
+    // ==== BIAS MOMENTUM ====
+    function computeBiasMomentum(sym) {
+      let arr = store[sym];
+      if (!arr || arr.length < 50) return { value: 0, label: 'neutral' };
+      let half = 25;
+      let firstHalf = arr.slice(-50, -25);
+      let secondHalf = arr.slice(-25);
+      let evenFirst = firstHalf.filter(d => d%2===0).length / half * 100;
+      let evenSecond = secondHalf.filter(d => d%2===0).length / half * 100;
+      let mom = evenSecond - evenFirst;
+      let label = mom > 5 ? 'up' : (mom < -5 ? 'down' : 'neutral');
+      return { value: mom, label };
+    }
+
+    // ==== SPARKLINE (rolling even% over last N ticks) ====
+    function drawSparkline(sym) {
+      let canvas = document.getElementById(`sparkline-${sym}`);
+      if (!canvas) return;
+      let arr = store[sym];
+      if (!arr || arr.length < 10) return;
+      let windowSize = 50;
+      let recent = arr.slice(-windowSize);
+      let ctx = canvas.getContext('2d');
+      let w = canvas.width = canvas.offsetWidth || 300;
+      let h = canvas.height = 40;
+      ctx.clearRect(0, 0, w, h);
+
+      if (recent.length < 2) return;
+
+      let points = [];
+      for (let i = 0; i < recent.length; i++) {
+        let slice = recent.slice(0, i+1);
+        let evenP = slice.filter(d => d%2===0).length / slice.length * 100;
+        points.push({ x: (i / (recent.length-1)) * w, y: h - (evenP / 100) * h });
+      }
+
+      // Gradient fill
+      let gradient = ctx.createLinearGradient(0, 0, 0, h);
+      gradient.addColorStop(0, 'rgba(74,222,128,0.3)'); // green for even dominance
+      gradient.addColorStop(1, 'rgba(248,113,113,0.3)'); // red for odd dominance
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, h);
+      for (let p of points) ctx.lineTo(p.x, p.y);
+      ctx.lineTo(points[points.length-1].x, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Line
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let p of points) ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+
+      // Baseline at 50%
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 0.5;
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.moveTo(0, h/2);
+      ctx.lineTo(w, h/2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
     // ==== HEATMAP (throttled) ====
     const heatmapUpdateCounters = {};
     function renderHeatmap(sym) {
@@ -292,10 +380,9 @@
       let ctx = canvas.getContext('2d');
       let arr = store[sym];
       if (!arr || arr.length < 50) return;
-      // Throttle: only update every 10 ticks per market
       if (!heatmapUpdateCounters[sym]) heatmapUpdateCounters[sym] = 0;
       heatmapUpdateCounters[sym]++;
-      if (heatmapUpdateCounters[sym] % 3 !== 0) return; // adjust frequency
+      if (heatmapUpdateCounters[sym] % 3 !== 0) return;
       
       let recent = arr.slice(-50);
       let matrix = Array(10).fill().map(() => Array(50).fill(0));
@@ -303,7 +390,6 @@
         let digit = recent[i];
         matrix[digit][i] = 1;
       }
-      // Destroy previous chart instance if exists
       let existingChart = Chart.getChart(canvas);
       if (existingChart) existingChart.destroy();
       
@@ -594,7 +680,7 @@
       }
     }
 
-    // ==== REPLAY (unchanged) ====
+    // ==== REPLAY ====
     function enterReplayMode() {
       replayMode = true;
       markets.forEach(m => { if (storeFullHistory[m.sym]) replaySnapshot[m.sym] = [...storeFullHistory[m.sym]]; });
@@ -650,7 +736,7 @@
 
     // ==== OPTIMIZED RENDERING ====
     let renderScheduled = false;
-    let marketElements = {}; // cache DOM elements per symbol
+    let marketElements = {};
 
     function scheduleRender() {
       if (renderScheduled) return;
@@ -665,10 +751,9 @@
       let wrap = document.getElementById("markets");
       if (!wrap) return;
       
-      // Create or reuse market containers
+      // Create containers if missing
       markets.forEach(m => {
-        let existing = marketElements[m.sym];
-        if (!existing) {
+        if (!marketElements[m.sym]) {
           let div = document.createElement("div");
           div.id = `market-${m.sym}`;
           div.className = "market";
@@ -706,29 +791,47 @@
         let reversal = detectReversalPattern(m.sym, counts, total, evenP, oddP);
         let features = getMLFeatures(m.sym, evenP, oddP);
         mlProb = mlModel.predict(features);
+        let momentum = computeBiasMomentum(m.sym);
         
+        // Track signal timestamps for ranking
+        if (isSignal) {
+          lastSignalTime[m.sym] = Date.now();
+        } else if (!lastSignalTime[m.sym]) {
+          lastSignalTime[m.sym] = 0; // never had a signal
+        }
+        // if signal just appeared, update time
+        if (!previousSignalState[m.sym] && isSignal) {
+          lastSignalTime[m.sym] = Date.now();
+        }
         let prevState = previousSignalState[m.sym] || false;
         let trendChanged = (prevState !== isSignal);
         if (trendChanged) marketTrendChangeFlag[m.sym] = Date.now();
         previousSignalState[m.sym] = isSignal;
         
-        let sortScore = isSignal ? (strength * (parseFloat(confidence) || 0) / 100) : -1;
+        // Ranking score: active signals get 1e9 + composite; inactive get recency timestamp
+        let sortScore = isSignal ? 1e9 + (strength * (parseFloat(confidence) || 0) / 100) : (lastSignalTime[m.sym] || 0);
         
         marketDataArray.push({
           sym: m.sym, name: m.name, price: priceMap[m.sym] || "—",
           evenP, oddP, signalType, isSignal, strength, confidence, health, exitMsg,
-          regime, reversal, mlProb,
+          regime, reversal, mlProb, momentum,
           perc, counts, arr, lastDigit: lastDigitMap[m.sym],
           repCount: (()=>{ let c=0, ld=arr[arr.length-1]; for(let i=arr.length-1;i>=0;i--){if(arr[i]===ld)c++;else break;} return c; })(),
           trendChanged, sortScore
         });
       });
       
-      marketDataArray.sort((a,b) => a.isSignal && !b.isSignal ? -1 : !a.isSignal && b.isSignal ? 1 : a.isSignal && b.isSignal ? b.sortScore - a.sortScore : a.name.localeCompare(b.name));
+      // Sort: active first (by strength), then recently signalled (recency), then never signalled alphabetically
+      marketDataArray.sort((a,b) => {
+        if (a.isSignal && !b.isSignal) return -1;
+        if (!a.isSignal && b.isSignal) return 1;
+        if (a.isSignal && b.isSignal) return b.sortScore - a.sortScore;
+        // Both inactive: sort by lastSignalTime descending (more recent first)
+        if (a.sortScore !== b.sortScore) return b.sortScore - a.sortScore;
+        return a.name.localeCompare(b.name);
+      });
       
       let consensus = detectConsensus();
-      
-      // Remove existing consensus alert
       let oldAlert = document.getElementById('consensusAlert');
       if (oldAlert) oldAlert.remove();
       if (consensus.active) {
@@ -739,7 +842,6 @@
         wrap.prepend(alertDiv);
       }
       
-      // Update each market container efficiently
       marketDataArray.forEach((data, idx) => {
         let container = marketElements[data.sym];
         if (!container) return;
@@ -767,7 +869,14 @@
           return `<div class="box ${cls} ${flash} ${repeatFx}">${pointer}${counter}<div class="digit">${i}</div><div class="percent">${data.perc[i]}%</div></div>`;
         }
         
-        let ticks = data.arr.slice(-50).map(d => `<span class="${d%2==0?'e':'o'}">${d%2==0?'E':'O'}</span>`).join("");
+        // Momentum badge
+        let mom = data.momentum;
+        let momClass = mom.label === 'up' ? 'momentum-up' : (mom.label === 'down' ? 'momentum-down' : 'momentum-neutral');
+        let momText = mom.label === 'up' ? `📈 EVENS RISING +${mom.value.toFixed(1)}%` :
+                      mom.label === 'down' ? `📉 ODDS RISING ${mom.value.toFixed(1)}%` :
+                      `➖ steady ${mom.value.toFixed(1)}%`;
+        let momentumHtml = `<span class="momentum-badge ${momClass}">${momText}</span>`;
+        
         let trendHtml = '';
         if (data.trendChanged) {
           trendHtml = !isSignal && previousSignalState[data.sym] ? '<span class="stop-signal">⛔ SIGNAL ENDED</span>' : '<span class="trend-change">🔄 NEW SIGNAL</span>';
@@ -778,11 +887,11 @@
         if (idx === 0 && isSignal) container.classList.add("ranked-first");
         
         container.innerHTML = `
-          <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap;">
             <div>
               <b>${data.name}</b> 
               <span class="small-badge" style="background:${data.regime.color}">🌊 ${data.regime.type}</span>
-              ${trendHtml} ${reversalHtml}
+              ${trendHtml} ${reversalHtml} ${momentumHtml}
             </div>
             <div style="display:flex; align-items:center;">
               <span class="small-badge">❤️ ${data.health}%</span>
@@ -799,21 +908,23 @@
             ${isSignal ? '<span class="confidence-badge" style="background:#22c55e20;">🔥 ACTIVE</span>' : '<span class="confidence-badge" style="background:#334155;">⚡ IDLE</span>'}</div>
           </div>
           ${isSignal ? `<div class="signal-text ${data.signalType==='BUY EVEN'?'buy-even':'buy-odd'}">🚀 ${data.signalType} (strength ${data.strength.toFixed(1)}% | conf ${data.confidence}) <span class="exit-suggestion">${data.exitMsg}</span></div>` : ''}
+          <canvas id="sparkline-${data.sym}" class="sparkline-canvas"></canvas>
           <div style="height:80px; margin:5px 0;"><canvas id="heatmap-${data.sym}" width="200" height="80" style="width:100%; height:100%;"></canvas></div>
           <div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
           <div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
-          <div class="tick">${ticks}</div>
         `;
         
-        // Update heatmap (throttled inside function)
-        setTimeout(() => renderHeatmap(data.sym), 10);
+        setTimeout(() => {
+          drawSparkline(data.sym);
+          renderHeatmap(data.sym);
+        }, 10);
       });
       
       throttledStatsUpdate();
       if (!replayMode) renderReplayControls();
     }
 
-    // Throttled stats panel update
+    // Throttled stats panel
     let statsUpdateScheduled = false;
     function throttledStatsUpdate() {
       if (statsUpdateScheduled) return;
@@ -886,7 +997,7 @@
       `;
     }
 
-    // ==== WEBSOCKET (with correct digit extraction) ====
+    // ==== WEBSOCKET ====
     ws.onopen = () => {
       ws.send(JSON.stringify({authorize: token}));
       markets.forEach(m => {
@@ -928,8 +1039,7 @@
       }
     };
 
-    // Initialize empty containers
-    markets.forEach(m => { marketElements[m.sym] = null; });
+    markets.forEach(m => { marketElements[m.sym] = null; lastSignalTime[m.sym] = 0; });
     renderAllMarkets();
   })();
 </script>
