@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Digit Analyzer PRO – Dynamic Markets</title>
+  <title>Digit Analyzer PRO – Advanced Signal Suite</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -189,7 +189,7 @@
 <div class="main-layout">
   <div class="markets-area" id="markets"></div>
   <div class="sidebar" id="sidebar">
-    <div class="sidebar-title">📋 Markets (click name to pin top)</div>
+    <div class="sidebar-title">📋 Markets (click name to pin & view)</div>
     <div id="marketList"></div>
   </div>
 </div>
@@ -217,6 +217,8 @@
     let pinnedSym = null;
     let ws = null;
     let audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+    // prevent rapid re-trigger of same signal
+    let lastSignalTimestamp = {};
 
     let adaptiveParams = { strengthMin: 60, confMin: 60, mlAccMin: 50, mlProbMin: 0.55 };
     let rollingWinHistory = {};
@@ -244,9 +246,8 @@
       return [(evenP-oddP)/100, Math.min(streakCount(sym),10)/10, volatilityFactors[sym]/3, (maxOpp/100)||0, momentum/20];
     }
 
-    // Sidebar generation with original order
     const marketListDiv = document.getElementById('marketList');
-    MARKETS.forEach((m, idx) => {
+    MARKETS.forEach((m) => {
       const div = document.createElement('div');
       div.className = 'market-list-item'; div.setAttribute('data-sym', m.sym);
       const cb = document.createElement('input'); cb.type='checkbox'; cb.className='market-checkbox'; cb.dataset.sym=m.sym; cb.checked=true;
@@ -262,18 +263,12 @@
       marketListDiv.appendChild(div);
     });
 
-    // FIX: Smooth scrolling without breaking scrollability - only within markets-area
     function pinMarket(sym) {
       pinnedSym = sym;
-      sortCards();  // reorder DOM (pinned first, then original order)
-      // Scroll to the pinned card inside the markets-area container using proper method
-      const container = document.getElementById('markets');
+      sortCards();
       const targetCard = document.getElementById(`mkt-${sym}`);
-      if (container && targetCard) {
-        const containerRect = container.getBoundingClientRect();
-        const cardRect = targetCard.getBoundingClientRect();
-        const scrollOffset = cardRect.top - containerRect.top + container.scrollTop - 12; // 12px padding
-        container.scrollTo({ top: scrollOffset, behavior: 'smooth' });
+      if (targetCard) {
+        targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
 
@@ -315,7 +310,7 @@
         store[m.sym] = []; priceStore[m.sym] = '—'; ready[m.sym] = false; signalState[m.sym] = false;
         latestScore[m.sym] = 0; rollingWinHistory[m.sym] = [];
       });
-      pinnedSym = null; completedTrades = []; pendingTrades = {};
+      pinnedSym = null; completedTrades = []; pendingTrades = {}; lastSignalTimestamp = {};
       connect();
     }
 
@@ -358,7 +353,10 @@
           const oldSig = signalState[sym] || false;
           const newSig = checkSignal(sym);
           signalState[sym] = newSig;
-          if (!oldSig && newSig) audio.play();
+          if (!oldSig && newSig) {
+            audio.play();
+            lastSignalTimestamp[sym] = Date.now();
+          }
           renderMarket(sym); updateInsights(); sortCards();
         }
         if (data.error) console.warn(data.error);
@@ -387,11 +385,102 @@
     function streakCount(sym){ let a=store[sym]; if(!a)return 0; let last=a[a.length-1],c=0; for(let i=a.length-1;i>=0;i--){if(a[i]===last)c++;else break;} return c; }
     function computeMLAccuracy(sym){ if(!mlAccuracyHistory[sym])return 0; let a=mlAccuracyHistory[sym].slice(-50); return a.length?(a.filter(x=>x).length/a.length)*100:0; }
 
+    // linear regression trend strength on binary even/odd sequence
+    function trendStrength(sym, length=100) {
+      let a=store[sym]; if(!a || a.length<length) return 0;
+      let slice = a.slice(-length).map(d=> d%2===0 ? 1 : -1);
+      let n=slice.length, sumX=0, sumY=0, sumXY=0, sumX2=0;
+      for(let i=0;i<n;i++){
+        let x=i;
+        let y=slice[i];
+        sumX+=x; sumY+=y; sumXY+=x*y; sumX2+=x*x;
+      }
+      let slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);
+      return Math.abs(slope); // absolute trend strength
+    }
+
+    // ADDITIONAL SIGNAL FILTERS: more rigorous
+    function checkSignal(sym) {
+      const full = store[sym]; if(!full || full.length < SIGNAL_WINDOW) return false;
+      
+      // Cooldown: only allow new signal every 10 ticks minimum to avoid spam
+      if(lastSignalTimestamp[sym] && (Date.now() - lastSignalTimestamp[sym]) < 8000) return false;
+      
+      const arr = full.slice(-SIGNAL_WINDOW); const total = arr.length;
+      const counts = new Array(10).fill(0); arr.forEach(d=>counts[d]++);
+      const evenCount = counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
+      const oddCount = total - evenCount;
+      const observed = evenCount/total;
+      const z = Math.abs(observed-0.5)/Math.sqrt(0.25/total);
+      // 1. stricter z-score threshold (2.0 instead of 1.65)
+      if(z < 2.0) return false;
+      
+      const tf = (evenCount > oddCount) ? "EVEN" : "ODD";
+      let oppDigits = (tf==="EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
+      // 2. each opposing digit must be below 9% (stricter)
+      if(!oppDigits.every(d=>(counts[d]/total)*100 < 9)) return false;
+      
+      const half=25;
+      const first=arr.slice(-50,-25), second=arr.slice(-25);
+      const evenFirst=first.filter(d=>d%2===0).length/half*100;
+      const evenSecond=second.filter(d=>d%2===0).length/half*100;
+      const mom=evenSecond-evenFirst;
+      if(tf==="EVEN" && mom<=8) return false;   // stronger momentum required
+      if(tf==="ODD" && mom>=-8) return false;
+      
+      const evens=evenCount/total*100, odds=100-evens;
+      const diff=Math.abs(evens-odds);
+      const maxOpposing=Math.max(...oppDigits.map(d=>(counts[d]/total)*100));
+      const distanceToMax=Math.max(0,14-maxOpposing);
+      const strength=Math.min(100, (diff*0.6 + distanceToMax*6)); // increased sensitivity
+      const conf= (14-maxOpposing)/14*100;
+      const volFactor=volatilityFactors[sym]||1;
+      if(strength/volFactor < adaptiveParams.strengthMin+5) return false;
+      if(conf < adaptiveParams.confMin+5) return false;
+      
+      // 3. new filter: trend strength must be > 0.15 (avoid random walk)
+      const trend = trendStrength(sym, 120);
+      if(trend < 0.15) return false;
+      
+      // 4. digit diversity: at least 6 different digits in recent window
+      const uniqueDigits = new Set(arr.slice(-200)).size;
+      if(uniqueDigits < 6) return false;
+      
+      const mlProb = mlModel.predict(getEnhancedMLFeatures(sym, evens, odds));
+      const mlAcc = computeMLAccuracy(sym);
+      if(mlAcc < adaptiveParams.mlAccMin+5) return false;
+      if(tf==="EVEN" && mlProb<=adaptiveParams.mlProbMin+0.05) return false;
+      if(tf==="ODD" && mlProb>=1-adaptiveParams.mlProbMin-0.05) return false;
+      
+      const regime = classifyRegime(sym);
+      if(regime.type==='Choppy') return false;
+      
+      const winHist = rollingWinHistory[sym];
+      if(winHist && winHist.length>=10) {
+        const wins=winHist.filter(x=>x).length;
+        if(wins/winHist.length < 0.45) return false;
+      }
+      
+      if(!signalState[sym]) {
+        const strengthVal = Math.min(100, (diff*0.6 + distanceToMax*6));
+        const confVal = (14-maxOpposing)/14*100;
+        recordPaperTrade(sym, tf==="EVEN"?"BUY EVEN":"BUY ODD", strengthVal, confVal, mlAcc, mlProb);
+      }
+      return true;
+    }
+
+    function recordPaperTrade(sym, sigType, strength, confidence, mlAcc, mlProb) {
+      let entry = { symbol:sym, signalType:sigType, strength, confidence, mlAcc, mlProb, timestamp:new Date().toLocaleTimeString(), outcome:'pending' };
+      completedTrades.push(entry);
+      if(completedTrades.length % ADAPTIVE_INTERVAL === 0) updateAdaptiveThresholds();
+      pendingTrades[sym] = entry;
+    }
+
     function updateAdaptiveThresholds() {
       if(completedTrades.length < 30) return;
       const recents = completedTrades.slice(-50);
       let bestWinRate=0, bestParams={...adaptiveParams};
-      const strOps=[50,55,60,65,70], confOps=[50,55,60,65,70], mlAccOps=[40,45,50,55], mlProbOps=[0.5,0.55,0.6];
+      const strOps=[55,60,65,70,75], confOps=[55,60,65,70,75], mlAccOps=[45,50,55,60], mlProbOps=[0.5,0.55,0.6,0.65];
       for(let s of strOps) for(let c of confOps) for(let a of mlAccOps) for(let p of mlProbOps) {
         const filtered = recents.filter(t => {
           const str=parseFloat(t.strength)||0, conf=parseFloat(t.confidence)||0, acc=t.mlAcc||0, prob=t.mlProb||0, dir=t.signalType;
@@ -404,67 +493,6 @@
         if(rate>bestWinRate){ bestWinRate=rate; bestParams={strengthMin:s, confMin:c, mlAccMin:a, mlProbMin:p}; }
       }
       if(bestWinRate>0) adaptiveParams=bestParams;
-    }
-
-    function checkSignal(sym) {
-      const full = store[sym]; if(!full || full.length < SIGNAL_WINDOW) return false;
-      const arr = full.slice(-SIGNAL_WINDOW); const total = arr.length;
-      const counts = new Array(10).fill(0); arr.forEach(d=>counts[d]++);
-      const evenCount = counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
-      const oddCount = total - evenCount;
-      const observed = evenCount/total;
-      const z = Math.abs(observed-0.5)/Math.sqrt(0.25/total);
-      if(z < 1.65) return false;
-      const tf = (evenCount > oddCount) ? "EVEN" : "ODD";
-      let oppDigits = (tf==="EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
-      if(!oppDigits.every(d=>(counts[d]/total)*100 < 10)) return false;
-
-      const half=25;
-      const first=arr.slice(-50,-25), second=arr.slice(-25);
-      const evenFirst=first.filter(d=>d%2===0).length/half*100;
-      const evenSecond=second.filter(d=>d%2===0).length/half*100;
-      const mom=evenSecond-evenFirst;
-      if(tf==="EVEN" && mom<=5) return false;
-      if(tf==="ODD" && mom>=-5) return false;
-
-      const evens=evenCount/total*100, odds=100-evens;
-      const diff=Math.abs(evens-odds);
-      const maxOpposing=Math.max(...oppDigits.map(d=>(counts[d]/total)*100));
-      const distanceToMax=Math.max(0,14-maxOpposing);
-      const strength=Math.min(100, (diff*0.5 + distanceToMax*5));
-      const conf= (14-maxOpposing)/14*100;
-      const volFactor=volatilityFactors[sym]||1;
-      if(strength/volFactor < adaptiveParams.strengthMin) return false;
-      if(conf < adaptiveParams.confMin) return false;
-
-      const mlProb = mlModel.predict(getEnhancedMLFeatures(sym, evens, odds));
-      const mlAcc = computeMLAccuracy(sym);
-      if(mlAcc < adaptiveParams.mlAccMin) return false;
-      if(tf==="EVEN" && mlProb<=adaptiveParams.mlProbMin) return false;
-      if(tf==="ODD" && mlProb>=1-adaptiveParams.mlProbMin) return false;
-
-      const regime = classifyRegime(sym);
-      if(regime.type==='Choppy') return false;
-
-      const winHist = rollingWinHistory[sym];
-      if(winHist && winHist.length>=10) {
-        const wins=winHist.filter(x=>x).length;
-        if(wins/winHist.length < 0.4) return false;
-      }
-
-      if(!signalState[sym]) {
-        const strengthVal = Math.min(100, (diff*0.5 + distanceToMax*5));
-        const confVal = (14-maxOpposing)/14*100;
-        recordPaperTrade(sym, tf==="EVEN"?"BUY EVEN":"BUY ODD", strengthVal, confVal, mlAcc, mlProb);
-      }
-      return true;
-    }
-
-    function recordPaperTrade(sym, sigType, strength, confidence, mlAcc, mlProb) {
-      let entry = { symbol:sym, signalType:sigType, strength, confidence, mlAcc, mlProb, timestamp:new Date().toLocaleTimeString(), outcome:'pending' };
-      completedTrades.push(entry);
-      if(completedTrades.length % ADAPTIVE_INTERVAL === 0) updateAdaptiveThresholds();
-      pendingTrades[sym] = entry;
     }
 
     function resolvePendingTrade(sym) {
@@ -506,14 +534,16 @@
       const diff=Math.abs(evenPct-50);
       const oppDigits=(evenPct>50)?[1,3,5,7,9]:[0,2,4,6,8];
       const maxOpposing=Math.max(...oppDigits.map(d=>(counts[d]/total)*100));
-      const strength=Math.min(100, diff*0.5+Math.max(0,14-maxOpposing)*5);
+      const strength=Math.min(100, diff*0.6+Math.max(0,14-maxOpposing)*6);
       const confidence=Math.max(0,(14-maxOpposing))/14*100;
       const regime=classifyRegime(sym);
       const regimeFactor=regime.type==='Calm'?1.2:(regime.type==='Trending'?1.0:0.6);
       const earlyMom=getEarlyMomentum(sym);
       const momFactor=earlyMom.dir==='up'?1.1:(earlyMom.dir==='down'?0.9:1.0);
       const volFactor=volatilityFactors[sym]||1;
-      return (strength/100)*(confidence/100)*regimeFactor*momFactor/volFactor;
+      const trend = trendStrength(sym,120);
+      const trendBonus = Math.min(1.2, 1 + trend*0.5);
+      return (strength/100)*(confidence/100)*regimeFactor*momFactor*trendBonus/volFactor;
     }
 
     function getSignalDirection(sym) {
@@ -533,22 +563,24 @@
       MARKETS.forEach(m=>{if(!signalState[m.sym])latestScore[m.sym]=0;});
       if(bestSym){ const mkt=MARKETS.find(m=>m.sym===bestSym); bestMarketLabel.textContent=`🏆 Best: ${mkt.name} (${(bestScore*100).toFixed(0)})`; }
       else bestMarketLabel.textContent='🏆 No signals yet';
+      
       const active = MARKETS.filter(m=>ready[m.sym]&&signalState[m.sym]).map(m=>({
         sym:m.sym, name:m.name, dir:getSignalDirection(m.sym), score:computeTradeScore(m.sym)
       })).sort((a,b)=>b.score-a.score);
+      
       if(active.length===0) activeSignalsList.innerHTML='<span class="no-signals">No active signals</span>';
       else activeSignalsList.innerHTML = active.map(s=>{
         const dirClass = s.dir==='EVEN'?'even':'odd';
         const dirLabel = s.dir==='EVEN'?'🔵 EVEN':'🔴 ODD';
         return `<span class="signal-badge ${dirClass}">${s.name} ${dirLabel} (${(s.score*100).toFixed(0)})</span>`;
       }).join('');
+      
       MARKETS.forEach(m=>{
         const listItem = document.querySelector(`.market-list-item[data-sym="${m.sym}"]`);
         if(listItem) listItem.classList.toggle('blinking', signalState[m.sym]===true);
       });
     }
 
-    // New sort: pinned first, then original MARKETS order (preserve as digit list / sidebar order)
     function sortCards() {
       const area = document.getElementById('markets');
       if (!area) return;
@@ -572,10 +604,8 @@
       if(!container) {
         container = document.createElement('div'); container.id=`mkt-${sym}`;
         container.className='market-card'; 
-        const marketsArea = document.getElementById('markets');
-        marketsArea.appendChild(container);
+        document.getElementById('markets').appendChild(container);
       }
-      // respect checkbox visibility
       if(!marketCheckboxState[sym]) { container.style.display = 'none'; return; }
       else container.style.display = '';
 
@@ -602,9 +632,6 @@
 
       const evenCount=counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
       const evenPct=((evenCount/total)*100).toFixed(1), oddPct=(((total-evenCount)/total)*100).toFixed(1);
-      const aTotal=Math.min(analysisTicks,total), aSlice=windowData.slice(-aTotal);
-      const aEvens=aSlice.filter(d=>d%2===0).length;
-      const aEvenPct=((aEvens/aTotal)*100).toFixed(1), aOddPct=((aTotal-aEvens)/aTotal*100).toFixed(1);
       const early=getEarlyMomentum(sym), regime=classifyRegime(sym);
       const isSig=signalState[sym]||false, tradeDir=isSig?getSignalDirection(sym):null;
       let tradeTypeHtml='';
