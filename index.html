@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO – Live Synced</title>
+  <title>Digit Analyzer PRO – Large Buffer Sync</title>
   <style>
     :root {
       --bg: #0f172a; --surface: #1e293b; --border: #1e293b; --text: white;
@@ -44,10 +44,11 @@
 <body>
 <div id="topbar">
   <label style="display:flex; align-items:center; gap:5px;">
-    <span style="font-size:12px;">Analysis window (bars):</span>
+    <span style="font-size:12px;">Analysis bars:</span>
     <input type="range" id="analysisSlider" min="10" max="1000" value="100" step="10" style="width:100px;">
     <span id="analysisValue" style="font-size:12px;">100</span>
   </label>
+  <button id="refreshBtn">🔄 Re-Sync</button>
   <button id="themeToggle">🌓 Theme</button>
 </div>
 <div class="wrapper">
@@ -73,18 +74,13 @@
       {sym:"JD75",name:"Jump 75 Index"},{sym:"JD100",name:"Jump 100 Index"}
     ];
 
-    const FIXED_PIPS = {
-      'R_10':2,'R_25':2,'R_50':2,'R_75':2,'R_100':2,
-      '1HZ10V':2,'1HZ15V':2,'1HZ25V':2,'1HZ30V':2,'1HZ50V':2,'1HZ75V':2,'1HZ90V':2,'1HZ100V':2,
-      'JD10':2,'JD25':2,'JD50':2,'JD75':2,'JD100':2
-    };
+    const BUFFER_SIZE = 5000;   // large buffer
+    const WINDOW_SIZE = 1000;   // the sliding window we display
 
-    // Sliding window of exactly 1000 ticks (most recent)
-    let store = {};            // array of last 1000 digits per market
-    let historyReady = {};     // bool, true once the first 1000 ticks have been loaded
-    let firstTickReceived = {}; // for synchronisation
+    let store = {};            // big array per market, up to BUFFER_SIZE
+    let historyReady = {};     // true once we have at least WINDOW_SIZE ticks
+    let analysisTicks = 100;
 
-    let analysisTicks = 100;   // for the even/odd bars
     const analysisSlider = document.getElementById('analysisSlider');
     const analysisValue = document.getElementById('analysisValue');
     analysisSlider.addEventListener('input', () => {
@@ -93,7 +89,7 @@
       refreshAllBars();
     });
 
-    // Build market list checkboxes
+    // Build market list
     const marketListDiv = document.getElementById('marketList');
     MARKETS.forEach(m => {
       let div = document.createElement('div');
@@ -109,51 +105,57 @@
       });
     });
 
-    // WebSocket connection
-    let ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
-    ws.onopen = () => {
-      ws.send(JSON.stringify({authorize: TOKEN}));
-      MARKETS.forEach(m => {
-        store[m.sym] = [];
-        historyReady[m.sym] = false;
-        firstTickReceived[m.sym] = false;
-        // Load the base 1000 ticks
-        ws.send(JSON.stringify({ticks_history: m.sym, count: 1000, end: "latest", style: "ticks"}));
-        // Subscribe to live ticks
-        ws.send(JSON.stringify({ticks: m.sym, subscribe: 1}));
-      });
-    };
+    let ws = null;
 
-    ws.onmessage = (msg) => {
-      const data = JSON.parse(msg.data);
-      if (data.history) {
-        const sym = data.echo_req.ticks_history;
-        const pip = FIXED_PIPS[sym] || 2;
-        const prices = data.history.prices.map(p => parseFloat(p).toFixed(pip));
-        const digits = prices.map(p => parseInt(p.slice(-1)));
-        store[sym] = digits.slice(-1000);   // take exactly last 1000
-        historyReady[sym] = true;
-        renderMarket(sym);
-      }
-      if (data.tick) {
-        const sym = data.tick.symbol;
-        const pip = data.tick.pip_size;  // use the actual pip from tick
-        const priceStr = parseFloat(data.tick.quote).toFixed(pip);
-        const digit = parseInt(priceStr.slice(-1));
+    function connect() {
+      if (ws) ws.close();
+      ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
+      ws.onopen = () => {
+        ws.send(JSON.stringify({authorize: TOKEN}));
+        MARKETS.forEach(m => {
+          store[m.sym] = [];
+          historyReady[m.sym] = false;
+          // Fetch large history
+          ws.send(JSON.stringify({ticks_history: m.sym, count: BUFFER_SIZE, end: "latest", style: "ticks"}));
+          ws.send(JSON.stringify({ticks: m.sym, subscribe: 1}));
+        });
+      };
 
-        if (!firstTickReceived[sym] && historyReady[sym]) {
-          // First live tick after history: push it to make the window exactly 1000 (shift oldest)
-          store[sym].push(digit);
-          store[sym].shift();
-          firstTickReceived[sym] = true;
-        } else if (firstTickReceived[sym]) {
-          store[sym].push(digit);
-          store[sym].shift();
+      ws.onmessage = (msg) => {
+        const data = JSON.parse(msg.data);
+        if (data.history) {
+          const sym = data.echo_req.ticks_history;
+          const pip = data.history.prices.length > 0 ? (data.tick?.pip_size || 2) : 2; // fallback
+          const prices = data.history.prices.map(p => parseFloat(p).toFixed(pip));
+          const digits = prices.map(p => parseInt(p.slice(-1)));
+          store[sym] = digits.slice(-BUFFER_SIZE);  // keep the most recent up to buffer size
+          if (store[sym].length >= WINDOW_SIZE) {
+            historyReady[sym] = true;
+          }
+          renderMarket(sym);
         }
-        // Always update the market display for this symbol
-        renderMarket(sym);
-      }
-    };
+        if (data.tick) {
+          const sym = data.tick.symbol;
+          const pip = data.tick.pip_size || 2;
+          const priceStr = parseFloat(data.tick.quote).toFixed(pip);
+          const digit = parseInt(priceStr.slice(-1));
+
+          if (!store[sym]) store[sym] = [];
+          store[sym].push(digit);
+          if (store[sym].length > BUFFER_SIZE) store[sym].shift();  // keep buffer from growing indefinitely
+
+          if (store[sym].length >= WINDOW_SIZE && !historyReady[sym]) {
+            historyReady[sym] = true;
+          }
+          // Always re-render the market
+          renderMarket(sym);
+        }
+      };
+
+      ws.onclose = () => { console.log('WS closed. Reconnect?'); };
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', connect);
 
     function renderMarket(sym) {
       let container = document.getElementById(`market-${sym}`);
@@ -163,14 +165,18 @@
         container.className = 'market';
         document.getElementById('markets').appendChild(container);
       }
-      if (!historyReady[sym]) return;
+      if (!historyReady[sym]) {
+        container.innerHTML = `<b>${MARKETS.find(m=>m.sym===sym).name}</b><div class="price">Loading...</div>`;
+        return;
+      }
 
-      const arr = store[sym];
-      if (arr.length < 1000) return;
+      const fullBuffer = store[sym];
+      // Compute percentages from the LAST WINDOW_SIZE ticks
+      const windowData = fullBuffer.slice(-WINDOW_SIZE);
+      const total = windowData.length;
       const cnt = new Array(10).fill(0);
-      arr.forEach(d => cnt[d]++);
+      windowData.forEach(d => cnt[d]++);
 
-      const total = arr.length;
       const perc = cnt.map(c => ((c/total)*100).toFixed(1));
       const es = cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8];
       const ep = ((es/total)*100).toFixed(1);
@@ -191,17 +197,20 @@
         </div>`;
       }
 
-      // even/odd bars for the shorter analysis window
+      // Even/Odd bars based on the shorter ANALYSIS window (slider)
       const n = Math.min(analysisTicks, total);
-      const slice = arr.slice(-n);
+      const slice = windowData.slice(-n);
       const evens = slice.filter(d=> d%2===0).length;
       const odds = n - evens;
       const evenPct = ((evens/n)*100).toFixed(1);
       const oddPct = ((odds/n)*100).toFixed(1);
 
+      // The price shown is the last digit of the full buffer (the most recent tick)
+      const lastDigit = fullBuffer[fullBuffer.length-1];
+
       container.innerHTML = `
         <b>${MARKETS.find(m=>m.sym===sym).name}</b>
-        <div class="price">${arr[arr.length-1]}</div>
+        <div class="price">${lastDigit}</div>
         <div class="win">🎲 EVEN ${ep}% | ODD ${op}%</div>
         <div class="even-bar-container">
           <span class="bar-label" style="color:var(--good);">EVEN</span>
@@ -215,7 +224,7 @@
         </div>
         <div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
         <div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
-        <div class="tick">${arr.slice(-50).map(d=>`<span class="${d%2===0?'e':'o'}">${d%2===0?'E':'O'}</span>`).join("")}</div>
+        <div class="tick">${windowData.slice(-50).map(d=>`<span class="${d%2===0?'e':'o'}">${d%2===0?'E':'O'}</span>`).join("")}</div>
       `;
     }
 
@@ -226,6 +235,9 @@
     }
 
     document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
+
+    // Start
+    connect();
   })();
 </script>
 </body>
