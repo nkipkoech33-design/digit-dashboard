@@ -3,29 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer – Fast & Exact</title>
+  <title>Digit Analyzer – 10k Window, Exact Match</title>
   <style>
     :root {
       --bg: #0f172a; --surface: #1e293b; --border: #1e293b; --text: white;
       --text-secondary: #94a3b8; --accent: #facc15; --good: #4ade80; --bad: #f87171;
       --highlight: #38bdf8;
     }
-    body.light { --bg: #f8fafc; --surface: #e2e8f0; --border: #cbd5e1; --text: #0f172a; --text-secondary: #475569; --good: #16a34a; --bad: #dc2626; }
-    body { background: var(--bg); color: var(--text); font-family: Arial; margin: 0; padding: 10px; padding-top: 130px; }
+    body.light {
+      --bg: #f8fafc; --surface: #e2e8f0; --border: #cbd5e1; --text: #0f172a;
+      --text-secondary: #475569; --good: #16a34a; --bad: #dc2626;
+    }
+    body { background: var(--bg); color: var(--text); font-family: Arial; margin: 0; padding: 10px; padding-top: 140px; }
     .controls {
       position: fixed; top: 0; left: 0; right: 0; background: var(--surface);
       padding: 10px; border-bottom: 2px solid var(--accent); z-index: 10;
-      display: flex; flex-wrap: wrap; gap: 15px; align-items: center;
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
     }
     .window-selector {
       background: var(--border); border-radius: 12px; padding: 8px 15px;
       display: flex; align-items: center; gap: 10px; font-weight: bold;
     }
-    .window-selector input[type=range] { width: 250px; }
+    .window-selector input[type=range] { width: 220px; }
     .window-selector output { font-size: 1.2em; color: var(--accent); min-width: 60px; }
     .market { border: 1px solid var(--border); padding: 6px; border-radius: 6px; background: var(--bg); margin-bottom: 8px; }
     .price { text-align: center; font-size: 22px; color: var(--highlight); font-weight: bold; }
     .win { text-align: center; font-size: 12px; margin-top: 2px; }
+    .progress { font-size: 11px; color: var(--text-secondary); margin: 4px 0; }
     .grid { display: grid; grid-template-columns: repeat(5, 2.5cm); gap: 10px; justify-content: center; margin-top: 8px; }
     .box { width: 2.5cm; height: 2.5cm; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); }
     .most { background: green; } .second { background: blue; } .secondLeast { background: orange; } .least { background: red; }
@@ -40,6 +44,7 @@
     .bar-label { font-size: 11px; font-weight: bold; min-width: 30px; color: var(--text-secondary); }
     .bar-pct { font-size: 10px; min-width: 40px; text-align: right; color: var(--text-secondary); }
     .small-control { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+    .apply-btn { padding: 6px 14px; border-radius: 8px; background: var(--accent); color: #000; font-weight: bold; cursor: pointer; border: none; }
     @media(max-width:600px) { .grid { grid-template-columns: repeat(5, 1fr); } .box { width: auto; } }
   </style>
 </head>
@@ -47,8 +52,9 @@
 <div class="controls">
   <div class="window-selector">
     <span>🕒 Tick Window:</span>
-    <input type="range" id="windowSlider" min="100" max="10000" value="1000" step="100">
-    <output id="windowValue">1000</output>
+    <input type="range" id="windowSlider" min="100" max="10000" value="10000" step="100">
+    <output id="windowValue">10000</output>
+    <button class="apply-btn" id="applyBtn">Apply</button>
   </div>
   <div class="small-control">
     <span>🔍 Analysis bars:</span>
@@ -63,7 +69,7 @@
 
 <script>
   (function() {
-    const TOKEN = "PUT_TOKEN_HERE";                       // <-- replace with your Deriv token
+    const TOKEN = "PUT_TOKEN_HERE";  // ⚠️ Replace with your Deriv token
     const MARKETS = [
       {sym:"R_10",name:"Volatility 10"},{sym:"R_25",name:"Volatility 25"},{sym:"R_50",name:"Volatility 50"},
       {sym:"R_75",name:"Volatility 75"},{sym:"R_100",name:"Volatility 100"},
@@ -74,41 +80,46 @@
       {sym:"JD75",name:"Jump 75"},{sym:"JD100",name:"Jump 100"}
     ];
 
-    let windowSize = 1000;          // user‑selected window (100‑10,000)
-    let analysisTicks = 100;        // for the even/odd bars
-    let store = {};                 // full tick arrays (digits)
-    let priceStore = {};            // last full price string per market
-    let pipStore = {};              // pip sizes
-    let ready = {};                 // true if at least windowSize ticks are in store
+    let windowSize = 10000;          // start with 10k
+    let analysisTicks = 100;         // even/odd bars
+    let store = {};                  // digits per market
+    let priceStore = {};             // last formatted price
+    let ready = {};                  // true once store.length >= windowSize
     let ws = null;
 
-    // ---- Controls ----
+    // ---- UI ----
     const windowSlider = document.getElementById('windowSlider');
     const windowValue = document.getElementById('windowValue');
+    const applyBtn = document.getElementById('applyBtn');
     const analysisSlider = document.getElementById('analysisSlider');
     const analysisValue = document.getElementById('analysisValue');
 
-    windowSlider.addEventListener('input', () => {
+    applyBtn.addEventListener('click', () => {
       windowSize = parseInt(windowSlider.value);
       windowValue.textContent = windowSize;
-      // If we already have enough ticks, just rerender.
-      // If not, fetch the missing history.
-      ensureEnoughTicks();
-      refreshAll();
+      resetAndFetch();
+    });
+
+    windowSlider.addEventListener('input', () => {
+      windowValue.textContent = windowSlider.value;
     });
 
     analysisSlider.addEventListener('input', () => {
       analysisTicks = parseInt(analysisSlider.value);
       analysisValue.textContent = analysisTicks;
-      refreshAll();
+      refreshAllBars();
     });
 
-    document.getElementById('refreshBtn').addEventListener('click', resetAndReconnect);
+    document.getElementById('refreshBtn').addEventListener('click', resetAndFetch);
     document.getElementById('themeToggle').addEventListener('click', () => document.body.classList.toggle('light'));
 
-    function resetAndReconnect() {
+    function resetAndFetch() {
       if (ws) ws.close();
-      MARKETS.forEach(m => { store[m.sym] = []; priceStore[m.sym] = '—'; ready[m.sym] = false; });
+      MARKETS.forEach(m => {
+        store[m.sym] = [];
+        priceStore[m.sym] = '—';
+        ready[m.sym] = false;
+      });
       connect();
     }
 
@@ -117,25 +128,32 @@
       ws.onopen = () => {
         ws.send(JSON.stringify({authorize: TOKEN}));
         MARKETS.forEach(m => {
-          // Start with 2000 ticks (fast load) – more than the default window of 1000
-          const initialFetch = 2000;
-          ws.send(JSON.stringify({ticks_history: m.sym, count: initialFetch, end: "latest", style: "ticks"}));
-          ws.send(JSON.stringify({ticks: m.sym, subscribe: 1}));
+          // Fetch the first 5000 ticks
+          ws.send(JSON.stringify({ticks_history: m.sym, count: 5000, end: "latest", style: "ticks"}));
         });
+        // After a short delay, fetch another 5000 (total 10k) – this avoids hitting limits
+        setTimeout(() => {
+          MARKETS.forEach(m => {
+            ws.send(JSON.stringify({ticks_history: m.sym, count: 5000, end: "latest", style: "ticks"}));
+            // Subscribe to live ticks
+            ws.send(JSON.stringify({ticks: m.sym, subscribe: 1}));
+          });
+        }, 2000);
       };
 
       ws.onmessage = (msg) => {
         const data = JSON.parse(msg.data);
         if (data.history) {
           const sym = data.echo_req.ticks_history;
-          pipStore[sym] = 2;  // all of these markets use 2 decimal places
           const prices = data.history.prices;
           const digits = prices.map(p => {
             const formatted = parseFloat(p).toFixed(2);
             return parseInt(formatted.slice(-1));
           });
-          store[sym] = digits.slice(-20000);  // keep at most 20k ticks
-          // Last price from history is the last element of prices
+          // Merge with existing data, then keep last 12000
+          if (!store[sym]) store[sym] = [];
+          store[sym] = store[sym].concat(digits).slice(-12000);
+          // Update price from last history price
           priceStore[sym] = prices.length ? parseFloat(prices[prices.length-1]).toFixed(2) : '—';
           updateReady(sym);
           renderMarket(sym);
@@ -143,22 +161,23 @@
 
         if (data.tick) {
           const sym = data.tick.symbol;
-          pipStore[sym] = data.tick.pip_size || 2;
           const quote = parseFloat(data.tick.quote);
-          const formatted = quote.toFixed(pipStore[sym] || 2);
+          const formatted = quote.toFixed(data.tick.pip_size || 2);
           const digit = parseInt(formatted.slice(-1));
 
           if (!store[sym]) store[sym] = [];
           store[sym].push(digit);
-          // Keep buffer manageable
-          if (store[sym].length > 20000) store[sym] = store[sym].slice(-15000);
+          // keep at most 12000 to avoid over‑growth
+          if (store[sym].length > 12000) store[sym] = store[sym].slice(-12000);
           priceStore[sym] = formatted;
+
           updateReady(sym);
           renderMarket(sym);
         }
 
         if (data.error) console.warn('WS error:', data.error);
       };
+
       ws.onclose = () => console.log('WS closed');
     }
 
@@ -166,20 +185,8 @@
       ready[sym] = store[sym] && store[sym].length >= windowSize;
     }
 
-    // If the window requires more ticks than we have, request more history
-    function ensureEnoughTicks() {
-      MARKETS.forEach(m => {
-        if (!store[m.sym]) return;
-        const need = windowSize + 100; // a bit more for safety
-        if (store[m.sym].length < need) {
-          // Fetch additional ticks to fill the gap
-          ws.send(JSON.stringify({ticks_history: m.sym, count: need, end: "latest", style: "ticks"}));
-        }
-      });
-    }
-
-    // ---- Rendering ----
     function renderMarket(sym) {
+      const mkt = MARKETS.find(m => m.sym === sym);
       let container = document.getElementById(`mkt-${sym}`);
       if (!container) {
         container = document.createElement('div');
@@ -189,12 +196,14 @@
       }
 
       if (!ready[sym]) {
-        container.innerHTML = `<b>${MARKETS.find(m=>m.sym===sym).name}</b><div class="price">⌛ Loading ${store[sym]?.length || 0} / ${windowSize} ticks…</div>`;
+        const have = store[sym] ? store[sym].length : 0;
+        const pct = windowSize ? Math.min(100, Math.floor(have / windowSize * 100)) : 0;
+        container.innerHTML = `<b>${mkt.name}</b><div class="price">⌛ Loading…</div><div class="progress">Fetched ${have} / ${windowSize} ticks (${pct}%)</div>`;
         return;
       }
 
       const full = store[sym];
-      const windowData = full.slice(-windowSize);   // last exactly windowSize ticks
+      const windowData = full.slice(-windowSize);   // last exactly windowSize
       const total = windowData.length;
       const counts = new Array(10).fill(0);
       windowData.forEach(d => counts[d]++);
@@ -224,11 +233,10 @@
       const aEvenPct = ((aEvens / aTotal) * 100).toFixed(1);
       const aOddPct = ((aOdds / aTotal) * 100).toFixed(1);
 
-      // Show the full last price (not just the digit)
       const lastPrice = priceStore[sym] || '—';
 
       container.innerHTML = `
-        <b>${MARKETS.find(m=>m.sym===sym).name}</b>
+        <b>${mkt.name}</b>
         <div class="price">${lastPrice}</div>
         <div class="win">🎲 EVEN ${evenPct}% | ODD ${oddPct}% (last ${windowSize})</div>
         <div class="even-bar-container">
@@ -247,12 +255,12 @@
       `;
     }
 
-    function refreshAll() {
+    function refreshAllBars() {
       MARKETS.forEach(m => renderMarket(m.sym));
     }
 
-    // Start the engine
-    connect();
+    // Start
+    resetAndFetch();
   })();
 </script>
 </body>
