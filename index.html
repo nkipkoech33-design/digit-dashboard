@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer – Window Matcher</title>
+  <title>Digit Analyzer – Fast & Exact</title>
   <style>
     :root {
       --bg: #0f172a; --surface: #1e293b; --border: #1e293b; --text: white;
@@ -11,26 +11,26 @@
       --highlight: #38bdf8;
     }
     body.light { --bg: #f8fafc; --surface: #e2e8f0; --border: #cbd5e1; --text: #0f172a; --text-secondary: #475569; --good: #16a34a; --bad: #dc2626; }
-    body { background: var(--bg); color: var(--text); font-family: Arial; margin: 0; padding: 0 10px; padding-top: 130px; }
+    body { background: var(--bg); color: var(--text); font-family: Arial; margin: 0; padding: 10px; padding-top: 130px; }
     .controls {
       position: fixed; top: 0; left: 0; right: 0; background: var(--surface);
-      padding: 12px; border-bottom: 2px solid var(--accent); z-index: 10;
+      padding: 10px; border-bottom: 2px solid var(--accent); z-index: 10;
       display: flex; flex-wrap: wrap; gap: 15px; align-items: center;
     }
     .window-selector {
       background: var(--border); border-radius: 12px; padding: 8px 15px;
       display: flex; align-items: center; gap: 10px; font-weight: bold;
     }
-    .window-selector input[type=range] { width: 200px; }
+    .window-selector input[type=range] { width: 250px; }
     .window-selector output { font-size: 1.2em; color: var(--accent); min-width: 60px; }
-    .markets { display: flex; flex-direction: column; gap: 8px; }
-    .market { border: 1px solid var(--border); padding: 6px; border-radius: 6px; background: var(--bg); }
+    .market { border: 1px solid var(--border); padding: 6px; border-radius: 6px; background: var(--bg); margin-bottom: 8px; }
     .price { text-align: center; font-size: 22px; color: var(--highlight); font-weight: bold; }
     .win { text-align: center; font-size: 12px; margin-top: 2px; }
     .grid { display: grid; grid-template-columns: repeat(5, 2.5cm); gap: 10px; justify-content: center; margin-top: 8px; }
     .box { width: 2.5cm; height: 2.5cm; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); }
     .most { background: green; } .second { background: blue; } .secondLeast { background: orange; } .least { background: red; }
     .digit { font-size: 48px; font-weight: bold; }
+    .percent { font-size: 13px; }
     .tick { display: grid; grid-template-columns: repeat(50, 1fr); font-size: 10px; margin-top: 8px; text-align: center; }
     .e { color: lime; } .o { color: red; }
     .even-bar-container, .odd-bar-container { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
@@ -52,17 +52,18 @@
   </div>
   <div class="small-control">
     <span>🔍 Analysis bars:</span>
-    <input type="range" id="analysisSlider" min="10" max="1000" value="100" step="10" style="width:100px;">
+    <input type="range" id="analysisSlider" min="10" max="1000" value="100" step="10">
     <span id="analysisValue">100</span>
   </div>
+  <button id="refreshBtn">🔄 Re‑Sync</button>
   <button id="themeToggle">🌓 Theme</button>
 </div>
 
-<div class="markets" id="markets"></div>
+<div id="markets"></div>
 
 <script>
   (function() {
-    const TOKEN = "PUT_TOKEN_HERE";
+    const TOKEN = "PUT_TOKEN_HERE";                       // <-- replace with your Deriv token
     const MARKETS = [
       {sym:"R_10",name:"Volatility 10"},{sym:"R_25",name:"Volatility 25"},{sym:"R_50",name:"Volatility 50"},
       {sym:"R_75",name:"Volatility 75"},{sym:"R_100",name:"Volatility 100"},
@@ -73,12 +74,13 @@
       {sym:"JD75",name:"Jump 75"},{sym:"JD100",name:"Jump 100"}
     ];
 
-    const PIP = 2;  // all these indices use 2 decimal places
-
-    let currentWindow = 1000;   // total ticks used for percentages
-    let analysisTicks = 100;    // for the even/odd bars
-    let store = {};             // full tick arrays (kept up to maxWindow+1000)
-    let ready = {};
+    let windowSize = 1000;          // user‑selected window (100‑10,000)
+    let analysisTicks = 100;        // for the even/odd bars
+    let store = {};                 // full tick arrays (digits)
+    let priceStore = {};            // last full price string per market
+    let pipStore = {};              // pip sizes
+    let ready = {};                 // true if at least windowSize ticks are in store
+    let ws = null;
 
     // ---- Controls ----
     const windowSlider = document.getElementById('windowSlider');
@@ -87,26 +89,26 @@
     const analysisValue = document.getElementById('analysisValue');
 
     windowSlider.addEventListener('input', () => {
-      currentWindow = parseInt(windowSlider.value);
-      windowValue.textContent = currentWindow;
-      // When window changes, we re‑fetch history to fill the buffer
-      resetAndReconnect();
+      windowSize = parseInt(windowSlider.value);
+      windowValue.textContent = windowSize;
+      // If we already have enough ticks, just rerender.
+      // If not, fetch the missing history.
+      ensureEnoughTicks();
+      refreshAll();
     });
 
     analysisSlider.addEventListener('input', () => {
       analysisTicks = parseInt(analysisSlider.value);
       analysisValue.textContent = analysisTicks;
-      refreshAllBars();
+      refreshAll();
     });
 
-    document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
+    document.getElementById('refreshBtn').addEventListener('click', resetAndReconnect);
+    document.getElementById('themeToggle').addEventListener('click', () => document.body.classList.toggle('light'));
 
-    // ---- WebSocket ----
-    let ws = null;
     function resetAndReconnect() {
       if (ws) ws.close();
-      // Clear stores
-      MARKETS.forEach(m => { store[m.sym] = []; ready[m.sym] = false; });
+      MARKETS.forEach(m => { store[m.sym] = []; priceStore[m.sym] = '—'; ready[m.sym] = false; });
       connect();
     }
 
@@ -115,9 +117,9 @@
       ws.onopen = () => {
         ws.send(JSON.stringify({authorize: TOKEN}));
         MARKETS.forEach(m => {
-          // Fetch a bit more than currentWindow to have a live margin
-          const fetchCount = Math.min(currentWindow + 500, 15000);
-          ws.send(JSON.stringify({ticks_history: m.sym, count: fetchCount, end: "latest", style: "ticks"}));
+          // Start with 2000 ticks (fast load) – more than the default window of 1000
+          const initialFetch = 2000;
+          ws.send(JSON.stringify({ticks_history: m.sym, count: initialFetch, end: "latest", style: "ticks"}));
           ws.send(JSON.stringify({ticks: m.sym, subscribe: 1}));
         });
       };
@@ -126,30 +128,54 @@
         const data = JSON.parse(msg.data);
         if (data.history) {
           const sym = data.echo_req.ticks_history;
+          pipStore[sym] = 2;  // all of these markets use 2 decimal places
           const prices = data.history.prices;
           const digits = prices.map(p => {
-            const formatted = parseFloat(p).toFixed(PIP);
+            const formatted = parseFloat(p).toFixed(2);
             return parseInt(formatted.slice(-1));
           });
-          store[sym] = digits;
-          if (store[sym].length >= currentWindow) ready[sym] = true;
+          store[sym] = digits.slice(-20000);  // keep at most 20k ticks
+          // Last price from history is the last element of prices
+          priceStore[sym] = prices.length ? parseFloat(prices[prices.length-1]).toFixed(2) : '—';
+          updateReady(sym);
           renderMarket(sym);
         }
+
         if (data.tick) {
           const sym = data.tick.symbol;
+          pipStore[sym] = data.tick.pip_size || 2;
           const quote = parseFloat(data.tick.quote);
-          const formatted = quote.toFixed(PIP);
+          const formatted = quote.toFixed(pipStore[sym] || 2);
           const digit = parseInt(formatted.slice(-1));
+
           if (!store[sym]) store[sym] = [];
           store[sym].push(digit);
-          // Keep buffer manageable (max 20000)
+          // Keep buffer manageable
           if (store[sym].length > 20000) store[sym] = store[sym].slice(-15000);
-          if (store[sym].length >= currentWindow && !ready[sym]) ready[sym] = true;
+          priceStore[sym] = formatted;
+          updateReady(sym);
           renderMarket(sym);
         }
-        if (data.error) console.warn(data.error);
+
+        if (data.error) console.warn('WS error:', data.error);
       };
       ws.onclose = () => console.log('WS closed');
+    }
+
+    function updateReady(sym) {
+      ready[sym] = store[sym] && store[sym].length >= windowSize;
+    }
+
+    // If the window requires more ticks than we have, request more history
+    function ensureEnoughTicks() {
+      MARKETS.forEach(m => {
+        if (!store[m.sym]) return;
+        const need = windowSize + 100; // a bit more for safety
+        if (store[m.sym].length < need) {
+          // Fetch additional ticks to fill the gap
+          ws.send(JSON.stringify({ticks_history: m.sym, count: need, end: "latest", style: "ticks"}));
+        }
+      });
     }
 
     // ---- Rendering ----
@@ -163,13 +189,12 @@
       }
 
       if (!ready[sym]) {
-        container.innerHTML = `<b>${MARKETS.find(m=>m.sym===sym).name}</b><div class="price">Loading…</div>`;
+        container.innerHTML = `<b>${MARKETS.find(m=>m.sym===sym).name}</b><div class="price">⌛ Loading ${store[sym]?.length || 0} / ${windowSize} ticks…</div>`;
         return;
       }
 
       const full = store[sym];
-      // Use only the last 'currentWindow' ticks for main percentages
-      const windowData = full.slice(-currentWindow);
+      const windowData = full.slice(-windowSize);   // last exactly windowSize ticks
       const total = windowData.length;
       const counts = new Array(10).fill(0);
       windowData.forEach(d => counts[d]++);
@@ -199,10 +224,13 @@
       const aEvenPct = ((aEvens / aTotal) * 100).toFixed(1);
       const aOddPct = ((aOdds / aTotal) * 100).toFixed(1);
 
+      // Show the full last price (not just the digit)
+      const lastPrice = priceStore[sym] || '—';
+
       container.innerHTML = `
         <b>${MARKETS.find(m=>m.sym===sym).name}</b>
-        <div class="price">${full[full.length-1]}</div>
-        <div class="win">🎲 EVEN ${evenPct}% | ODD ${oddPct}% (last ${currentWindow})</div>
+        <div class="price">${lastPrice}</div>
+        <div class="win">🎲 EVEN ${evenPct}% | ODD ${oddPct}% (last ${windowSize})</div>
         <div class="even-bar-container">
           <span class="bar-label" style="color:var(--good);">EVEN</span>
           <div class="even-bar-rail"><div class="even-bar-fill" style="width:${aEvenPct}%;"></div></div>
@@ -219,11 +247,11 @@
       `;
     }
 
-    function refreshAllBars() {
-      MARKETS.forEach(m => { if (ready[m.sym]) renderMarket(m.sym); });
+    function refreshAll() {
+      MARKETS.forEach(m => renderMarket(m.sym));
     }
 
-    // Start
+    // Start the engine
     connect();
   })();
 </script>
