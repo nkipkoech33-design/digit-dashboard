@@ -3,99 +3,94 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer – Configurable Window (Exact Match)</title>
+  <title>Digit Analyzer – Window Matcher</title>
   <style>
     :root {
       --bg: #0f172a; --surface: #1e293b; --border: #1e293b; --text: white;
       --text-secondary: #94a3b8; --accent: #facc15; --good: #4ade80; --bad: #f87171;
-      --highlight: #38bdf8; --bar-bg: #334155;
+      --highlight: #38bdf8;
     }
-    body.light {
-      --bg: #f8fafc; --surface: #e2e8f0; --border: #cbd5e1; --text: #0f172a;
-      --text-secondary: #475569; --accent: #eab308; --good: #16a34a; --bad: #dc2626;
-      --highlight: #0284c7; --bar-bg: #cbd5e1;
+    body.light { --bg: #f8fafc; --surface: #e2e8f0; --border: #cbd5e1; --text: #0f172a; --text-secondary: #475569; --good: #16a34a; --bad: #dc2626; }
+    body { background: var(--bg); color: var(--text); font-family: Arial; margin: 0; padding: 0 10px; padding-top: 130px; }
+    .controls {
+      position: fixed; top: 0; left: 0; right: 0; background: var(--surface);
+      padding: 12px; border-bottom: 2px solid var(--accent); z-index: 10;
+      display: flex; flex-wrap: wrap; gap: 15px; align-items: center;
     }
-    body { background: var(--bg); color: var(--text); font-family: Arial; margin: 0; }
-    .wrapper { display: flex; }
-    .left { width: 70%; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-    .right { width: 30%; border-left: 1px solid var(--border); padding: 10px; background: var(--bg); overflow-y: auto; max-height: 100vh; }
+    .window-selector {
+      background: var(--border); border-radius: 12px; padding: 8px 15px;
+      display: flex; align-items: center; gap: 10px; font-weight: bold;
+    }
+    .window-selector input[type=range] { width: 200px; }
+    .window-selector output { font-size: 1.2em; color: var(--accent); min-width: 60px; }
+    .markets { display: flex; flex-direction: column; gap: 8px; }
     .market { border: 1px solid var(--border); padding: 6px; border-radius: 6px; background: var(--bg); }
     .price { text-align: center; font-size: 22px; color: var(--highlight); font-weight: bold; }
-    .win { text-align: center; font-size: 12px; }
+    .win { text-align: center; font-size: 12px; margin-top: 2px; }
     .grid { display: grid; grid-template-columns: repeat(5, 2.5cm); gap: 10px; justify-content: center; margin-top: 8px; }
     .box { width: 2.5cm; height: 2.5cm; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); }
     .most { background: green; } .second { background: blue; } .secondLeast { background: orange; } .least { background: red; }
-    .digit { font-size: 48px; font-weight: bold; } .percent { font-size: 13px; }
+    .digit { font-size: 48px; font-weight: bold; }
     .tick { display: grid; grid-template-columns: repeat(50, 1fr); font-size: 10px; margin-top: 8px; text-align: center; }
     .e { color: lime; } .o { color: red; }
     .even-bar-container, .odd-bar-container { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
-    .even-bar-rail, .odd-bar-rail { flex: 1; height: 8px; background: var(--bar-bg); border-radius: 10px; overflow: hidden; }
+    .even-bar-rail, .odd-bar-rail { flex: 1; height: 8px; background: var(--border); border-radius: 10px; overflow: hidden; }
     .even-bar-fill { height: 100%; background: var(--good); width: 0%; transition: width 0.2s; }
     .odd-bar-fill  { height: 100%; background: var(--bad); width: 0%; transition: width 0.2s; }
     .bar-label { font-size: 11px; font-weight: bold; min-width: 30px; color: var(--text-secondary); }
     .bar-pct { font-size: 10px; min-width: 40px; text-align: right; color: var(--text-secondary); }
-    #topbar { position: fixed; top: 0; left: 0; right: 0; background: var(--surface); padding: 6px 10px; display: flex; align-items: center; gap: 15px; z-index: 20; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-    body { padding-top: 50px; }
-    @media(max-width:1200px) { .left { width: 100%; } .right { display: none; } }
+    .small-control { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+    @media(max-width:600px) { .grid { grid-template-columns: repeat(5, 1fr); } .box { width: auto; } }
   </style>
 </head>
 <body>
-<div id="topbar">
-  <label style="display:flex; align-items:center; gap:5px; font-size:12px;">
-    Total ticks (window): 
-    <input type="number" id="windowSize" min="100" max="10000" value="1000" step="100" style="width:80px;">
-    <button id="applyWindowBtn">Apply</button>
-  </label>
-  <label style="display:flex; align-items:center; gap:5px; font-size:12px;">
-    Analysis bars: 
+<div class="controls">
+  <div class="window-selector">
+    <span>🕒 Tick Window:</span>
+    <input type="range" id="windowSlider" min="100" max="10000" value="1000" step="100">
+    <output id="windowValue">1000</output>
+  </div>
+  <div class="small-control">
+    <span>🔍 Analysis bars:</span>
     <input type="range" id="analysisSlider" min="10" max="1000" value="100" step="10" style="width:100px;">
     <span id="analysisValue">100</span>
-  </label>
-  <button id="refreshBtn">🔄 Re-Sync</button>
+  </div>
   <button id="themeToggle">🌓 Theme</button>
 </div>
-<div class="wrapper">
-  <div class="left" id="markets"></div>
-  <div class="right" id="statsPanel">
-    <div class="stats-panel">
-      <div class="stats-title">📋 Market Selection</div>
-      <div id="marketList"></div>
-    </div>
-  </div>
-</div>
+
+<div class="markets" id="markets"></div>
 
 <script>
   (function() {
     const TOKEN = "PUT_TOKEN_HERE";
     const MARKETS = [
-      {sym:"R_10",name:"Volatility 10 Index",pip:2},{sym:"R_25",name:"Volatility 25 Index",pip:2},{sym:"R_50",name:"Volatility 50 Index",pip:2},
-      {sym:"R_75",name:"Volatility 75 Index",pip:2},{sym:"R_100",name:"Volatility 100 Index",pip:2},
-      {sym:"1HZ10V",name:"Volatility 10 (1s)",pip:2},{sym:"1HZ15V",name:"Volatility 15 (1s)",pip:2},{sym:"1HZ25V",name:"Volatility 25 (1s)",pip:2},
-      {sym:"1HZ30V",name:"Volatility 30 (1s)",pip:2},{sym:"1HZ50V",name:"Volatility 50 (1s)",pip:2},{sym:"1HZ75V",name:"Volatility 75 (1s)",pip:2},
-      {sym:"1HZ90V",name:"Volatility 90 (1s)",pip:2},{sym:"1HZ100V",name:"Volatility 100 (1s)",pip:2},
-      {sym:"JD10",name:"Jump 10 Index",pip:2},{sym:"JD25",name:"Jump 25 Index",pip:2},{sym:"JD50",name:"Jump 50 Index",pip:2},
-      {sym:"JD75",name:"Jump 75 Index",pip:2},{sym:"JD100",name:"Jump 100 Index",pip:2}
+      {sym:"R_10",name:"Volatility 10"},{sym:"R_25",name:"Volatility 25"},{sym:"R_50",name:"Volatility 50"},
+      {sym:"R_75",name:"Volatility 75"},{sym:"R_100",name:"Volatility 100"},
+      {sym:"1HZ10V",name:"Volatility 10 (1s)"},{sym:"1HZ15V",name:"Volatility 15 (1s)"},{sym:"1HZ25V",name:"Volatility 25 (1s)"},
+      {sym:"1HZ30V",name:"Volatility 30 (1s)"},{sym:"1HZ50V",name:"Volatility 50 (1s)"},{sym:"1HZ75V",name:"Volatility 75 (1s)"},
+      {sym:"1HZ90V",name:"Volatility 90 (1s)"},{sym:"1HZ100V",name:"Volatility 100 (1s)"},
+      {sym:"JD10",name:"Jump 10"},{sym:"JD25",name:"Jump 25"},{sym:"JD50",name:"Jump 50"},
+      {sym:"JD75",name:"Jump 75"},{sym:"JD100",name:"Jump 100"}
     ];
 
-    let WINDOW_SIZE = 1000;       // user-configurable window
-    let MAX_BUFFER = 20000;      // keep up to 20k ticks max
-    let store = {};
-    let historyReady = {};
-    let analysisTicks = 100;
+    const PIP = 2;  // all these indices use 2 decimal places
 
-    const windowInput = document.getElementById('windowSize');
-    const applyBtn = document.getElementById('applyWindowBtn');
+    let currentWindow = 1000;   // total ticks used for percentages
+    let analysisTicks = 100;    // for the even/odd bars
+    let store = {};             // full tick arrays (kept up to maxWindow+1000)
+    let ready = {};
+
+    // ---- Controls ----
+    const windowSlider = document.getElementById('windowSlider');
+    const windowValue = document.getElementById('windowValue');
     const analysisSlider = document.getElementById('analysisSlider');
     const analysisValue = document.getElementById('analysisValue');
 
-    applyBtn.addEventListener('click', () => {
-      const val = parseInt(windowInput.value);
-      if (val >= 100 && val <= 10000) {
-        WINDOW_SIZE = val;
-        windowInput.value = val;
-        // Reset stores and re-fetch
-        connect();
-      }
+    windowSlider.addEventListener('input', () => {
+      currentWindow = parseInt(windowSlider.value);
+      windowValue.textContent = currentWindow;
+      // When window changes, we re‑fetch history to fill the buffer
+      resetAndReconnect();
     });
 
     analysisSlider.addEventListener('input', () => {
@@ -104,34 +99,25 @@
       refreshAllBars();
     });
 
-    // Market checkboxes
-    const marketListDiv = document.getElementById('marketList');
-    MARKETS.forEach(m => {
-      let div = document.createElement('div');
-      div.className = 'market-list-item';
-      div.innerHTML = `<input type="checkbox" class="market-checkbox" data-sym="${m.sym}" checked> ${m.name}`;
-      marketListDiv.appendChild(div);
-    });
-    document.querySelectorAll('.market-checkbox').forEach(cb => {
-      cb.addEventListener('change', function() {
-        let sym = this.dataset.sym;
-        let el = document.getElementById(`market-${sym}`);
-        if (el) el.style.display = this.checked ? '' : 'none';
-      });
-    });
+    document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
 
+    // ---- WebSocket ----
     let ws = null;
+    function resetAndReconnect() {
+      if (ws) ws.close();
+      // Clear stores
+      MARKETS.forEach(m => { store[m.sym] = []; ready[m.sym] = false; });
+      connect();
+    }
 
     function connect() {
-      if (ws) ws.close();
       ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
       ws.onopen = () => {
         ws.send(JSON.stringify({authorize: TOKEN}));
         MARKETS.forEach(m => {
-          store[m.sym] = [];
-          historyReady[m.sym] = false;
-          // Request exactly the window size plus a small buffer to start live
-          ws.send(JSON.stringify({ticks_history: m.sym, count: Math.min(WINDOW_SIZE + 100, MAX_BUFFER), end: "latest", style: "ticks"}));
+          // Fetch a bit more than currentWindow to have a live margin
+          const fetchCount = Math.min(currentWindow + 500, 15000);
+          ws.send(JSON.stringify({ticks_history: m.sym, count: fetchCount, end: "latest", style: "ticks"}));
           ws.send(JSON.stringify({ticks: m.sym, subscribe: 1}));
         });
       };
@@ -140,123 +126,102 @@
         const data = JSON.parse(msg.data);
         if (data.history) {
           const sym = data.echo_req.ticks_history;
-          const mkt = MARKETS.find(m => m.sym === sym);
-          const pip = mkt ? mkt.pip : 2;
           const prices = data.history.prices;
           const digits = prices.map(p => {
-            const formatted = parseFloat(p).toFixed(pip);
+            const formatted = parseFloat(p).toFixed(PIP);
             return parseInt(formatted.slice(-1));
           });
-          store[sym] = digits.slice(-MAX_BUFFER);
-          if (store[sym].length >= WINDOW_SIZE) {
-            historyReady[sym] = true;
-          }
+          store[sym] = digits;
+          if (store[sym].length >= currentWindow) ready[sym] = true;
           renderMarket(sym);
         }
-
         if (data.tick) {
           const sym = data.tick.symbol;
-          const mkt = MARKETS.find(m => m.sym === sym);
-          const pip = mkt ? mkt.pip : 2;
           const quote = parseFloat(data.tick.quote);
-          const formatted = quote.toFixed(pip);
+          const formatted = quote.toFixed(PIP);
           const digit = parseInt(formatted.slice(-1));
-
           if (!store[sym]) store[sym] = [];
           store[sym].push(digit);
-          if (store[sym].length > MAX_BUFFER) store[sym].shift();
-          if (store[sym].length >= WINDOW_SIZE && !historyReady[sym]) {
-            historyReady[sym] = true;
-          }
+          // Keep buffer manageable (max 20000)
+          if (store[sym].length > 20000) store[sym] = store[sym].slice(-15000);
+          if (store[sym].length >= currentWindow && !ready[sym]) ready[sym] = true;
           renderMarket(sym);
         }
-
-        if (data.error) console.warn('WS error:', data.error);
+        if (data.error) console.warn(data.error);
       };
-
       ws.onclose = () => console.log('WS closed');
     }
 
-    document.getElementById('refreshBtn').addEventListener('click', connect);
-
+    // ---- Rendering ----
     function renderMarket(sym) {
-      let container = document.getElementById(`market-${sym}`);
+      let container = document.getElementById(`mkt-${sym}`);
       if (!container) {
         container = document.createElement('div');
-        container.id = `market-${sym}`;
+        container.id = `mkt-${sym}`;
         container.className = 'market';
         document.getElementById('markets').appendChild(container);
       }
 
-      if (!historyReady[sym]) {
+      if (!ready[sym]) {
         container.innerHTML = `<b>${MARKETS.find(m=>m.sym===sym).name}</b><div class="price">Loading…</div>`;
         return;
       }
 
-      const fullBuffer = store[sym];
-      // Use only the last WINDOW_SIZE ticks for percentages
-      const windowData = fullBuffer.slice(-WINDOW_SIZE);
+      const full = store[sym];
+      // Use only the last 'currentWindow' ticks for main percentages
+      const windowData = full.slice(-currentWindow);
       const total = windowData.length;
-      const cnt = new Array(10).fill(0);
-      windowData.forEach(d => cnt[d]++);
+      const counts = new Array(10).fill(0);
+      windowData.forEach(d => counts[d]++);
 
-      const perc = cnt.map(c => ((c / total) * 100).toFixed(1));
-      const es = cnt[0] + cnt[2] + cnt[4] + cnt[6] + cnt[8];
-      const ep = ((es / total) * 100).toFixed(1);
-      const op = (((total - es) / total) * 100).toFixed(1);
+      const perc = counts.map(c => ((c / total) * 100).toFixed(1));
+      const evenCount = counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
+      const evenPct = ((evenCount / total) * 100).toFixed(1);
+      const oddPct = (((total - evenCount) / total) * 100).toFixed(1);
 
-      const sorted = cnt.map((v, i) => ({v, i})).sort((a, b) => b.v - a.v);
+      const sorted = counts.map((v,i) => ({v,i})).sort((a,b) => b.v - a.v);
       const most = sorted[0].i, second = sorted[1].i, secondLeast = sorted[8].i, least = sorted[9].i;
 
       function box(i) {
-        let cls = "";
-        if (i === most) cls = "most";
-        else if (i === second) cls = "second";
-        else if (i === least) cls = "least";
-        else if (i === secondLeast) cls = "secondLeast";
-        return `<div class="box ${cls}">
-          <div class="digit">${i}</div>
-          <div class="percent">${perc[i]}%</div>
-        </div>`;
+        let cls = '';
+        if (i === most) cls = 'most';
+        else if (i === second) cls = 'second';
+        else if (i === least) cls = 'least';
+        else if (i === secondLeast) cls = 'secondLeast';
+        return `<div class="box ${cls}"><div class="digit">${i}</div><div class="percent">${perc[i]}%</div></div>`;
       }
 
-      // Even/Odd bars based on the shorter ANALYSIS window
-      const n = Math.min(analysisTicks, total);
-      const slice = windowData.slice(-n);
-      const evens = slice.filter(d => d % 2 === 0).length;
-      const odds = n - evens;
-      const evenPctVal = ((evens / n) * 100).toFixed(1);
-      const oddPctVal  = ((odds / n) * 100).toFixed(1);
-
-      const lastDigit = fullBuffer[fullBuffer.length - 1];
+      // Even/odd bars for analysis window
+      const aTotal = Math.min(analysisTicks, total);
+      const aSlice = windowData.slice(-aTotal);
+      const aEvens = aSlice.filter(d => d % 2 === 0).length;
+      const aOdds = aTotal - aEvens;
+      const aEvenPct = ((aEvens / aTotal) * 100).toFixed(1);
+      const aOddPct = ((aOdds / aTotal) * 100).toFixed(1);
 
       container.innerHTML = `
         <b>${MARKETS.find(m=>m.sym===sym).name}</b>
-        <div class="price">${lastDigit}</div>
-        <div class="win">🎲 EVEN ${ep}% | ODD ${op}% (last ${WINDOW_SIZE} ticks)</div>
+        <div class="price">${full[full.length-1]}</div>
+        <div class="win">🎲 EVEN ${evenPct}% | ODD ${oddPct}% (last ${currentWindow})</div>
         <div class="even-bar-container">
           <span class="bar-label" style="color:var(--good);">EVEN</span>
-          <div class="even-bar-rail"><div class="even-bar-fill" style="width:${evenPctVal}%;"></div></div>
-          <span class="bar-pct">${evenPctVal}%</span>
+          <div class="even-bar-rail"><div class="even-bar-fill" style="width:${aEvenPct}%;"></div></div>
+          <span class="bar-pct">${aEvenPct}%</span>
         </div>
         <div class="odd-bar-container">
           <span class="bar-label" style="color:var(--bad);">ODD</span>
-          <div class="odd-bar-rail"><div class="odd-bar-fill" style="width:${oddPctVal}%;"></div></div>
-          <span class="bar-pct">${oddPctVal}%</span>
+          <div class="odd-bar-rail"><div class="odd-bar-fill" style="width:${aOddPct}%;"></div></div>
+          <span class="bar-pct">${aOddPct}%</span>
         </div>
-        <div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
-        <div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
-        <div class="tick">${windowData.slice(-50).map(d => `<span class="${d % 2 === 0 ? 'e' : 'o'}">${d % 2 === 0 ? 'E' : 'O'}</span>`).join("")}</div>
+        <div class="grid">${[0,2,4,6,8].map(box).join('')}</div>
+        <div class="grid">${[1,3,5,7,9].map(box).join('')}</div>
+        <div class="tick">${windowData.slice(-50).map(d => `<span class="${d%2===0?'e':'o'}">${d%2===0?'E':'O'}</span>`).join('')}</div>
       `;
     }
 
     function refreshAllBars() {
-      MARKETS.forEach(m => {
-        if (historyReady[m.sym]) renderMarket(m.sym);
-      });
+      MARKETS.forEach(m => { if (ready[m.sym]) renderMarket(m.sym); });
     }
-
-    document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
 
     // Start
     connect();
