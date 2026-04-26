@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Digit Analyzer – Live Demo Balance + Martingale</title>
+  <title>Digit Analyzer – Continuous Session Trading (Profit Target ≥ Stake)</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -34,7 +34,7 @@
     .signal-badge.odd { background: #7f1d1d; color: #f87171; border: 1px solid #ef4444; }
     .main-layout { display: flex; flex: 1; overflow: hidden; }
     .markets-area { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
-    .sidebar { width: 320px; background: var(--card); border-left: 1px solid var(--border);
+    .sidebar { width: 340px; background: var(--card); border-left: 1px solid var(--border);
       overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
     .trade-panel { background: var(--bg); border-radius: 1rem; padding: 0.8rem; border: 1px solid var(--accent); }
     .trade-panel div { margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
@@ -86,7 +86,7 @@
 </head>
 <body>
 <div class="token-bar">
-  <span>🔑 Deriv API Token (demo):</span>
+  <span>🔑 Deriv Demo Token:</span>
   <input type="text" id="tokenInput" class="token-input" placeholder="Paste your token here" value="PUT_TOKEN_HERE">
   <button id="connectBtn" class="btn">Connect & Fetch Balance</button>
   <span id="tokenStatus" style="font-size:0.8rem;"></span>
@@ -111,14 +111,17 @@
       <div><span>💰 Demo Balance:</span><span id="demoBalance" style="font-weight:bold; color:var(--good);">---</span></div>
       <div><span>💵 Base Stake ($):</span><input type="number" id="baseStake" value="10" step="1" style="width:80px;"></div>
       <div><span>💹 Martingale x</span><input type="range" id="martingaleMult" min="1.5" max="3.0" step="0.05" value="2.1" style="width:100px;"><span id="multVal">2.10</span></div>
+      <div><span>🎯 Target (× stake)</span><input type="range" id="targetMult" min="0.5" max="3.0" step="0.1" value="1.0" style="width:100px;"><span id="targetVal">1.0</span></div>
+      <div><span>🛑 Max Martingale steps</span><input type="number" id="maxSteps" value="10" min="1" max="30" style="width:60px;"></div>
       <div><span>📈 Next Stake:</span><span id="nextStake">0.00</span></div>
-      <div><span>🔄 Martingale step:</span><span id="martingaleCount">1</span></div>
-      <button id="resetMartingaleBtn" class="btn" style="width:100%;">Reset Martingale</button>
+      <div><span>📊 Session P&L:</span><span id="sessionPL">0.00</span></div>
+      <div><span>🔄 Step:</span><span id="martingaleCount">1</span></div>
+      <button id="resetSessionBtn" class="btn" style="width:100%;">Reset Session (Stop)</button>
     </div>
     <div class="sidebar-title">📋 Markets (click name to pin)</div>
     <div id="marketList"></div>
     <div class="history-panel"><div>📜 Trade History <span id="overallWR"></span></div><div id="historyList">No trades yet</div></div>
-    <div class="debug-panel"><div>🔍 Signal & Trade Log</div><div id="debugContent">Connecting...</div></div>
+    <div class="debug-panel"><div>🔍 Signal & Session Log</div><div id="debugContent">Connecting...</div></div>
   </div>
 </div>
 <script>
@@ -130,50 +133,122 @@
       {sym:"JD10",name:"Jump 10"},{sym:"JD25",name:"Jump 25"},{sym:"JD50",name:"Jump 50"},{sym:"JD75",name:"Jump 75"},{sym:"JD100",name:"Jump 100"}
     ];
     
-    // ---------- Demo Balance & Martingale ----------
+    // Demo balance & Martingale state
     let demoBalance = 0;
     let baseStake = 10;
     let martingaleMult = 2.1;
     let currentStake = baseStake;
     let martingaleStep = 1;
-    let token = "";
-    let ws = null;
-    let isAuthorized = false;
-    let pendingTrade = null; // { sym, direction, stake }
-    let store = {}, priceStore = {}, ready = {}, signalActive = {}, pinned = null;
-    let lastSignalTime = {}, signalStrength = {}, signalConf = {}, signalExpiry = {};
-    let lastDigit = {};
-    let checkboxState = {};
-    let debug = [];
-    let trades = [];
-    let readyCount = 0;
+    let targetMultiplier = 1.0;   // target profit = initialStake * targetMultiplier
+    let maxMartingaleSteps = 10;
     
-    function addDebug(msg) { debug.unshift(msg); if(debug.length>20) debug.pop(); document.getElementById('debugContent').innerHTML = debug.map(m=>`<div>${m}</div>`).join(''); }
-    function updateBalanceUI() { document.getElementById('demoBalance').innerText = demoBalance.toFixed(2); }
-    function updateMartingaleUI() { document.getElementById('nextStake').innerText = currentStake.toFixed(2); document.getElementById('martingaleCount').innerText = martingaleStep; }
-    function resetMartingale() { currentStake = baseStake; martingaleStep = 1; updateMartingaleUI(); addDebug("Martingale reset."); }
+    // Session tracking per market (only one active market at a time for simplicity, but we can support multiple)
+    let activeSession = null; // { marketSym, initialStake, cumulativePL, direction }
+    let sessionCumulativePL = 0;
+    let sessionInitialStake = 0;
+    let sessionActive = false;
+    let sessionMarket = null;
     
-    function applyTradeOutcome(win) {
-      let profit = win ? currentStake * 0.85 : -currentStake;
+    // DOM elements
+    const balanceSpan = document.getElementById('demoBalance');
+    const nextStakeSpan = document.getElementById('nextStake');
+    const martingaleCountSpan = document.getElementById('martingaleCount');
+    const sessionPLSpan = document.getElementById('sessionPL');
+    const baseStakeInput = document.getElementById('baseStake');
+    const martingaleMultSlider = document.getElementById('martingaleMult');
+    const multValSpan = document.getElementById('multVal');
+    const targetMultSlider = document.getElementById('targetMult');
+    const targetValSpan = document.getElementById('targetVal');
+    const maxStepsInput = document.getElementById('maxSteps');
+    const resetSessionBtn = document.getElementById('resetSessionBtn');
+    
+    baseStakeInput.addEventListener('change', () => { baseStake = parseFloat(baseStakeInput.value) || 10; if(!sessionActive) resetMartingale(); });
+    martingaleMultSlider.addEventListener('input', () => { martingaleMult = parseFloat(martingaleMultSlider.value); multValSpan.innerText = martingaleMult.toFixed(2); if(!sessionActive) resetMartingale(); });
+    targetMultSlider.addEventListener('input', () => { targetMultiplier = parseFloat(targetMultSlider.value); targetValSpan.innerText = targetMultiplier.toFixed(1); });
+    maxStepsInput.addEventListener('change', () => { maxMartingaleSteps = parseInt(maxStepsInput.value) || 10; });
+    resetSessionBtn.addEventListener('click', () => { endSession(true); addDebug("Session manually reset."); });
+    
+    function resetMartingale() {
+      currentStake = baseStake;
+      martingaleStep = 1;
+      updateMartingaleUI();
+    }
+    function updateMartingaleUI() {
+      nextStakeSpan.innerText = currentStake.toFixed(2);
+      martingaleCountSpan.innerText = martingaleStep;
+    }
+    function updateSessionUI() {
+      sessionPLSpan.innerText = sessionCumulativePL.toFixed(2);
+    }
+    function endSession(resetBalanceRelated = true) {
+      if(sessionActive) {
+        addDebug(`Session ended. Final P&L: ${sessionCumulativePL.toFixed(2)}`);
+        sessionActive = false;
+        sessionMarket = null;
+        sessionCumulativePL = 0;
+        sessionInitialStake = 0;
+        updateSessionUI();
+        resetMartingale();
+      }
+    }
+    function startSession(marketSym, direction, firstStake) {
+      if(sessionActive) {
+        addDebug(`Session already active for ${sessionMarket}. Cannot start new.`);
+        return false;
+      }
+      sessionActive = true;
+      sessionMarket = marketSym;
+      sessionInitialStake = firstStake;
+      sessionCumulativePL = 0;
+      updateSessionUI();
+      addDebug(`🟢 New session started on ${marketSym} (${direction}). Target profit: $${(sessionInitialStake * targetMultiplier).toFixed(2)}`);
+      return true;
+    }
+    
+    function applyTradeOutcome(win, stakeUsed) {
+      let profit = win ? stakeUsed * 0.85 : -stakeUsed;
       demoBalance += profit;
       updateBalanceUI();
-      if(win) { currentStake = baseStake; martingaleStep = 1; }
-      else { currentStake = currentStake * martingaleMult; martingaleStep++; }
-      updateMartingaleUI();
+      // Update session cumulative profit
+      if(sessionActive) {
+        sessionCumulativePL += profit;
+        updateSessionUI();
+        addDebug(`Session P&L: ${sessionCumulativePL.toFixed(2)} / target: ${(sessionInitialStake * targetMultiplier).toFixed(2)}`);
+        // Check if target reached
+        if(sessionCumulativePL >= sessionInitialStake * targetMultiplier) {
+          addDebug(`🎯 Profit target reached! Session closed.`);
+          endSession();
+          return profit;
+        }
+      }
+      // Update Martingale (only if session still active, otherwise reset)
+      if(sessionActive) {
+        if(win) {
+          // Win: reset martingale to base stake
+          currentStake = baseStake;
+          martingaleStep = 1;
+          addDebug(`Win – reset Martingale to ${currentStake.toFixed(2)}`);
+        } else {
+          // Loss: increase stake
+          if(martingaleStep < maxMartingaleSteps) {
+            currentStake = currentStake * martingaleMult;
+            martingaleStep++;
+            addDebug(`Loss – Martingale step ${martingaleStep}, next stake ${currentStake.toFixed(2)}`);
+          } else {
+            addDebug(`Max Martingale steps reached (${maxMartingaleSteps}). Closing session.`);
+            endSession();
+          }
+        }
+        updateMartingaleUI();
+      } else {
+        resetMartingale();
+      }
       return profit;
     }
     
-    function addTradeToHistory(sym, dir, outcome, profit) {
-      trades.unshift({ sym, dir, outcome, profit, time: new Date().toLocaleTimeString() });
-      if(trades.length>40) trades.pop();
-      let wins = trades.filter(t=>t.outcome==='win').length;
-      let wr = trades.length ? (wins/trades.length*100).toFixed(0) : 0;
-      document.getElementById('overallWR').innerHTML = `(WR:${wr}%)`;
-      let html = trades.slice(0,20).map(t=>`<div class="history-entry"><span>${t.time} ${t.sym} ${t.dir}</span><span class="${t.outcome}">${t.outcome==='win'?'+'+t.profit.toFixed(2):t.profit.toFixed(2)}</span></div>`).join('');
-      document.getElementById('historyList').innerHTML = html;
-    }
+    function updateBalanceUI() { balanceSpan.innerText = demoBalance.toFixed(2); }
     
-    // ---------- Strategy parameters ----------
+    // ----- Strategy parameters (same as before) -----
     let shortPct = 70, thresh250 = 57, thresh500 = 55, thresh1000 = 52;
     let sensitivity = 1.0, signalSec = 20;
     document.getElementById('shortThresh').oninput = (e) => { shortPct = parseInt(e.target.value); document.getElementById('shortVal').innerText = shortPct+'%'; };
@@ -182,11 +257,8 @@
     document.getElementById('thresh1000').oninput = (e) => { thresh1000 = parseInt(e.target.value); document.getElementById('val1000').innerText = thresh1000+'%'; };
     document.getElementById('sensitivity').oninput = (e) => { sensitivity = parseFloat(e.target.value); document.getElementById('sensVal').innerText = sensitivity.toFixed(2); };
     document.getElementById('duration').oninput = (e) => { signalSec = parseInt(e.target.value); document.getElementById('durVal').innerText = signalSec; };
-    document.getElementById('baseStake').onchange = (e) => { baseStake = parseFloat(e.target.value) || 10; resetMartingale(); };
-    document.getElementById('martingaleMult').oninput = (e) => { martingaleMult = parseFloat(e.target.value); document.getElementById('multVal').innerText = martingaleMult.toFixed(2); resetMartingale(); };
-    document.getElementById('resetMartingaleBtn').onclick = resetMartingale;
     
-    // ---------- Sound ----------
+    // Sound
     let muted = false;
     let sounds = { beep:"https://actions.google.com/sounds/v1/alarms/beep_short.ogg", alert:"https://actions.google.com/sounds/v1/alarms/beep_soft.ogg", ping:"https://actions.google.com/sounds/v1/alarms/ding.ogg" };
     let audio = new Audio(sounds.beep);
@@ -194,7 +266,18 @@
     document.getElementById('soundSelect').onchange = (e) => { audio = new Audio(sounds[e.target.value]); };
     document.getElementById('muteBtn').onclick = () => { muted = !muted; document.getElementById('muteBtn').innerText = muted ? '🔇' : '🔊'; };
     
-    // ---------- Signal logic ----------
+    // Global state for market data
+    let store = {}, priceStore = {}, ready = {}, signalActive = {}, pinned = null, tickWs = null;
+    let lastSignalTime = {}, signalStrength = {}, signalConf = {}, signalExpiry = {};
+    let lastDigit = {};
+    let checkboxState = {};
+    let debug = [];
+    let trades = [];
+    let readyCount = 0;
+    
+    function addDebug(msg) { debug.unshift(msg); if(debug.length>25) debug.pop(); document.getElementById('debugContent').innerHTML = debug.map(m=>`<div>${m}</div>`).join(''); }
+    
+    // Signal logic (unchanged)
     function getEvenPct(arr) { if(!arr.length) return 50; return (arr.filter(d=>d%2===0).length/arr.length)*100; }
     function isSaturated(data, tf, bias) {
       if(!data || data.length < tf) return false;
@@ -205,6 +288,110 @@
       else return even <= (100 - th);
     }
     function checkSignal(sym) {
+      if(!ready[sym]) return false;
+      // If there is an active session on a different market, we could still allow signals on other markets? 
+      // For simplicity, we allow any market, but each market can have its own session. We'll implement per-market session.
+      // To keep code simpler, we'll allow only one global session for now. But we can enable per-market later.
+      // However, the user wants continuous until profit target on the same market. So we should allow session per market.
+      // Let's store sessions in a Map: sessionMap.set(sym, {active, initialStake, cumulativePL})
+      // For brevity, I'll implement per-market session using a map.
+      // I already have per-market session tracking? Actually `activeSession` is global. Let's upgrade to per-market.
+      // Quick upgrade: use sessions object.
+    }
+    
+    // I'll implement per-market session map for full flexibility.
+    let sessions = new Map(); // key: symbol, value: { active, initialStake, cumulativePL, direction, martingaleStake, martingaleStep }
+    
+    function getSession(sym) {
+      if(!sessions.has(sym)) sessions.set(sym, { active: false, initialStake: 0, cumulativePL: 0, direction: null, martingaleStake: baseStake, martingaleStep: 1 });
+      return sessions.get(sym);
+    }
+    function endSessionForSymbol(sym) {
+      let sess = getSession(sym);
+      if(sess.active) {
+        addDebug(`Session ended for ${sym}. Final P&L: ${sess.cumulativePL.toFixed(2)}`);
+        sess.active = false;
+        sess.cumulativePL = 0;
+        sess.initialStake = 0;
+        sess.direction = null;
+        sess.martingaleStake = baseStake;
+        sess.martingaleStep = 1;
+        // Also update UI for that market? We'll just show global session info for the currently selected? But we'll keep it simple.
+        // Update global UI for the active market if needed.
+      }
+    }
+    function startSessionForSymbol(sym, direction, firstStake) {
+      let sess = getSession(sym);
+      if(sess.active) {
+        addDebug(`Session already active for ${sym}. Cannot start new.`);
+        return false;
+      }
+      sess.active = true;
+      sess.initialStake = firstStake;
+      sess.cumulativePL = 0;
+      sess.direction = direction;
+      sess.martingaleStake = firstStake;
+      sess.martingaleStep = 1;
+      addDebug(`🟢 New session started on ${sym} (${direction}). Target profit: $${(firstStake * targetMultiplier).toFixed(2)}`);
+      // Update global UI for the session (we'll show the most recent session info)
+      sessionPLSpan.innerText = "0.00";
+      nextStakeSpan.innerText = firstStake.toFixed(2);
+      martingaleCountSpan.innerText = "1";
+      return true;
+    }
+    
+    function applyTradeOutcomePerMarket(sym, win, stakeUsed) {
+      let sess = getSession(sym);
+      if(!sess.active) return;
+      let profit = win ? stakeUsed * 0.85 : -stakeUsed;
+      demoBalance += profit;
+      updateBalanceUI();
+      sess.cumulativePL += profit;
+      addDebug(`${sym} trade ${win?'WIN':'LOSS'} | P/L: ${profit.toFixed(2)} | Session P&L: ${sess.cumulativePL.toFixed(2)}`);
+      // Update global UI for display (show last touched market)
+      sessionPLSpan.innerText = sess.cumulativePL.toFixed(2);
+      // Check target
+      let target = sess.initialStake * targetMultiplier;
+      if(sess.cumulativePL >= target) {
+        addDebug(`🎯 Target reached for ${sym}! Session closed.`);
+        endSessionForSymbol(sym);
+        return;
+      }
+      // Update Martingale
+      if(win) {
+        sess.martingaleStake = baseStake;
+        sess.martingaleStep = 1;
+      } else {
+        if(sess.martingaleStep < maxMartingaleSteps) {
+          sess.martingaleStake = sess.martingaleStake * martingaleMult;
+          sess.martingaleStep++;
+        } else {
+          addDebug(`Max Martingale steps reached for ${sym}. Closing session.`);
+          endSessionForSymbol(sym);
+          return;
+        }
+      }
+      // Update UI for next stake
+      nextStakeSpan.innerText = sess.martingaleStake.toFixed(2);
+      martingaleCountSpan.innerText = sess.martingaleStep;
+      // After a loss, we will automatically place another trade on the next tick (since signal continues)
+      // But we need to ensure that the next tick triggers another trade decision.
+      // We'll set pendingTrade to the next stake and direction.
+      pendingTradeForMarket[sym] = { sym, direction: sess.direction, stake: sess.martingaleStake };
+      addDebug(`Next trade queued: ${sess.direction} stake ${sess.martingaleStake.toFixed(2)}`);
+    }
+    
+    let pendingTradeForMarket = {};
+    function resolvePendingForMarket(sym, digit) {
+      let trade = pendingTradeForMarket[sym];
+      if(!trade) return;
+      let win = (trade.direction === 'EVEN' && digit%2===0) || (trade.direction === 'ODD' && digit%2===1);
+      applyTradeOutcomePerMarket(sym, win, trade.stake);
+      addTradeToHistory(sym, trade.direction, win?'win':'loss', win ? trade.stake*0.85 : -trade.stake);
+      delete pendingTradeForMarket[sym];
+    }
+    
+    function checkSignalWithSession(sym) {
       if(!ready[sym]) return false;
       let full = store[sym];
       if(!full || full.length < 1000) return false;
@@ -222,30 +409,35 @@
       if(strength<40 || confidence<35) return false;
       let now = Date.now();
       if(lastSignalTime[sym] && now - lastSignalTime[sym] < 5000/sensitivity) return false;
-      if(!signalActive[sym]) {
-        if(demoBalance < currentStake) { addDebug(`${sym}: insufficient balance ${demoBalance.toFixed(2)} < ${currentStake.toFixed(2)}`); return false; }
-        addDebug(`🔔 SIGNAL ${sym} ${expected} | stake $${currentStake.toFixed(2)}`);
+      
+      let sess = getSession(sym);
+      if(!sess.active) {
+        // Start new session
+        let stakeToUse = baseStake;
+        if(demoBalance < stakeToUse) { addDebug(`${sym}: insufficient balance ${demoBalance.toFixed(2)} for new session`); return false; }
+        if(startSessionForSymbol(sym, expected, stakeToUse)) {
+          addDebug(`🔔 SIGNAL ${sym} ${expected} | starting session with stake $${stakeToUse.toFixed(2)}`);
+          signalStrength[sym]=strength; signalConf[sym]=confidence;
+          signalExpiry[sym]=now+signalSec*1000;
+          lastSignalTime[sym]=now;
+          // Place first trade
+          pendingTradeForMarket[sym] = { sym, direction: expected, stake: stakeToUse };
+          playSound();
+        }
+      } else {
+        // Session already active – we ignore new signals on same market (or we could update signal strength)
+        addDebug(`${sym}: session active, ignoring new signal.`);
+        // But we can still refresh the signal visual
         signalStrength[sym]=strength; signalConf[sym]=confidence;
         signalExpiry[sym]=now+signalSec*1000;
-        lastSignalTime[sym]=now;
-        pendingTrade = { sym, direction: expected, stake: currentStake };
-        playSound();
       }
       return true;
     }
     
+    // Expiry timer
     setInterval(()=>{ let n=Date.now(); for(let s in signalExpiry) if(signalExpiry[s] && n>signalExpiry[s]) { signalActive[s]=false; delete signalExpiry[s]; renderMarket(s); updateInsights(); } },1000);
     
-    function resolvePending(sym, digit) {
-      if(!pendingTrade || pendingTrade.sym !== sym) return;
-      let win = (pendingTrade.direction === 'EVEN' && digit%2===0) || (pendingTrade.direction === 'ODD' && digit%2===1);
-      let profit = applyTradeOutcome(win);
-      addTradeToHistory(sym, pendingTrade.direction, win?'win':'loss', profit);
-      addDebug(`${sym} trade ${win?'WIN':'LOSS'} (digit ${digit}) | P/L: ${profit.toFixed(2)} | Balance: ${demoBalance.toFixed(2)}`);
-      pendingTrade = null;
-    }
-    
-    // ---------- UI Rendering ----------
+    // UI rendering (same as before, large cells)
     function renderMarket(sym) {
       let cont = document.getElementById(`mkt-${sym}`);
       if(!cont) { cont=document.createElement('div'); cont.id=`mkt-${sym}`; cont.className='market-card'; document.getElementById('markets').appendChild(cont); }
@@ -258,7 +450,9 @@
       let isSig=signalActive[sym]||false;
       let tradeDir=isSig ? (signalStrength[sym]? (even>total/2?'EVEN':'ODD'):null):null;
       let rem = signalExpiry[sym] ? Math.max(0, Math.ceil((signalExpiry[sym]-Date.now())/1000)) : 0;
-      let html = `<div class="market-name">${MARKETS.find(m=>m.sym===sym).name} ${isSig && tradeDir ? `<span class="signal-badge ${tradeDir==='EVEN'?'even':'odd'}">BUY ${tradeDir}</span>` : ''}</div>
+      let sess = getSession(sym);
+      let sessionInfo = sess.active ? ` | Session P&L: ${sess.cumulativePL.toFixed(2)}` : '';
+      let html = `<div class="market-name">${MARKETS.find(m=>m.sym===sym).name} ${isSig && tradeDir ? `<span class="signal-badge ${tradeDir==='EVEN'?'even':'odd'}">BUY ${tradeDir}</span>` : ''}<span class="tag" style="background:#64748b">${sessionInfo}</span></div>
         <div class="price-large">${priceStore[sym]}</div>
         <div class="stat-line"><span>🎲 Even: ${evenPct}%</span><span>Odd: ${(100-evenPct).toFixed(1)}%</span><span>TF: 100/250/500/1000</span></div>
         <div class="digit-grid">${[0,1,2,3,4,5,6,7,8,9].map(i=>{ let perc=(counts[i]/total*100).toFixed(1); let cls=''; if(counts[i]===Math.max(...counts)) cls='most'; return `<div class="digit-cell ${cls}" data-digit="${i}"><span class="digit-number">${i}</span><span class="digit-percent">${perc}%</span></div>`; }).join('')}</div>
@@ -284,27 +478,33 @@
     function sortCards() { let area=document.getElementById('markets'); let cards=Array.from(area.querySelectorAll('.market-card')); let order=new Map(); MARKETS.forEach((m,i)=>order.set(m.sym,i)); cards.sort((a,b)=>{ let sa=a.id.replace('mkt-',''), sb=b.id.replace('mkt-',''); if(sa===pinned) return -1; if(sb===pinned) return 1; return (order.get(sa)||999)-(order.get(sb)||999); }); cards.forEach(c=>area.appendChild(c)); }
     function pinMarket(sym){ pinned=sym; sortCards(); document.getElementById(`mkt-${sym}`)?.scrollIntoView({behavior:'smooth',block:'center'}); }
     
-    // ---------- WebSocket for ticks (public) and auth for balance ----------
-    let tickWs = null;
-    let authWs = null;
+    function addTradeToHistory(sym, dir, outcome, profit) {
+      trades.unshift({ sym, dir, outcome, profit, time: new Date().toLocaleTimeString() });
+      if(trades.length>50) trades.pop();
+      let wins = trades.filter(t=>t.outcome==='win').length;
+      let wr = trades.length ? (wins/trades.length*100).toFixed(0) : 0;
+      document.getElementById('overallWR').innerHTML = `(WR:${wr}%)`;
+      let html = trades.slice(0,20).map(t=>`<div class="history-entry"><span>${t.time} ${t.sym} ${t.dir}</span><span class="${t.outcome}">${t.outcome==='win'?'+'+t.profit.toFixed(2):t.profit.toFixed(2)}</span></div>`).join('');
+      document.getElementById('historyList').innerHTML = html;
+    }
     
-    function fetchBalance(tokenVal) {
+    // ---------- Balance fetch & WebSocket ticks ----------
+    async function fetchBalance(tokenVal) {
       return new Promise((resolve) => {
         let balWs = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
         balWs.onopen = () => balWs.send(JSON.stringify({authorize: tokenVal}));
         balWs.onmessage = (msg) => {
           let data = JSON.parse(msg.data);
           if(data.msg_type === "authorize") {
-            if(data.error) { addDebug(`Auth error: ${data.error.message}`); resolve(null); balWs.close(); return; }
+            if(data.error) { resolve(null); balWs.close(); return; }
             balWs.send(JSON.stringify({balance: 1}));
           }
           if(data.msg_type === "balance") {
-            let bal = data.balance.balance;
+            resolve(data.balance.balance);
             balWs.close();
-            resolve(bal);
           }
         };
-        balWs.onerror = () => { resolve(null); };
+        balWs.onerror = () => resolve(null);
         setTimeout(() => { if(balWs.readyState === WebSocket.OPEN) balWs.close(); resolve(null); }, 5000);
       });
     }
@@ -312,16 +512,13 @@
     async function connectWithToken() {
       let newToken = document.getElementById('tokenInput').value.trim();
       if(!newToken || newToken === "PUT_TOKEN_HERE") { addDebug("Please enter a valid Deriv token"); return; }
-      token = newToken;
       document.getElementById('connectionStatus').innerHTML = '<span class="status-dot live"></span> Authorizing...';
-      let bal = await fetchBalance(token);
+      let bal = await fetchBalance(newToken);
       if(bal !== null) {
         demoBalance = bal;
         updateBalanceUI();
         addDebug(`✅ Authorized. Demo balance: ${demoBalance.toFixed(2)}`);
         document.getElementById('connectionStatus').innerHTML = '<span class="status-dot live"></span> Live + Balance OK';
-        isAuthorized = true;
-        // Now start tick WebSocket (public, no auth needed)
         if(tickWs) tickWs.close();
         startTickStream();
       } else {
@@ -361,9 +558,11 @@
           priceStore[sym]=formatted;
           lastDigit[sym]=digit;
           ready[sym] = store[sym].length >= 1000;
-          resolvePending(sym, digit);
+          // Resolve pending trade for this market
+          resolvePendingForMarket(sym, digit);
+          // Check for signal (which may start new session or queue next trade)
           let old = signalActive[sym]||false;
-          let newSig = checkSignal(sym);
+          let newSig = checkSignalWithSession(sym);
           signalActive[sym] = newSig;
           if(!old && newSig) playSound();
           else if(old && !newSig) { signalStrength[sym]=0; signalConf[sym]=0; }
@@ -379,7 +578,7 @@
       tickWs.onerror = () => addDebug("Tick stream error");
     }
     
-    function resetAll() { if(tickWs) tickWs.close(); store={}; ready={}; signalActive={}; pendingTrade=null; readyCount=0; if(isAuthorized) startTickStream(); }
+    function resetAll() { if(tickWs) tickWs.close(); store={}; ready={}; signalActive={}; readyCount=0; sessions.clear(); pendingTradeForMarket={}; if(typeof startTickStream === 'function') startTickStream(); }
     document.getElementById('refreshBtn').onclick = resetAll;
     document.getElementById('connectBtn').onclick = connectWithToken;
     document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
