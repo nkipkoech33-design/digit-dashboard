@@ -44,6 +44,10 @@
     }
     .btn:hover { opacity: 0.9; }
     .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .error-banner {
+      background: #7f1d1d; color: white; text-align: center; padding: 0.5rem;
+      font-size: 0.9rem; font-weight: bold; flex-shrink: 0;
+    }
     .insights-bar {
       background: var(--card); padding: 0.4rem 1.2rem; border-bottom: 1px solid var(--border);
       z-index: 15; display: flex; align-items: center; gap: 0.8rem;
@@ -175,6 +179,8 @@
   <button class="btn btn-outline" id="themeToggle">🌓 Theme</button>
 </div>
 
+<div id="errorBanner" class="error-banner" style="display: none;"></div>
+
 <div class="insights-bar" id="insightsBar">
   <span class="best-badge" id="bestMarketLabel">🏆 Loading…</span>
   <div class="signals-row" id="activeSignalsList">
@@ -192,7 +198,7 @@
 
 <script>
   (function() {
-    const TOKEN = "PUT_TOKEN_HERE";  // ⚠️ Replace with your Deriv token
+    const TOKEN = "PUT_TOKEN_HERE".trim();  // ⚠️ Replace with your real Deriv token
     const MARKETS = [
       {sym:"R_10",name:"Volatility 10"},{sym:"R_25",name:"Volatility 25"},{sym:"R_50",name:"Volatility 50"},
       {sym:"R_75",name:"Volatility 75"},{sym:"R_100",name:"Volatility 100"},
@@ -203,12 +209,19 @@
       {sym:"JD75",name:"Jump 75"},{sym:"JD100",name:"Jump 100"}
     ];
 
+    // Check if token is still the placeholder
+    if (TOKEN === "PUT_TOKEN_HERE" || TOKEN === "") {
+      document.getElementById('errorBanner').textContent = "⚠️ Please replace 'PUT_TOKEN_HERE' with your real Deriv token in the HTML code.";
+      document.getElementById('errorBanner').style.display = 'block';
+      document.getElementById('insightsBar').style.display = 'none';
+      return;
+    }
+
     const SIGNAL_WINDOW = 1000;
     const volatilityFactors = {
       'R_10':0.8,'R_25':1.0,'R_50':1.3,'R_75':1.6,'R_100':2.0,'1HZ10V':0.9,'1HZ15V':1.0,'1HZ25V':1.2,'1HZ30V':1.3,'1HZ50V':1.5,'1HZ75V':1.8,'1HZ90V':1.9,'1HZ100V':2.0,'JD10':1.2,'JD25':1.5,'JD50':2.0,'JD75':2.5,'JD100':3.0
     };
 
-    // ---- Global state ----
     let windowSize = 10000, analysisTicks = 100;
     let store = {}, priceStore = {}, ready = {}, signalState = {}, latestScore = {};
     let pinnedSym = null;
@@ -221,7 +234,6 @@
     const ROLLING_WIN_WINDOW = 30;
     const ADAPTIVE_INTERVAL = 20;
 
-    // ML model
     class OnlineLogisticRegression {
       constructor(fc=2,lr=0.01){ this.weights=Array(fc).fill(0).map(()=>Math.random()*0.1); this.bias=0; this.lr=lr; }
       sigmoid(z){return 1/(1+Math.exp(-z));}
@@ -242,7 +254,7 @@
       return [(evenP-oddP)/100, Math.min(streakCount(sym),10)/10, volatilityFactors[sym]/3, (maxOpp/100)||0, momentum/20];
     }
 
-    // ---- Sidebar ----
+    // Sidebar
     const marketListDiv = document.getElementById('marketList');
     MARKETS.forEach(m => {
       const div = document.createElement('div');
@@ -258,16 +270,11 @@
     function pinMarket(sym) {
       pinnedSym = sym;
       sortCards();
-      // Scroll the market card into view smoothly
       const container = document.getElementById(`mkt-${sym}`);
-      if (container) {
-        setTimeout(() => {
-          container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 50);
-      }
+      if (container) setTimeout(() => container.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     }
 
-    // ---- Controls ----
+    // Controls
     const windowSlider = document.getElementById('windowSlider');
     const windowInput = document.getElementById('windowInput');
     const windowValue = document.getElementById('windowValue');
@@ -289,22 +296,12 @@
       const val = parseInt(windowInput.value) || parseInt(windowSlider.value) || 1000;
       if (val >= 100 && val <= 10000) setWindowSize(val);
     });
-    windowSlider.addEventListener('input', () => {
-      windowInput.value = windowSlider.value;
-      windowValue.textContent = windowSlider.value;
-    });
+    windowSlider.addEventListener('input', () => { windowInput.value = windowSlider.value; windowValue.textContent = windowSlider.value; });
     windowInput.addEventListener('change', () => {
       const val = parseInt(windowInput.value);
-      if (val >= 100 && val <= 10000) {
-        windowSlider.value = val;
-        windowValue.textContent = val;
-      }
+      if (val >= 100 && val <= 10000) { windowSlider.value = val; windowValue.textContent = val; }
     });
-    analysisSlider.addEventListener('input', () => {
-      analysisTicks = parseInt(analysisSlider.value);
-      analysisValue.textContent = analysisTicks;
-      refreshAllBars();
-    });
+    analysisSlider.addEventListener('input', () => { analysisTicks = parseInt(analysisSlider.value); analysisValue.textContent = analysisTicks; refreshAllBars(); });
     document.getElementById('refreshBtn').addEventListener('click', resetAndFetch);
     document.getElementById('themeToggle').addEventListener('click', () => document.body.classList.toggle('light'));
 
@@ -332,7 +329,6 @@
           });
         }, 2000);
       };
-
       ws.onmessage = (msg) => {
         const data = JSON.parse(msg.data);
         if (data.history) {
@@ -363,12 +359,25 @@
         }
         if (data.error) console.warn(data.error);
       };
-      ws.onclose = () => console.log('WS closed');
+      ws.onerror = (err) => {
+        console.error('WebSocket error:', err);
+        showError('Connection failed. Please check your token and try again.');
+      };
+      ws.onclose = (event) => {
+        if (event.code !== 1000) {
+          showError(`Connection closed unexpectedly (code ${event.code}). Reconnect or check token.`);
+        }
+      };
+    }
+
+    function showError(message) {
+      const banner = document.getElementById('errorBanner');
+      banner.textContent = '⚠️ ' + message;
+      banner.style.display = 'block';
     }
 
     function updateReady(sym) { ready[sym] = store[sym] && store[sym].length >= windowSize; }
 
-    // ---- Helpers ----
     function getCounts(sym){ let a=store[sym]; if(!a)return Array(10).fill(0); let c=Array(10).fill(0); a.forEach(d=>c[d]++); return c; }
     function getEvenP(sym){ let c=getCounts(sym); let t=c.reduce((a,b)=>a+b,0); let e=c[0]+c[2]+c[4]+c[6]+c[8]; return(e/t)*100; }
     function getOddP(sym){ return 100-getEvenP(sym); }
@@ -453,7 +462,6 @@
         if(wins/winHist.length < 0.4) return false;
       }
 
-      // Record trade on first appearance
       if(!signalState[sym]) {
         const strengthVal = Math.min(100, (diff*0.5 + distanceToMax*5));
         const confVal = (14-maxOpposing)/14*100;
@@ -461,7 +469,6 @@
         const mlAccVal = mlAcc;
         recordPaperTrade(sym, tf==="EVEN"?"BUY EVEN":"BUY ODD", strengthVal, confVal, mlAccVal, mlProbVal);
       }
-
       return true;
     }
 
@@ -473,26 +480,17 @@
     }
 
     function resolvePendingTrade(sym) {
-      const entry = pendingTrades[sym];
-      if(!entry) return;
-      const lastDigit = lastDigitMap[sym];
-      if(lastDigit === undefined) return;
-      const predEven = entry.signalType==='BUY EVEN';
-      const actualEven = lastDigit%2===0;
+      const entry = pendingTrades[sym]; if(!entry) return;
+      const lastDigit = lastDigitMap[sym]; if(lastDigit === undefined) return;
+      const predEven = entry.signalType==='BUY EVEN'; const actualEven = lastDigit%2===0;
       const win = predEven===actualEven;
       entry.outcome = win ? 'win' : 'loss';
-
       if(!rollingWinHistory[sym]) rollingWinHistory[sym]=[];
-      rollingWinHistory[sym].push(win);
-      if(rollingWinHistory[sym].length > ROLLING_WIN_WINDOW) rollingWinHistory[sym].shift();
-
+      rollingWinHistory[sym].push(win); if(rollingWinHistory[sym].length > ROLLING_WIN_WINDOW) rollingWinHistory[sym].shift();
       if(!mlAccuracyHistory[sym]) mlAccuracyHistory[sym]=[];
-      mlAccuracyHistory[sym].push(win);
-      if(mlAccuracyHistory[sym].length>50) mlAccuracyHistory[sym].shift();
-
+      mlAccuracyHistory[sym].push(win); if(mlAccuracyHistory[sym].length>50) mlAccuracyHistory[sym].shift();
       let cnt=getCounts(sym), t=cnt.reduce((a,b)=>a+b,0), ep=(cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8])/t*100;
       mlModel.update(getEnhancedMLFeatures(sym, ep, 100-ep), win?1:0);
-
       delete pendingTrades[sym];
     }
 
@@ -540,7 +538,6 @@
         if(score>bestScore){bestScore=score;bestSym=m.sym;}
       });
       MARKETS.forEach(m=>{if(!signalState[m.sym])latestScore[m.sym]=0;});
-
       if(bestSym){ const mkt=MARKETS.find(m=>m.sym===bestSym); bestMarketLabel.textContent=`🏆 Best: ${mkt.name} (${(bestScore*100).toFixed(0)})`; }
       else bestMarketLabel.textContent='🏆 No signals yet';
 
@@ -576,10 +573,7 @@
     function renderMarket(sym) {
       const mkt = MARKETS.find(m=>m.sym===sym);
       let container = document.getElementById(`mkt-${sym}`);
-      if(!container) {
-        container = document.createElement('div'); container.id=`mkt-${sym}`;
-        container.className='market-card'; document.getElementById('markets').appendChild(container);
-      }
+      if(!container) { container = document.createElement('div'); container.id=`mkt-${sym}`; container.className='market-card'; document.getElementById('markets').appendChild(container); }
 
       if(!ready[sym]) {
         const have = store[sym]?store[sym].length:0;
