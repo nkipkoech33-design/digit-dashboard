@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO – Polished & Powerful</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Digit Analyzer PRO – Dynamic Markets</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -48,12 +48,13 @@
       background: var(--card); padding: 0.4rem 1.2rem; border-bottom: 1px solid var(--border);
       z-index: 15; display: flex; align-items: center; gap: 0.8rem;
       flex-wrap: nowrap; font-size: 0.85rem; font-weight: 500; flex-shrink: 0; overflow-x: auto;
+      min-height: 52px;
     }
     .best-badge {
       background: var(--accent); color: #000; padding: 0.3rem 0.8rem; border-radius: 2rem;
       font-weight: 700; white-space: nowrap; font-size: 0.85rem; flex-shrink: 0;
     }
-    .signals-row { display: flex; gap: 6px; flex-shrink: 0; }
+    .signals-row { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
     .signal-badge {
       padding: 0.25rem 0.7rem; border-radius: 2rem; font-weight: 700; font-size: 0.75rem;
       white-space: nowrap; display: flex; align-items: center; gap: 4px;
@@ -64,20 +65,22 @@
     .main-layout { display: flex; flex: 1; overflow: hidden; }
     .markets-area {
       flex: 1; overflow-y: auto; padding: 0.8rem; display: flex;
-      flex-direction: column; gap: 0.8rem;
+      flex-direction: column; gap: 0.8rem; scroll-behavior: smooth;
     }
     .sidebar {
-      width: 240px; background: var(--card); border-left: 1px solid var(--border);
+      width: 260px; background: var(--card); border-left: 1px solid var(--border);
       overflow-y: auto; padding: 0.8rem; box-shadow: var(--shadow); flex-shrink: 0;
     }
     .sidebar-title {
       font-weight: 700; margin-bottom: 0.8rem; font-size: 0.95rem; color: var(--accent);
+      display: flex; align-items: center; gap: 6px;
     }
     .market-list-item {
-      display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0;
+      display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0;
       font-size: 0.8rem; border-bottom: 1px solid var(--border);
+      cursor: pointer;
     }
-    .market-list-item span { cursor: pointer; flex: 1; }
+    .market-list-item span { flex: 1; transition: color 0.1s; }
     .market-list-item span:hover { color: var(--accent); }
     .market-list-item.blinking span {
       animation: listBlink 0.8s infinite;
@@ -103,7 +106,7 @@
       display: flex; justify-content: space-between; align-items: center;
       flex-wrap: wrap; margin-bottom: 0.3rem;
     }
-    .market-name { font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 0.3rem; }
+    .market-name { font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
     .price-large { font-size: 1.8rem; font-weight: 800; text-align: center; color: var(--highlight); margin: 0.3rem 0; }
     .stat-line { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-secondary); margin: 0.15rem 0; }
     .trade-type-badge {
@@ -148,6 +151,7 @@
       font-weight: 600; line-height: 1.2;
     }
     .loading-text { text-align: center; color: var(--text-secondary); padding: 2rem; }
+    .market-checkbox { cursor: pointer; width: 18px; height: 18px; accent-color: var(--accent); }
     @media (max-width: 800px) {
       .main-layout { flex-direction: column; }
       .sidebar { width: 100%; border-left: none; border-top: 1px solid var(--border); max-height: 180px; }
@@ -185,7 +189,7 @@
 <div class="main-layout">
   <div class="markets-area" id="markets"></div>
   <div class="sidebar" id="sidebar">
-    <div class="sidebar-title">📋 Markets</div>
+    <div class="sidebar-title">📋 Markets (click name to pin top)</div>
     <div id="marketList"></div>
   </div>
 </div>
@@ -208,7 +212,6 @@
       'R_10':0.8,'R_25':1.0,'R_50':1.3,'R_75':1.6,'R_100':2.0,'1HZ10V':0.9,'1HZ15V':1.0,'1HZ25V':1.2,'1HZ30V':1.3,'1HZ50V':1.5,'1HZ75V':1.8,'1HZ90V':1.9,'1HZ100V':2.0,'JD10':1.2,'JD25':1.5,'JD50':2.0,'JD75':2.5,'JD100':3.0
     };
 
-    // ---- Global state ----
     let windowSize = 10000, analysisTicks = 100;
     let store = {}, priceStore = {}, ready = {}, signalState = {}, latestScore = {};
     let pinnedSym = null;
@@ -221,7 +224,6 @@
     const ROLLING_WIN_WINDOW = 30;
     const ADAPTIVE_INTERVAL = 20;
 
-    // ML model
     class OnlineLogisticRegression {
       constructor(fc=2,lr=0.01){ this.weights=Array(fc).fill(0).map(()=>Math.random()*0.1); this.bias=0; this.lr=lr; }
       sigmoid(z){return 1/(1+Math.exp(-z));}
@@ -232,7 +234,7 @@
     let mlAccuracyHistory = {};
     let lastDigitMap = {};
     let pendingTrades = {};
-    let marketContainers = {};
+    let marketCheckboxState = {};
 
     function getEnhancedMLFeatures(sym, evenP, oddP) {
       let a=store[sym]; if(!a||a.length<10)return Array(5).fill(0);
@@ -242,35 +244,41 @@
       return [(evenP-oddP)/100, Math.min(streakCount(sym),10)/10, volatilityFactors[sym]/3, (maxOpp/100)||0, momentum/20];
     }
 
-    // ---- Sidebar ----
+    // Sidebar generation with original order
     const marketListDiv = document.getElementById('marketList');
-    MARKETS.forEach(m => {
+    MARKETS.forEach((m, idx) => {
       const div = document.createElement('div');
       div.className = 'market-list-item'; div.setAttribute('data-sym', m.sym);
       const cb = document.createElement('input'); cb.type='checkbox'; cb.className='market-checkbox'; cb.dataset.sym=m.sym; cb.checked=true;
-      cb.addEventListener('change', function(e){ e.stopPropagation(); const el=document.getElementById(`mkt-${m.sym}`); if(el) el.style.display=this.checked?'':'none'; });
+      cb.addEventListener('change', function(e){ e.stopPropagation(); 
+        const el=document.getElementById(`mkt-${m.sym}`); 
+        if(el) el.style.display=this.checked?'':'none';
+        marketCheckboxState[m.sym] = this.checked;
+      });
+      marketCheckboxState[m.sym] = true;
       const span = document.createElement('span'); span.textContent=m.name;
       span.addEventListener('click', (e)=>{ e.stopPropagation(); pinMarket(m.sym); });
       div.appendChild(cb); div.appendChild(span);
       marketListDiv.appendChild(div);
     });
 
+    // FIX: Smooth scrolling without breaking scrollability - only within markets-area
     function pinMarket(sym) {
       pinnedSym = sym;
-      sortCards();
-      // Scroll the market card into view smoothly
-      const container = document.getElementById(`mkt-${sym}`);
-      if (container) {
-        setTimeout(() => {
-          container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 50);
+      sortCards();  // reorder DOM (pinned first, then original order)
+      // Scroll to the pinned card inside the markets-area container using proper method
+      const container = document.getElementById('markets');
+      const targetCard = document.getElementById(`mkt-${sym}`);
+      if (container && targetCard) {
+        const containerRect = container.getBoundingClientRect();
+        const cardRect = targetCard.getBoundingClientRect();
+        const scrollOffset = cardRect.top - containerRect.top + container.scrollTop - 12; // 12px padding
+        container.scrollTo({ top: scrollOffset, behavior: 'smooth' });
       }
     }
 
-    // ---- Controls ----
     const windowSlider = document.getElementById('windowSlider');
     const windowInput = document.getElementById('windowInput');
-    const windowValue = document.getElementById('windowValue');
     const applyBtn = document.getElementById('applyBtn');
     const analysisSlider = document.getElementById('analysisSlider');
     const analysisValue = document.getElementById('analysisValue');
@@ -281,7 +289,6 @@
       windowSize = value;
       windowSlider.value = value;
       windowInput.value = value;
-      windowValue.textContent = value;
       resetAndFetch();
     }
 
@@ -289,16 +296,10 @@
       const val = parseInt(windowInput.value) || parseInt(windowSlider.value) || 1000;
       if (val >= 100 && val <= 10000) setWindowSize(val);
     });
-    windowSlider.addEventListener('input', () => {
-      windowInput.value = windowSlider.value;
-      windowValue.textContent = windowSlider.value;
-    });
+    windowSlider.addEventListener('input', () => { windowInput.value = windowSlider.value; });
     windowInput.addEventListener('change', () => {
       const val = parseInt(windowInput.value);
-      if (val >= 100 && val <= 10000) {
-        windowSlider.value = val;
-        windowValue.textContent = val;
-      }
+      if (val >= 100 && val <= 10000) windowSlider.value = val;
     });
     analysisSlider.addEventListener('input', () => {
       analysisTicks = parseInt(analysisSlider.value);
@@ -332,7 +333,6 @@
           });
         }, 2000);
       };
-
       ws.onmessage = (msg) => {
         const data = JSON.parse(msg.data);
         if (data.history) {
@@ -368,7 +368,6 @@
 
     function updateReady(sym) { ready[sym] = store[sym] && store[sym].length >= windowSize; }
 
-    // ---- Helpers ----
     function getCounts(sym){ let a=store[sym]; if(!a)return Array(10).fill(0); let c=Array(10).fill(0); a.forEach(d=>c[d]++); return c; }
     function getEvenP(sym){ let c=getCounts(sym); let t=c.reduce((a,b)=>a+b,0); let e=c[0]+c[2]+c[4]+c[6]+c[8]; return(e/t)*100; }
     function getOddP(sym){ return 100-getEvenP(sym); }
@@ -453,15 +452,11 @@
         if(wins/winHist.length < 0.4) return false;
       }
 
-      // Record trade on first appearance
       if(!signalState[sym]) {
         const strengthVal = Math.min(100, (diff*0.5 + distanceToMax*5));
         const confVal = (14-maxOpposing)/14*100;
-        const mlProbVal = mlProb;
-        const mlAccVal = mlAcc;
-        recordPaperTrade(sym, tf==="EVEN"?"BUY EVEN":"BUY ODD", strengthVal, confVal, mlAccVal, mlProbVal);
+        recordPaperTrade(sym, tf==="EVEN"?"BUY EVEN":"BUY ODD", strengthVal, confVal, mlAcc, mlProb);
       }
-
       return true;
     }
 
@@ -481,18 +476,14 @@
       const actualEven = lastDigit%2===0;
       const win = predEven===actualEven;
       entry.outcome = win ? 'win' : 'loss';
-
       if(!rollingWinHistory[sym]) rollingWinHistory[sym]=[];
       rollingWinHistory[sym].push(win);
       if(rollingWinHistory[sym].length > ROLLING_WIN_WINDOW) rollingWinHistory[sym].shift();
-
       if(!mlAccuracyHistory[sym]) mlAccuracyHistory[sym]=[];
       mlAccuracyHistory[sym].push(win);
       if(mlAccuracyHistory[sym].length>50) mlAccuracyHistory[sym].shift();
-
       let cnt=getCounts(sym), t=cnt.reduce((a,b)=>a+b,0), ep=(cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8])/t*100;
       mlModel.update(getEnhancedMLFeatures(sym, ep, 100-ep), win?1:0);
-
       delete pendingTrades[sym];
     }
 
@@ -540,37 +531,39 @@
         if(score>bestScore){bestScore=score;bestSym=m.sym;}
       });
       MARKETS.forEach(m=>{if(!signalState[m.sym])latestScore[m.sym]=0;});
-
       if(bestSym){ const mkt=MARKETS.find(m=>m.sym===bestSym); bestMarketLabel.textContent=`🏆 Best: ${mkt.name} (${(bestScore*100).toFixed(0)})`; }
       else bestMarketLabel.textContent='🏆 No signals yet';
-
       const active = MARKETS.filter(m=>ready[m.sym]&&signalState[m.sym]).map(m=>({
         sym:m.sym, name:m.name, dir:getSignalDirection(m.sym), score:computeTradeScore(m.sym)
       })).sort((a,b)=>b.score-a.score);
-
       if(active.length===0) activeSignalsList.innerHTML='<span class="no-signals">No active signals</span>';
       else activeSignalsList.innerHTML = active.map(s=>{
         const dirClass = s.dir==='EVEN'?'even':'odd';
         const dirLabel = s.dir==='EVEN'?'🔵 EVEN':'🔴 ODD';
         return `<span class="signal-badge ${dirClass}">${s.name} ${dirLabel} (${(s.score*100).toFixed(0)})</span>`;
       }).join('');
-
       MARKETS.forEach(m=>{
         const listItem = document.querySelector(`.market-list-item[data-sym="${m.sym}"]`);
         if(listItem) listItem.classList.toggle('blinking', signalState[m.sym]===true);
       });
     }
 
+    // New sort: pinned first, then original MARKETS order (preserve as digit list / sidebar order)
     function sortCards() {
-      const area = document.getElementById('markets'); if(!area)return;
+      const area = document.getElementById('markets');
+      if (!area) return;
       const cards = Array.from(area.querySelectorAll('.market-card'));
-      cards.sort((a,b)=>{
-        const symA=a.id.replace('mkt-',''), symB=b.id.replace('mkt-','');
-        if(symA===pinnedSym)return -1; if(symB===pinnedSym)return 1;
-        const scoreA=latestScore[symA]||0, scoreB=latestScore[symB]||0;
-        return scoreB-scoreA;
+      const originalOrderMap = new Map();
+      MARKETS.forEach((m, idx) => { originalOrderMap.set(m.sym, idx); });
+      cards.sort((a,b) => {
+        const symA = a.id.replace('mkt-',''), symB = b.id.replace('mkt-','');
+        if(symA === pinnedSym) return -1;
+        if(symB === pinnedSym) return 1;
+        const idxA = originalOrderMap.get(symA) ?? 9999;
+        const idxB = originalOrderMap.get(symB) ?? 9999;
+        return idxA - idxB;
       });
-      cards.forEach(card=>area.appendChild(card));
+      cards.forEach(card => area.appendChild(card));
     }
 
     function renderMarket(sym) {
@@ -578,15 +571,19 @@
       let container = document.getElementById(`mkt-${sym}`);
       if(!container) {
         container = document.createElement('div'); container.id=`mkt-${sym}`;
-        container.className='market-card'; document.getElementById('markets').appendChild(container);
+        container.className='market-card'; 
+        const marketsArea = document.getElementById('markets');
+        marketsArea.appendChild(container);
       }
+      // respect checkbox visibility
+      if(!marketCheckboxState[sym]) { container.style.display = 'none'; return; }
+      else container.style.display = '';
 
       if(!ready[sym]) {
         const have = store[sym]?store[sym].length:0;
         container.innerHTML = `<div class="loading-text">⌛ Loading ${mkt.name}... (${have}/${windowSize})</div>`;
         return;
       }
-
       const full = store[sym], windowData = full.slice(-windowSize), total = windowData.length;
       const counts = new Array(10).fill(0); windowData.forEach(d=>counts[d]++);
       const uniqueCounts = [...new Set(counts)].sort((a,b)=>b-a);
@@ -610,21 +607,18 @@
       const aEvenPct=((aEvens/aTotal)*100).toFixed(1), aOddPct=((aTotal-aEvens)/aTotal*100).toFixed(1);
       const early=getEarlyMomentum(sym), regime=classifyRegime(sym);
       const isSig=signalState[sym]||false, tradeDir=isSig?getSignalDirection(sym):null;
-
       let tradeTypeHtml='';
       if(isSig&&tradeDir) {
         const dirClass=tradeDir==='EVEN'?'even':'odd';
         const label=tradeDir==='EVEN'?'BUY EVEN':'BUY ODD';
         tradeTypeHtml=`<span class="trade-type-badge ${dirClass}">${label}</span>`;
       }
-
       container.className='market-card'+(isSig?' signal-active':'');
       container.innerHTML = `
         <div class="card-header">
           <div class="market-name">${mkt.name} ${tradeTypeHtml} <span class="tag" style="background:${regime.color}">${regime.type}</span></div>
           <div style="display:flex; gap:6px;">
             ${early.dir==='up'?'<span class="tag" style="background:#16a34a;">📈 Rising +'+early.value.toFixed(1)+'%</span>':(early.dir==='down'?'<span class="tag" style="background:#dc2626;">📉 Falling '+early.value.toFixed(1)+'%</span>':'<span class="tag" style="background:#64748b;">➖ Steady</span>')}
-            ${parseFloat(evenPct)>=48&&parseFloat(evenPct)<=52?'<span class="tag" style="background:#64748b;">⚖️ TIE</span>':''}
           </div>
         </div>
         <div class="price-large">${priceStore[sym]}</div>
@@ -632,13 +626,10 @@
         <div class="digit-grid">${[0,2,4,6,8].map(cell).join('')}${[1,3,5,7,9].map(cell).join('')}</div>
         <div class="tick-strip">${windowData.slice(-50).map(d=>`<span style="color:${d%2===0?'#4ade80':'#f87171'}">${d%2===0?'E':'O'}</span>`).join(' ')}</div>
       `;
-
       setTimeout(()=>{
         const lastDigit=full[full.length-1];
         const target=container.querySelector(`.digit-cell[data-digit="${lastDigit}"]`);
-        if(target) {
-          const old=container.querySelector('.pointer-dot');
-          if(old)old.remove();
+        if(target && !target.querySelector('.pointer-dot')) {
           const pointer=document.createElement('span');
           pointer.className='pointer-dot '+(lastDigit%2===0?'even':'odd');
           pointer.textContent='●'; target.appendChild(pointer);
@@ -647,7 +638,6 @@
     }
 
     function refreshAllBars() { MARKETS.forEach(m=>renderMarket(m.sym)); }
-
     resetAndFetch();
   })();
 </script>
