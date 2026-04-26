@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Digit Analyzer PRO – Signal History + Win Rates</title>
+  <title>Digit Analyzer PRO – Sensitivity Control + Full Features</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -33,7 +33,7 @@
     .signal-badge.odd  { background: #7f1d1d; color: #f87171; border: 1px solid #ef4444; }
     .main-layout { display: flex; flex: 1; overflow: hidden; }
     .markets-area { flex: 1; overflow-y: auto; padding: 0.8rem; display: flex; flex-direction: column; gap: 0.8rem; }
-    .sidebar { width: 300px; background: var(--card); border-left: 1px solid var(--border);
+    .sidebar { width: 310px; background: var(--card); border-left: 1px solid var(--border);
       overflow-y: auto; padding: 0.8rem; display: flex; flex-direction: column; gap: 1rem; }
     .debug-panel, .history-panel { background: var(--bg); border-radius: 0.8rem; padding: 0.6rem;
       border: 1px solid var(--border); font-size: 0.7rem; max-height: 200px; overflow-y: auto; }
@@ -70,14 +70,15 @@
     .gauge-fill { height: 100%; width: 0%; transition: width 0.3s; border-radius: 10px; }
     .gauge-fill.strength { background: #fbbf24; }
     .gauge-fill.conf { background: #38bdf8; }
-    @media (max-width: 800px) { .main-layout { flex-direction: column; } .sidebar { width: 100%; max-height: 280px; } .digit-grid { grid-template-columns: repeat(5, 60px); } .digit-cell { width: 60px; height: 60px; } .digit-number { font-size: 1.4rem; } }
+    @media (max-width: 800px) { .main-layout { flex-direction: column; } .sidebar { width: 100%; max-height: 300px; } .digit-grid { grid-template-columns: repeat(5, 60px); } .digit-cell { width: 60px; height: 60px; } .digit-number { font-size: 1.4rem; } }
   </style>
 </head>
 <body>
 <div class="top-bar">
   <div class="control-group"><span>🕒 Window</span><input type="range" id="windowSlider" min="100" max="2000" value="500" step="50"><input type="number" id="windowInput" min="100" max="2000" step="50" value="500"><button class="btn" id="applyBtn">Apply</button></div>
   <div class="control-group"><span>🔍 Bars</span><input type="range" id="analysisSlider" min="10" max="500" value="100" step="10"><span id="analysisValue">100</span></div>
-  <div class="control-group"><span>⚙️ Strategy</span><select id="strategySelect"><option value="aggressive">🔥 Aggressive (Many signals)</option><option value="balanced" selected>⚖️ Balanced</option><option value="conservative">🛡️ Conservative</option></select></div>
+  <div class="control-group"><span>⚙️ Strategy</span><select id="strategySelect"><option value="aggressive">🔥 Aggressive</option><option value="balanced" selected>⚖️ Balanced</option><option value="conservative">🛡️ Conservative</option></select></div>
+  <div class="control-group"><span>🎚️ Sensitivity</span><input type="range" id="sensitivitySlider" min="0.3" max="2.0" step="0.01" value="1.0"><span id="sensitivityValue">1.0</span><span style="font-size:0.7rem;">(lower=more signals)</span></div>
   <div class="control-group"><span>🔊 Sound</span><select id="soundSelect"><option value="beep">Beep</option><option value="alert">Alert</option><option value="ping">Ping</option></select><button id="muteBtn" class="btn">🔊 Mute</button></div>
   <div class="control-group"><span>💰 Balance:</span><span id="balanceDisplay">10000</span><span>📅 Daily:</span><span id="dailyProfit">0</span><input type="number" id="stakeInput" value="100" step="10" style="width:70px;"><button class="btn" id="resetBalanceBtn">Reset</button></div>
   <button class="btn" id="refreshBtn">🔄 Re‑Sync</button>
@@ -110,9 +111,8 @@
     
     // ---- Paper Trading & History ----
     let virtualBalance = 10000, dailyProfit = 0, stakePerTrade = 100, sessionStart = Date.now();
-    let tradeHistory = [];  // { sym, direction, outcome, timestamp, profit }
-    let marketWinStats = new Map(); // sym -> { wins, losses }
-    
+    let tradeHistory = [];
+    let marketWinStats = new Map();
     function updateBalanceUI() { document.getElementById('balanceDisplay').innerText = virtualBalance.toFixed(2); const color = dailyProfit>=0 ? '#4ade80' : '#f87171'; document.getElementById('dailyProfit').innerHTML = `<span style="color:${color}">${dailyProfit>=0?'+':''}${dailyProfit.toFixed(2)}</span>`; }
     function addToHistory(sym, direction, outcome, profit) {
       tradeHistory.unshift({ sym, direction, outcome, profit, time: new Date().toLocaleTimeString() });
@@ -160,11 +160,33 @@
     function addDebug(msg) { debugMessages.unshift(msg); if(debugMessages.length>12) debugMessages.pop(); document.getElementById('debugContent').innerHTML = debugMessages.map(m=>`<div class="debug-entry">${m}</div>`).join(''); }
     
     let strategy = 'balanced';
-    document.getElementById('strategySelect').onchange = (e) => { strategy = e.target.value; addDebug(`Strategy: ${strategy}`); };
+    let sensitivity = 1.0;  // lower = more signals
+    document.getElementById('strategySelect').onchange = (e) => { strategy = e.target.value; addDebug(`Strategy: ${strategy}, Sensitivity: ${sensitivity}`); };
+    document.getElementById('sensitivitySlider').oninput = (e) => { sensitivity = parseFloat(e.target.value); document.getElementById('sensitivityValue').innerText = sensitivity.toFixed(2); addDebug(`Sensitivity set to ${sensitivity} (lower = more signals)`); };
+    
     function getThresholds() {
-      if(strategy === 'aggressive') return { zMin:1.2, oppMax:14, momMin:2, strengthMin:35, confMin:35, trendMin:0.05, uniqueMin:4, cooldown:3000 };
-      if(strategy === 'conservative') return { zMin:2.5, oppMax:8, momMin:12, strengthMin:70, confMin:70, trendMin:0.25, uniqueMin:7, cooldown:10000 };
-      return { zMin:1.8, oppMax:11, momMin:6, strengthMin:50, confMin:50, trendMin:0.12, uniqueMin:5, cooldown:6000 };
+      let base;
+      if(strategy === 'aggressive') base = { zMin:1.2, oppMax:14, momMin:2, strengthMin:35, confMin:35, trendMin:0.05, uniqueMin:4, cooldown:3000 };
+      else if(strategy === 'conservative') base = { zMin:2.5, oppMax:8, momMin:12, strengthMin:70, confMin:70, trendMin:0.25, uniqueMin:7, cooldown:10000 };
+      else base = { zMin:1.8, oppMax:11, momMin:6, strengthMin:50, confMin:50, trendMin:0.12, uniqueMin:5, cooldown:6000 };
+      
+      // Apply sensitivity: lower sensitivity (e.g., 0.5) makes thresholds easier (divide critical values)
+      // We'll multiply thresholds by (1/sensitivity) but with limits to avoid extreme values.
+      // Actually easier: threshold = base / sensitivity (for thresholds where lower is easier) – we want lower numerical threshold for lower sensitivity.
+      // For values like oppMax (higher easier), we do base * sensitivity. For min values (zMin, momMin, strengthMin, confMin, trendMin) we do base / sensitivity.
+      // For cooldown (lower easier): base / sensitivity.
+      let factor = sensitivity;
+      let invFactor = 1 / sensitivity;
+      return {
+        zMin: Math.max(0.8, base.zMin / sensitivity),
+        oppMax: Math.min(18, base.oppMax * sensitivity),
+        momMin: Math.max(1, base.momMin / sensitivity),
+        strengthMin: Math.max(20, base.strengthMin / sensitivity),
+        confMin: Math.max(20, base.confMin / sensitivity),
+        trendMin: Math.max(0.02, base.trendMin / sensitivity),
+        uniqueMin: Math.max(3, Math.floor(base.uniqueMin / sensitivity)),
+        cooldown: Math.max(1000, base.cooldown / sensitivity)
+      };
     }
     
     function getCounts(sym) { let a=store[sym]; if(!a)return Array(10).fill(0); let c=Array(10).fill(0); a.forEach(d=>c[d]++); return c; }
@@ -195,26 +217,26 @@
       const observed = evenCount/total;
       const z = Math.abs(observed-0.5)/Math.sqrt(0.25/total);
       const th = getThresholds();
-      if(z < th.zMin) { addDebug(`${sym}: z=${z.toFixed(2)} < ${th.zMin}`); return false; }
+      if(z < th.zMin) { addDebug(`${sym}: z=${z.toFixed(2)} < ${th.zMin.toFixed(2)}`); return false; }
       const tf = (evenCount > total/2) ? "EVEN" : "ODD";
       let oppDigits = (tf==="EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
       let maxOpp = Math.max(...oppDigits.map(d=> (winCounts[d]/total)*100 ));
-      if(maxOpp > th.oppMax) { addDebug(`${sym}: maxOpp=${maxOpp.toFixed(1)}% > ${th.oppMax}%`); return false; }
+      if(maxOpp > th.oppMax) { addDebug(`${sym}: maxOpp=${maxOpp.toFixed(1)}% > ${th.oppMax.toFixed(1)}%`); return false; }
       let mom = computeMomentum(windowData);
-      if(tf==="EVEN" && mom < th.momMin) { addDebug(`${sym}: EVEN mom=${mom.toFixed(1)} < ${th.momMin}`); return false; }
-      if(tf==="ODD" && mom > -th.momMin) { addDebug(`${sym}: ODD mom=${mom.toFixed(1)} > -${th.momMin}`); return false; }
+      if(tf==="EVEN" && mom < th.momMin) { addDebug(`${sym}: EVEN mom=${mom.toFixed(1)} < ${th.momMin.toFixed(1)}`); return false; }
+      if(tf==="ODD" && mom > -th.momMin) { addDebug(`${sym}: ODD mom=${mom.toFixed(1)} > -${th.momMin.toFixed(1)}`); return false; }
       let diff = Math.abs(observed*100 - 50);
       let distanceToMax = Math.max(0, 14 - maxOpp);
       let strength = Math.min(100, diff*0.8 + distanceToMax*5);
       let conf = (14-maxOpp)/14*100;
-      if(strength < th.strengthMin) { addDebug(`${sym}: strength=${strength.toFixed(0)} < ${th.strengthMin}`); return false; }
-      if(conf < th.confMin) { addDebug(`${sym}: conf=${conf.toFixed(0)} < ${th.confMin}`); return false; }
+      if(strength < th.strengthMin) { addDebug(`${sym}: strength=${strength.toFixed(0)} < ${th.strengthMin.toFixed(0)}`); return false; }
+      if(conf < th.confMin) { addDebug(`${sym}: conf=${conf.toFixed(0)} < ${th.confMin.toFixed(0)}`); return false; }
       let trend = computeTrendStrength(windowData, 80);
-      if(trend < th.trendMin) { addDebug(`${sym}: trend=${trend.toFixed(3)} < ${th.trendMin}`); return false; }
+      if(trend < th.trendMin) { addDebug(`${sym}: trend=${trend.toFixed(3)} < ${th.trendMin.toFixed(3)}`); return false; }
       let uniqueDigits = new Set(windowData.slice(-200)).size;
       if(uniqueDigits < th.uniqueMin) { addDebug(`${sym}: uniqueDigits=${uniqueDigits} < ${th.uniqueMin}`); return false; }
       let now = Date.now();
-      if(lastSignalTime[sym] && (now - lastSignalTime[sym]) < th.cooldown) { addDebug(`${sym}: cooldown`); return false; }
+      if(lastSignalTime[sym] && (now - lastSignalTime[sym]) < th.cooldown) { addDebug(`${sym}: cooldown (${Math.round((now-lastSignalTime[sym])/1000)}s < ${th.cooldown/1000}s)`); return false; }
       if(!signalState[sym]) {
         signalStrength[sym]=strength; signalConfidence[sym]=conf;
         pendingTrades[sym] = { sym, direction: tf, timestamp: now, stake: stakePerTrade };
@@ -236,7 +258,7 @@
       delete pendingTrades[sym];
     }
     
-    // ---- UI Rendering (same as before but with win rate badges) ----
+    // ---- UI Rendering ----
     function renderMarket(sym) {
       let container = document.getElementById(`mkt-${sym}`);
       if(!container) { container=document.createElement('div'); container.id=`mkt-${sym}`; container.className='market-card'; document.getElementById('markets').appendChild(container); }
