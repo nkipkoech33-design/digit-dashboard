@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO – Adaptive & Accurate</title>
+  <title>Digit Analyzer PRO – Polished & Powerful</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -32,6 +32,11 @@
       font-size: 0.8rem; font-weight: 500;
     }
     .control-group input[type=range] { width: 100px; accent-color: var(--accent); }
+    .control-group input[type=number] {
+      width: 80px; background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.2rem 0.4rem;
+      font-size: 0.8rem;
+    }
     .btn {
       background: var(--accent); color: #000; border: none; padding: 0.4rem 1rem;
       border-radius: 2rem; font-weight: 600; cursor: pointer; font-size: 0.8rem;
@@ -158,13 +163,13 @@
   <div class="control-group">
     <span>🕒 Window</span>
     <input type="range" id="windowSlider" min="100" max="10000" value="10000" step="100">
-    <output id="windowValue">10000</output>
+    <input type="number" id="windowInput" min="100" max="10000" step="100" value="10000">
     <button class="btn" id="applyBtn">Apply</button>
   </div>
   <div class="control-group">
     <span>🔍 Bars</span>
     <input type="range" id="analysisSlider" min="10" max="1000" value="100" step="10">
-    <output id="analysisValue">100</output>
+    <span id="analysisValue">100</span>
   </div>
   <button class="btn btn-outline" id="refreshBtn">🔄 Re‑Sync</button>
   <button class="btn btn-outline" id="themeToggle">🌓 Theme</button>
@@ -245,29 +250,71 @@
       const cb = document.createElement('input'); cb.type='checkbox'; cb.className='market-checkbox'; cb.dataset.sym=m.sym; cb.checked=true;
       cb.addEventListener('change', function(e){ e.stopPropagation(); const el=document.getElementById(`mkt-${m.sym}`); if(el) el.style.display=this.checked?'':'none'; });
       const span = document.createElement('span'); span.textContent=m.name;
-      span.addEventListener('click', (e)=>{ e.stopPropagation(); pinMarket(m.sym); const card=document.getElementById(`mkt-${m.sym}`); if(card) card.scrollIntoView({behavior:'smooth',block:'start'}); });
-      div.appendChild(cb); div.appendChild(span); marketListDiv.appendChild(div);
+      span.addEventListener('click', (e)=>{ e.stopPropagation(); pinMarket(m.sym); });
+      div.appendChild(cb); div.appendChild(span);
+      marketListDiv.appendChild(div);
     });
-    function pinMarket(sym) { pinnedSym = sym; sortCards(); }
+
+    function pinMarket(sym) {
+      pinnedSym = sym;
+      sortCards();
+      // Scroll the market card into view smoothly
+      const container = document.getElementById(`mkt-${sym}`);
+      if (container) {
+        setTimeout(() => {
+          container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
+      }
+    }
 
     // ---- Controls ----
-    const windowSlider = document.getElementById('windowSlider'), windowValue = document.getElementById('windowValue');
-    const applyBtn = document.getElementById('applyBtn'), analysisSlider = document.getElementById('analysisSlider'), analysisValue = document.getElementById('analysisValue');
-    const bestMarketLabel = document.getElementById('bestMarketLabel'), activeSignalsList = document.getElementById('activeSignalsList');
+    const windowSlider = document.getElementById('windowSlider');
+    const windowInput = document.getElementById('windowInput');
+    const windowValue = document.getElementById('windowValue');
+    const applyBtn = document.getElementById('applyBtn');
+    const analysisSlider = document.getElementById('analysisSlider');
+    const analysisValue = document.getElementById('analysisValue');
+    const bestMarketLabel = document.getElementById('bestMarketLabel');
+    const activeSignalsList = document.getElementById('activeSignalsList');
 
-    applyBtn.addEventListener('click', () => { windowSize=parseInt(windowSlider.value); windowValue.textContent=windowSize; resetAndFetch(); });
-    windowSlider.addEventListener('input', ()=> { windowValue.textContent=windowSlider.value; });
-    analysisSlider.addEventListener('input', ()=> { analysisTicks=parseInt(analysisSlider.value); analysisValue.textContent=analysisTicks; refreshAllBars(); });
+    function setWindowSize(value) {
+      windowSize = value;
+      windowSlider.value = value;
+      windowInput.value = value;
+      windowValue.textContent = value;
+      resetAndFetch();
+    }
+
+    applyBtn.addEventListener('click', () => {
+      const val = parseInt(windowInput.value) || parseInt(windowSlider.value) || 1000;
+      if (val >= 100 && val <= 10000) setWindowSize(val);
+    });
+    windowSlider.addEventListener('input', () => {
+      windowInput.value = windowSlider.value;
+      windowValue.textContent = windowSlider.value;
+    });
+    windowInput.addEventListener('change', () => {
+      const val = parseInt(windowInput.value);
+      if (val >= 100 && val <= 10000) {
+        windowSlider.value = val;
+        windowValue.textContent = val;
+      }
+    });
+    analysisSlider.addEventListener('input', () => {
+      analysisTicks = parseInt(analysisSlider.value);
+      analysisValue.textContent = analysisTicks;
+      refreshAllBars();
+    });
     document.getElementById('refreshBtn').addEventListener('click', resetAndFetch);
-    document.getElementById('themeToggle').addEventListener('click', ()=> document.body.classList.toggle('light'));
+    document.getElementById('themeToggle').addEventListener('click', () => document.body.classList.toggle('light'));
 
     function resetAndFetch() {
-      if(ws) ws.close();
+      if (ws) ws.close();
       MARKETS.forEach(m => {
-        store[m.sym]=[]; priceStore[m.sym]='—'; ready[m.sym]=false; signalState[m.sym]=false;
-        latestScore[m.sym]=0; rollingWinHistory[m.sym]=[];
+        store[m.sym] = []; priceStore[m.sym] = '—'; ready[m.sym] = false; signalState[m.sym] = false;
+        latestScore[m.sym] = 0; rollingWinHistory[m.sym] = [];
       });
-      pinnedSym=null; completedTrades=[]; pendingTrades={};
+      pinnedSym = null; completedTrades = []; pendingTrades = {};
       connect();
     }
 
@@ -288,22 +335,22 @@
 
       ws.onmessage = (msg) => {
         const data = JSON.parse(msg.data);
-        if(data.history) {
+        if (data.history) {
           const sym = data.echo_req.ticks_history;
           const prices = data.history.prices;
           const digits = prices.map(p => { const formatted = parseFloat(p).toFixed(2); return parseInt(formatted.slice(-1)); });
-          if(!store[sym]) store[sym]=[];
+          if (!store[sym]) store[sym] = [];
           store[sym] = store[sym].concat(digits).slice(-12000);
           priceStore[sym] = prices.length ? parseFloat(prices[prices.length-1]).toFixed(2) : '—';
           updateReady(sym); renderMarket(sym); updateInsights(); sortCards();
         }
-        if(data.tick) {
+        if (data.tick) {
           const sym = data.tick.symbol;
           const quote = parseFloat(data.tick.quote);
           const formatted = quote.toFixed(data.tick.pip_size || 2);
           const digit = parseInt(formatted.slice(-1));
-          if(!store[sym]) store[sym]=[];
-          store[sym].push(digit); if(store[sym].length > 12000) store[sym]=store[sym].slice(-12000);
+          if (!store[sym]) store[sym] = [];
+          store[sym].push(digit); if (store[sym].length > 12000) store[sym] = store[sym].slice(-12000);
           priceStore[sym] = formatted;
           lastDigitMap[sym] = digit;
           updateReady(sym);
@@ -311,10 +358,10 @@
           const oldSig = signalState[sym] || false;
           const newSig = checkSignal(sym);
           signalState[sym] = newSig;
-          if(!oldSig && newSig) audio.play();
+          if (!oldSig && newSig) audio.play();
           renderMarket(sym); updateInsights(); sortCards();
         }
-        if(data.error) console.warn(data.error);
+        if (data.error) console.warn(data.error);
       };
       ws.onclose = () => console.log('WS closed');
     }
@@ -439,12 +486,10 @@
       rollingWinHistory[sym].push(win);
       if(rollingWinHistory[sym].length > ROLLING_WIN_WINDOW) rollingWinHistory[sym].shift();
 
-      // update ML accuracy tracking
       if(!mlAccuracyHistory[sym]) mlAccuracyHistory[sym]=[];
       mlAccuracyHistory[sym].push(win);
       if(mlAccuracyHistory[sym].length>50) mlAccuracyHistory[sym].shift();
 
-      // ML model update
       let cnt=getCounts(sym), t=cnt.reduce((a,b)=>a+b,0), ep=(cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8])/t*100;
       mlModel.update(getEnhancedMLFeatures(sym, ep, 100-ep), win?1:0);
 
