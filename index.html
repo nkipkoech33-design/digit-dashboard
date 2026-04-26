@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO – Perfect Sync</title>
+  <title>Digit Analyzer – Configurable Window (Exact Match)</title>
   <style>
     :root {
       --bg: #0f172a; --surface: #1e293b; --border: #1e293b; --text: white;
@@ -41,10 +41,15 @@
 </head>
 <body>
 <div id="topbar">
-  <label style="display:flex; align-items:center; gap:5px;">
-    <span style="font-size:12px;">Analysis bars:</span>
+  <label style="display:flex; align-items:center; gap:5px; font-size:12px;">
+    Total ticks (window): 
+    <input type="number" id="windowSize" min="100" max="10000" value="1000" step="100" style="width:80px;">
+    <button id="applyWindowBtn">Apply</button>
+  </label>
+  <label style="display:flex; align-items:center; gap:5px; font-size:12px;">
+    Analysis bars: 
     <input type="range" id="analysisSlider" min="10" max="1000" value="100" step="10" style="width:100px;">
-    <span id="analysisValue" style="font-size:12px;">100</span>
+    <span id="analysisValue">100</span>
   </label>
   <button id="refreshBtn">🔄 Re-Sync</button>
   <button id="themeToggle">🌓 Theme</button>
@@ -72,21 +77,34 @@
       {sym:"JD75",name:"Jump 75 Index",pip:2},{sym:"JD100",name:"Jump 100 Index",pip:2}
     ];
 
-    const BUFFER_SIZE = 5000;      // we store this many ticks per market
-    const WINDOW_SIZE  = 1000;     // the sliding window we display (matches Deriv's Last 1000)
-    let store = {};                // large array of digits per market
-    let historyReady = {};         // true once at least WINDOW_SIZE ticks are in store
-    let analysisTicks = 100;       // for the even/odd bars
+    let WINDOW_SIZE = 1000;       // user-configurable window
+    let MAX_BUFFER = 20000;      // keep up to 20k ticks max
+    let store = {};
+    let historyReady = {};
+    let analysisTicks = 100;
 
+    const windowInput = document.getElementById('windowSize');
+    const applyBtn = document.getElementById('applyWindowBtn');
     const analysisSlider = document.getElementById('analysisSlider');
     const analysisValue = document.getElementById('analysisValue');
+
+    applyBtn.addEventListener('click', () => {
+      const val = parseInt(windowInput.value);
+      if (val >= 100 && val <= 10000) {
+        WINDOW_SIZE = val;
+        windowInput.value = val;
+        // Reset stores and re-fetch
+        connect();
+      }
+    });
+
     analysisSlider.addEventListener('input', () => {
       analysisTicks = parseInt(analysisSlider.value);
       analysisValue.textContent = analysisTicks;
       refreshAllBars();
     });
 
-    // Build market checkboxes
+    // Market checkboxes
     const marketListDiv = document.getElementById('marketList');
     MARKETS.forEach(m => {
       let div = document.createElement('div');
@@ -112,8 +130,8 @@
         MARKETS.forEach(m => {
           store[m.sym] = [];
           historyReady[m.sym] = false;
-          // Fetch history and subscribe in one go
-          ws.send(JSON.stringify({ticks_history: m.sym, count: BUFFER_SIZE, end: "latest", style: "ticks"}));
+          // Request exactly the window size plus a small buffer to start live
+          ws.send(JSON.stringify({ticks_history: m.sym, count: Math.min(WINDOW_SIZE + 100, MAX_BUFFER), end: "latest", style: "ticks"}));
           ws.send(JSON.stringify({ticks: m.sym, subscribe: 1}));
         });
       };
@@ -124,16 +142,12 @@
           const sym = data.echo_req.ticks_history;
           const mkt = MARKETS.find(m => m.sym === sym);
           const pip = mkt ? mkt.pip : 2;
-
-          // Convert history prices to digits using correct pip
           const prices = data.history.prices;
           const digits = prices.map(p => {
             const formatted = parseFloat(p).toFixed(pip);
             return parseInt(formatted.slice(-1));
           });
-
-          // Keep only the last BUFFER_SIZE digits (if more arrived)
-          store[sym] = digits.slice(-BUFFER_SIZE);
+          store[sym] = digits.slice(-MAX_BUFFER);
           if (store[sym].length >= WINDOW_SIZE) {
             historyReady[sym] = true;
           }
@@ -150,8 +164,7 @@
 
           if (!store[sym]) store[sym] = [];
           store[sym].push(digit);
-          if (store[sym].length > BUFFER_SIZE) store[sym].shift();   // keep buffer size bounded
-
+          if (store[sym].length > MAX_BUFFER) store[sym].shift();
           if (store[sym].length >= WINDOW_SIZE && !historyReady[sym]) {
             historyReady[sym] = true;
           }
@@ -181,7 +194,7 @@
       }
 
       const fullBuffer = store[sym];
-      // Compute percentages from the last WINDOW_SIZE ticks
+      // Use only the last WINDOW_SIZE ticks for percentages
       const windowData = fullBuffer.slice(-WINDOW_SIZE);
       const total = windowData.length;
       const cnt = new Array(10).fill(0);
@@ -215,13 +228,12 @@
       const evenPctVal = ((evens / n) * 100).toFixed(1);
       const oddPctVal  = ((odds / n) * 100).toFixed(1);
 
-      // The "price" shown is the last digit (most recent tick)
       const lastDigit = fullBuffer[fullBuffer.length - 1];
 
       container.innerHTML = `
         <b>${MARKETS.find(m=>m.sym===sym).name}</b>
         <div class="price">${lastDigit}</div>
-        <div class="win">🎲 EVEN ${ep}% | ODD ${op}%</div>
+        <div class="win">🎲 EVEN ${ep}% | ODD ${op}% (last ${WINDOW_SIZE} ticks)</div>
         <div class="even-bar-container">
           <span class="bar-label" style="color:var(--good);">EVEN</span>
           <div class="even-bar-rail"><div class="even-bar-fill" style="width:${evenPctVal}%;"></div></div>
@@ -246,7 +258,7 @@
 
     document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
 
-    // Start the connection
+    // Start
     connect();
   })();
 </script>
