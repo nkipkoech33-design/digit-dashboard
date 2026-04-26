@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO – Reduced Cells</title>
+  <title>Digit Analyzer PRO – All Active Signals</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -83,10 +83,11 @@
       display: flex;
       align-items: center;
       gap: 0.8rem;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       font-size: 0.85rem;
       font-weight: 500;
       flex-shrink: 0;
+      overflow-x: auto;
     }
     .best-badge {
       background: var(--accent);
@@ -96,6 +97,29 @@
       font-weight: 700;
       white-space: nowrap;
       font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .signals-row {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .signal-badge {
+      padding: 0.25rem 0.7rem;
+      border-radius: 2rem;
+      font-weight: 700;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .signal-badge.even { background: #166534; color: #4ade80; border: 1px solid #22c55e; }
+    .signal-badge.odd  { background: #7f1d1d; color: #f87171; border: 1px solid #ef4444; }
+    .no-signals {
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      white-space: nowrap;
     }
     .main-layout {
       display: flex;
@@ -164,17 +188,16 @@
     .price-large { font-size: 1.8rem; font-weight: 800; text-align: center; color: var(--highlight); margin: 0.3rem 0; }
     .stat-line { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-secondary); margin: 0.15rem 0; }
 
-    /* -- REDUCED DIGIT GRID & CELLS -- */
     .digit-grid {
       display: grid;
-      grid-template-columns: repeat(5, 40px);  /* small fixed columns */
-      gap: 3px;
+      grid-template-columns: repeat(5, 80px);
+      gap: 5px;
       margin: 0.4rem 0;
       justify-content: center;
     }
     .digit-cell {
-      width: 40px;
-      height: 40px;
+      width: 80px;
+      height: 80px;
       background: var(--bg);
       border-radius: 0.4rem;
       display: flex;
@@ -190,15 +213,15 @@
     .digit-cell.second { background: #1e3a8a; border-color: #3b82f6; }
     .digit-cell.least { background: #7f1d1d; border-color: #ef4444; }
     .digit-cell.second-least { background: #9a3412; border-color: #f97316; }
-    .digit-number { font-size: 1.1rem; line-height: 1; }
-    .digit-percent { font-size: 0.55rem; opacity: 0.9; }
+    .digit-number { font-size: 1.8rem; line-height: 1; }
+    .digit-percent { font-size: 0.75rem; opacity: 0.9; }
 
     .pointer-dot {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 1.8rem;      /* still big enough to see */
+      font-size: 2rem;
       z-index: 2;
       animation: pulse-dot 0.8s infinite;
       text-shadow: 0 0 8px currentColor;
@@ -256,7 +279,10 @@
 </div>
 
 <div class="insights-bar" id="insightsBar">
-  <span class="best-badge" id="bestMarketLabel">🏆 Loading best market…</span>
+  <span class="best-badge" id="bestMarketLabel">🏆 Loading…</span>
+  <div class="signals-row" id="activeSignalsList">
+    <span class="no-signals">⏳ Waiting for data…</span>
+  </div>
 </div>
 
 <div class="main-layout">
@@ -310,6 +336,7 @@
     const analysisSlider = document.getElementById('analysisSlider');
     const analysisValue = document.getElementById('analysisValue');
     const bestMarketLabel = document.getElementById('bestMarketLabel');
+    const activeSignalsList = document.getElementById('activeSignalsList');
 
     applyBtn.addEventListener('click', () => {
       windowSize = parseInt(windowSlider.value);
@@ -365,7 +392,7 @@
           priceStore[sym] = prices.length ? parseFloat(prices[prices.length-1]).toFixed(2) : '—';
           updateReady(sym);
           renderMarket(sym);
-          updateBestMarket();
+          updateInsights();
         }
         if (data.tick) {
           const sym = data.tick.symbol;
@@ -382,7 +409,7 @@
           signalState[sym] = newSig;
           if (!oldSig && newSig) audio.play();
           renderMarket(sym);
-          updateBestMarket();
+          updateInsights();
         }
         if (data.error) console.warn(data.error);
       };
@@ -391,7 +418,7 @@
 
     function updateReady(sym) { ready[sym] = store[sym] && store[sym].length >= windowSize; }
 
-    // Signal detection (unchanged)
+    // Signal detection
     function checkSignal(sym) {
       const full = store[sym]; if (!full || full.length < SIGNAL_WINDOW) return false;
       const arr = full.slice(-SIGNAL_WINDOW); const total = arr.length;
@@ -460,11 +487,43 @@
       return (strength/100) * (confidence/100) * regimeFactor * momFactor;
     }
 
-    function updateBestMarket() {
+    function getSignalDirection(sym) {
+      const full = store[sym]; if (!full || full.length < SIGNAL_WINDOW) return null;
+      const arr = full.slice(-SIGNAL_WINDOW);
+      const evenCount = arr.filter(d => d%2===0).length;
+      return (evenCount > arr.length/2) ? 'EVEN' : 'ODD';
+    }
+
+    function updateInsights() {
       let bestSym = null, bestScore = 0;
-      MARKETS.forEach(m => { if (!ready[m.sym]) return; const score = computeTradeScore(m.sym); if (score > bestScore) { bestScore = score; bestSym = m.sym; } });
-      if (bestSym) { const mkt = MARKETS.find(m => m.sym === bestSym); bestMarketLabel.textContent = `🏆 Best: ${mkt.name} (score ${(bestScore*100).toFixed(0)})`; }
-      else bestMarketLabel.textContent = 'Loading best market…';
+      MARKETS.forEach(m => {
+        if (!ready[m.sym] || !signalState[m.sym]) return;
+        const score = computeTradeScore(m.sym);
+        if (score > bestScore) { bestScore = score; bestSym = m.sym; }
+      });
+      if (bestSym) {
+        const mkt = MARKETS.find(m => m.sym === bestSym);
+        bestMarketLabel.textContent = `🏆 Best: ${mkt.name} (${(bestScore*100).toFixed(0)})`;
+      } else {
+        bestMarketLabel.textContent = '🏆 No signals yet';
+      }
+
+      const active = MARKETS.filter(m => ready[m.sym] && signalState[m.sym]).map(m => ({
+        sym: m.sym,
+        name: m.name,
+        dir: getSignalDirection(m.sym),
+        score: computeTradeScore(m.sym)
+      })).sort((a,b) => b.score - a.score);
+
+      if (active.length === 0) {
+        activeSignalsList.innerHTML = '<span class="no-signals">No active signals</span>';
+      } else {
+        activeSignalsList.innerHTML = active.map(s => {
+          const dirClass = s.dir === 'EVEN' ? 'even' : 'odd';
+          const dirLabel = s.dir === 'EVEN' ? '🔵 EVEN' : '🔴 ODD';
+          return `<span class="signal-badge ${dirClass}">${s.name} ${dirLabel} (${(s.score*100).toFixed(0)})</span>`;
+        }).join('');
+      }
     }
 
     function renderMarket(sym) {
