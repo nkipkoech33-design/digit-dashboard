@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Digit Analyzer PRO – Strategy Modes + Debug</title>
+  <title>Digit Analyzer PRO – Signal History + Win Rates</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -33,11 +33,12 @@
     .signal-badge.odd  { background: #7f1d1d; color: #f87171; border: 1px solid #ef4444; }
     .main-layout { display: flex; flex: 1; overflow: hidden; }
     .markets-area { flex: 1; overflow-y: auto; padding: 0.8rem; display: flex; flex-direction: column; gap: 0.8rem; }
-    .sidebar { width: 280px; background: var(--card); border-left: 1px solid var(--border);
+    .sidebar { width: 300px; background: var(--card); border-left: 1px solid var(--border);
       overflow-y: auto; padding: 0.8rem; display: flex; flex-direction: column; gap: 1rem; }
-    .debug-panel { background: var(--bg); border-radius: 0.8rem; padding: 0.6rem; font-size: 0.7rem;
-      border: 1px solid var(--border); max-height: 200px; overflow-y: auto; }
-    .debug-entry { font-family: monospace; padding: 2px 0; border-bottom: 1px dotted var(--border); }
+    .debug-panel, .history-panel { background: var(--bg); border-radius: 0.8rem; padding: 0.6rem;
+      border: 1px solid var(--border); font-size: 0.7rem; max-height: 200px; overflow-y: auto; }
+    .history-entry { font-family: monospace; padding: 3px 0; border-bottom: 1px dotted var(--border); display: flex; justify-content: space-between; }
+    .win { color: var(--good); } .loss { color: var(--bad); }
     .market-list-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0;
       border-bottom: 1px solid var(--border); cursor: pointer; }
     .market-list-item span { flex: 1; }
@@ -69,14 +70,15 @@
     .gauge-fill { height: 100%; width: 0%; transition: width 0.3s; border-radius: 10px; }
     .gauge-fill.strength { background: #fbbf24; }
     .gauge-fill.conf { background: #38bdf8; }
-    @media (max-width: 800px) { .main-layout { flex-direction: column; } .sidebar { width: 100%; max-height: 220px; } .digit-grid { grid-template-columns: repeat(5, 60px); } .digit-cell { width: 60px; height: 60px; } .digit-number { font-size: 1.4rem; } }
+    @media (max-width: 800px) { .main-layout { flex-direction: column; } .sidebar { width: 100%; max-height: 280px; } .digit-grid { grid-template-columns: repeat(5, 60px); } .digit-cell { width: 60px; height: 60px; } .digit-number { font-size: 1.4rem; } }
   </style>
 </head>
 <body>
 <div class="top-bar">
-  <div class="control-group"><span>🕒 Window</span><input type="range" id="windowSlider" min="100" max="5000" value="500" step="50"><input type="number" id="windowInput" min="100" max="5000" step="50" value="500"><button class="btn" id="applyBtn">Apply</button></div>
+  <div class="control-group"><span>🕒 Window</span><input type="range" id="windowSlider" min="100" max="2000" value="500" step="50"><input type="number" id="windowInput" min="100" max="2000" step="50" value="500"><button class="btn" id="applyBtn">Apply</button></div>
   <div class="control-group"><span>🔍 Bars</span><input type="range" id="analysisSlider" min="10" max="500" value="100" step="10"><span id="analysisValue">100</span></div>
-  <div class="control-group"><span>⚙️ Strategy</span><select id="strategySelect"><option value="aggressive">🔥 Aggressive (Many signals)</option><option value="balanced" selected>⚖️ Balanced (Moderate)</option><option value="conservative">🛡️ Conservative (Rare)</option></select></div>
+  <div class="control-group"><span>⚙️ Strategy</span><select id="strategySelect"><option value="aggressive">🔥 Aggressive (Many signals)</option><option value="balanced" selected>⚖️ Balanced</option><option value="conservative">🛡️ Conservative</option></select></div>
+  <div class="control-group"><span>🔊 Sound</span><select id="soundSelect"><option value="beep">Beep</option><option value="alert">Alert</option><option value="ping">Ping</option></select><button id="muteBtn" class="btn">🔊 Mute</button></div>
   <div class="control-group"><span>💰 Balance:</span><span id="balanceDisplay">10000</span><span>📅 Daily:</span><span id="dailyProfit">0</span><input type="number" id="stakeInput" value="100" step="10" style="width:70px;"><button class="btn" id="resetBalanceBtn">Reset</button></div>
   <button class="btn" id="refreshBtn">🔄 Re‑Sync</button>
   <button class="btn" id="themeToggle">🌓 Theme</button>
@@ -87,48 +89,85 @@
   <div class="sidebar">
     <div class="sidebar-title">📋 Markets (click name to pin)</div>
     <div id="marketList"></div>
-    <div class="debug-panel" id="debugPanel"><div style="font-weight:bold;">🔍 Debug (why no signal?)</div><div id="debugContent">Waiting for data...</div></div>
+    <div class="history-panel" id="historyPanel">
+      <div style="font-weight:bold;">📜 Signal History <span id="overallWinRate"></span></div>
+      <div id="historyList">No signals yet</div>
+    </div>
+    <div class="debug-panel" id="debugPanel">
+      <div style="font-weight:bold;">🔍 Debug (why no signal?)</div>
+      <div id="debugContent">Waiting for data...</div>
+    </div>
   </div>
 </div>
 <script>
   (function() {
-    const TOKEN = "PUT_TOKEN_HERE"; // ⚠️ REPLACE WITH YOUR TOKEN
+    const TOKEN = "PUT_TOKEN_HERE"; // ⚠️ REPLACE WITH YOUR DERIV TOKEN
     const MARKETS = [
       {sym:"R_10",name:"Vol 10"},{sym:"R_25",name:"Vol 25"},{sym:"R_50",name:"Vol 50"},{sym:"R_75",name:"Vol 75"},{sym:"R_100",name:"Vol 100"},
       {sym:"1HZ10V",name:"V10 (1s)"},{sym:"1HZ25V",name:"V25 (1s)"},{sym:"1HZ50V",name:"V50 (1s)"},{sym:"1HZ75V",name:"V75 (1s)"},{sym:"1HZ100V",name:"V100 (1s)"},
       {sym:"JD10",name:"Jump 10"},{sym:"JD25",name:"Jump 25"},{sym:"JD50",name:"Jump 50"},{sym:"JD75",name:"Jump 75"},{sym:"JD100",name:"Jump 100"}
     ];
-    // Paper trading state
+    
+    // ---- Paper Trading & History ----
     let virtualBalance = 10000, dailyProfit = 0, stakePerTrade = 100, sessionStart = Date.now();
+    let tradeHistory = [];  // { sym, direction, outcome, timestamp, profit }
+    let marketWinStats = new Map(); // sym -> { wins, losses }
+    
     function updateBalanceUI() { document.getElementById('balanceDisplay').innerText = virtualBalance.toFixed(2); const color = dailyProfit>=0 ? '#4ade80' : '#f87171'; document.getElementById('dailyProfit').innerHTML = `<span style="color:${color}">${dailyProfit>=0?'+':''}${dailyProfit.toFixed(2)}</span>`; }
-    function applyTradeOutcome(win) { const profit = win ? stakePerTrade*0.85 : -stakePerTrade; virtualBalance += profit; dailyProfit += profit; updateBalanceUI(); }
-    document.getElementById('resetBalanceBtn').onclick = () => { virtualBalance=10000; dailyProfit=0; updateBalanceUI(); };
+    function addToHistory(sym, direction, outcome, profit) {
+      tradeHistory.unshift({ sym, direction, outcome, profit, time: new Date().toLocaleTimeString() });
+      if(tradeHistory.length > 50) tradeHistory.pop();
+      let stats = marketWinStats.get(sym) || { wins:0, losses:0 };
+      if(outcome === 'win') stats.wins++; else stats.losses++;
+      marketWinStats.set(sym, stats);
+      renderHistoryPanel();
+    }
+    function renderHistoryPanel() {
+      if(tradeHistory.length === 0) { document.getElementById('historyList').innerHTML = 'No signals yet'; document.getElementById('overallWinRate').innerHTML = ''; return; }
+      let totalWins = tradeHistory.filter(t=>t.outcome==='win').length;
+      let totalLosses = tradeHistory.filter(t=>t.outcome==='loss').length;
+      let total = totalWins+totalLosses;
+      let winRate = total ? (totalWins/total*100).toFixed(1) : 0;
+      document.getElementById('overallWinRate').innerHTML = `(WR: ${winRate}%)`;
+      let html = tradeHistory.slice(0,20).map(t => `<div class="history-entry"><span>${t.time} ${t.sym} ${t.direction}</span><span class="${t.outcome}">${t.outcome==='win'?'+'+t.profit.toFixed(2):t.profit.toFixed(2)}</span></div>`).join('');
+      document.getElementById('historyList').innerHTML = html;
+    }
+    function applyTradeOutcome(sym, direction, win) {
+      let profit = win ? stakePerTrade*0.85 : -stakePerTrade;
+      virtualBalance += profit;
+      dailyProfit += profit;
+      updateBalanceUI();
+      addToHistory(sym, direction, win ? 'win' : 'loss', profit);
+    }
+    document.getElementById('resetBalanceBtn').onclick = () => { virtualBalance=10000; dailyProfit=0; tradeHistory=[]; marketWinStats.clear(); updateBalanceUI(); renderHistoryPanel(); };
     document.getElementById('stakeInput').onchange = (e) => { stakePerTrade = parseFloat(e.target.value) || 100; };
     
-    let windowSize = 500, analysisTicks = 100;  // shorter window = more signals
-    let store = {}, priceStore = {}, ready = {}, signalState = {}, latestScore = {}, pinnedSym = null, ws = null;
-    let audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
-    let lastSignalTime = {};
-    let signalStrength = {}, signalConfidence = {};
+    // ---- Sound & Mute ----
+    let muted = false;
+    let sounds = { beep: "https://actions.google.com/sounds/v1/alarms/beep_short.ogg", alert: "https://actions.google.com/sounds/v1/alarms/beep_soft.ogg", ping: "https://actions.google.com/sounds/v1/alarms/ding.ogg" };
+    let audioPlayer = new Audio(sounds.beep);
+    function playSound() { if(!muted) { audioPlayer.play().catch(e=>console.log); } }
+    document.getElementById('soundSelect').onchange = (e) => { audioPlayer = new Audio(sounds[e.target.value]); };
+    document.getElementById('muteBtn').onclick = () => { muted = !muted; document.getElementById('muteBtn').innerText = muted ? '🔇 Muted' : '🔊 Mute'; };
+    
+    // ---- Signal Detection State ----
+    let windowSize = 500, analysisTicks = 100;
+    let store = {}, priceStore = {}, ready = {}, signalState = {}, pinnedSym = null, ws = null;
+    let lastSignalTime = {}, signalStrength = {}, signalConfidence = {};
     let pendingTrades = {}, lastDigitMap = {};
     let marketCheckboxState = {};
-    let debugMessages = [];  // store recent debug
+    let debugMessages = [];
+    function addDebug(msg) { debugMessages.unshift(msg); if(debugMessages.length>12) debugMessages.pop(); document.getElementById('debugContent').innerHTML = debugMessages.map(m=>`<div class="debug-entry">${m}</div>`).join(''); }
     
-    function addDebug(msg) { debugMessages.unshift(msg); if(debugMessages.length>15) debugMessages.pop(); document.getElementById('debugContent').innerHTML = debugMessages.map(m=>`<div class="debug-entry">${m}</div>`).join(''); }
-    
-    // Strategy thresholds
     let strategy = 'balanced';
-    document.getElementById('strategySelect').onchange = (e) => { strategy = e.target.value; addDebug(`Strategy changed to ${strategy}`); };
-    
+    document.getElementById('strategySelect').onchange = (e) => { strategy = e.target.value; addDebug(`Strategy: ${strategy}`); };
     function getThresholds() {
       if(strategy === 'aggressive') return { zMin:1.2, oppMax:14, momMin:2, strengthMin:35, confMin:35, trendMin:0.05, uniqueMin:4, cooldown:3000 };
       if(strategy === 'conservative') return { zMin:2.5, oppMax:8, momMin:12, strengthMin:70, confMin:70, trendMin:0.25, uniqueMin:7, cooldown:10000 };
-      return { zMin:1.8, oppMax:11, momMin:6, strengthMin:50, confMin:50, trendMin:0.12, uniqueMin:5, cooldown:6000 }; // balanced
+      return { zMin:1.8, oppMax:11, momMin:6, strengthMin:50, confMin:50, trendMin:0.12, uniqueMin:5, cooldown:6000 };
     }
     
-    // Helper functions
     function getCounts(sym) { let a=store[sym]; if(!a)return Array(10).fill(0); let c=Array(10).fill(0); a.forEach(d=>c[d]++); return c; }
-    function getEvenOddPct(sym, windowData) { let even=0; windowData.forEach(d=>{if(d%2===0) even++;}); return { even: even/windowData.length*100, odd: (windowData.length-even)/windowData.length*100 }; }
     function computeMomentum(arr) { 
       if(arr.length<50) return 0;
       let first=arr.slice(-50,-25), second=arr.slice(-25);
@@ -151,46 +190,39 @@
       if(!full || full.length<windowSize) return false;
       const windowData = full.slice(-windowSize);
       const total = windowData.length;
-      const counts = getCounts(sym).slice(); // fresh counts for window? Actually getCounts uses whole store, we need window-specific. Let's compute from windowData.
       const winCounts = Array(10).fill(0); windowData.forEach(d=>winCounts[d]++);
       const evenCount = winCounts[0]+winCounts[2]+winCounts[4]+winCounts[6]+winCounts[8];
       const observed = evenCount/total;
       const z = Math.abs(observed-0.5)/Math.sqrt(0.25/total);
       const th = getThresholds();
-      if(z < th.zMin) { addDebug(`${sym}: z-score ${z.toFixed(2)} < ${th.zMin}`); return false; }
+      if(z < th.zMin) { addDebug(`${sym}: z=${z.toFixed(2)} < ${th.zMin}`); return false; }
       const tf = (evenCount > total/2) ? "EVEN" : "ODD";
       let oppDigits = (tf==="EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
       let maxOpp = Math.max(...oppDigits.map(d=> (winCounts[d]/total)*100 ));
-      if(maxOpp > th.oppMax) { addDebug(`${sym}: max opposing digit ${maxOpp.toFixed(1)}% > ${th.oppMax}%`); return false; }
+      if(maxOpp > th.oppMax) { addDebug(`${sym}: maxOpp=${maxOpp.toFixed(1)}% > ${th.oppMax}%`); return false; }
       let mom = computeMomentum(windowData);
-      if(tf==="EVEN" && mom < th.momMin) { addDebug(`${sym}: EVEN momentum ${mom.toFixed(1)} < ${th.momMin}`); return false; }
-      if(tf==="ODD" && mom > -th.momMin) { addDebug(`${sym}: ODD momentum ${mom.toFixed(1)} > -${th.momMin}`); return false; }
+      if(tf==="EVEN" && mom < th.momMin) { addDebug(`${sym}: EVEN mom=${mom.toFixed(1)} < ${th.momMin}`); return false; }
+      if(tf==="ODD" && mom > -th.momMin) { addDebug(`${sym}: ODD mom=${mom.toFixed(1)} > -${th.momMin}`); return false; }
       let diff = Math.abs(observed*100 - 50);
       let distanceToMax = Math.max(0, 14 - maxOpp);
       let strength = Math.min(100, diff*0.8 + distanceToMax*5);
       let conf = (14-maxOpp)/14*100;
-      if(strength < th.strengthMin) { addDebug(`${sym}: strength ${strength.toFixed(0)} < ${th.strengthMin}`); return false; }
-      if(conf < th.confMin) { addDebug(`${sym}: confidence ${conf.toFixed(0)} < ${th.confMin}`); return false; }
+      if(strength < th.strengthMin) { addDebug(`${sym}: strength=${strength.toFixed(0)} < ${th.strengthMin}`); return false; }
+      if(conf < th.confMin) { addDebug(`${sym}: conf=${conf.toFixed(0)} < ${th.confMin}`); return false; }
       let trend = computeTrendStrength(windowData, 80);
-      if(trend < th.trendMin) { addDebug(`${sym}: trend ${trend.toFixed(3)} < ${th.trendMin}`); return false; }
+      if(trend < th.trendMin) { addDebug(`${sym}: trend=${trend.toFixed(3)} < ${th.trendMin}`); return false; }
       let uniqueDigits = new Set(windowData.slice(-200)).size;
-      if(uniqueDigits < th.uniqueMin) { addDebug(`${sym}: unique digits ${uniqueDigits} < ${th.uniqueMin}`); return false; }
+      if(uniqueDigits < th.uniqueMin) { addDebug(`${sym}: uniqueDigits=${uniqueDigits} < ${th.uniqueMin}`); return false; }
       let now = Date.now();
-      if(lastSignalTime[sym] && (now - lastSignalTime[sym]) < th.cooldown) { addDebug(`${sym}: cooldown active (${Math.round((now-lastSignalTime[sym])/1000)}s)`); return false; }
-      // passed all filters
+      if(lastSignalTime[sym] && (now - lastSignalTime[sym]) < th.cooldown) { addDebug(`${sym}: cooldown`); return false; }
       if(!signalState[sym]) {
         signalStrength[sym]=strength; signalConfidence[sym]=conf;
-        recordTrade(sym, tf);
+        pendingTrades[sym] = { sym, direction: tf, timestamp: now, stake: stakePerTrade };
         lastSignalTime[sym]=now;
-        addDebug(`✅ SIGNAL on ${sym} | ${tf} | strength=${strength.toFixed(0)} conf=${conf.toFixed(0)}`);
-        audio.play();
+        addDebug(`✅ SIGNAL on ${sym} | ${tf} | S=${strength.toFixed(0)} C=${conf.toFixed(0)}`);
+        playSound();
       }
       return true;
-    }
-    
-    function recordTrade(sym, direction) {
-      let entry = { symbol:sym, direction, timestamp:Date.now(), stake:stakePerTrade, outcome:'pending' };
-      pendingTrades[sym] = entry;
     }
     
     function resolvePendingTrade(sym) {
@@ -199,13 +231,12 @@
       let lastDigit = lastDigitMap[sym];
       if(lastDigit===undefined) return;
       let win = (entry.direction==='EVEN' && lastDigit%2===0) || (entry.direction==='ODD' && lastDigit%2===1);
-      entry.outcome = win ? 'win' : 'loss';
-      applyTradeOutcome(win);
+      applyTradeOutcome(sym, entry.direction, win);
+      addDebug(`${sym} trade ${win ? 'WIN' : 'LOSS'} (digit ${lastDigit})`);
       delete pendingTrades[sym];
-      addDebug(`${sym} trade ${win ? 'WIN' : 'LOSS'} (last digit ${lastDigit})`);
     }
     
-    // UI rendering (simplified but complete)
+    // ---- UI Rendering (same as before but with win rate badges) ----
     function renderMarket(sym) {
       let container = document.getElementById(`mkt-${sym}`);
       if(!container) { container=document.createElement('div'); container.id=`mkt-${sym}`; container.className='market-card'; document.getElementById('markets').appendChild(container); }
@@ -217,7 +248,9 @@
       let evenPct=(evenCount/total*100).toFixed(1);
       let isSig=signalState[sym]||false;
       let tradeDir=isSig ? (signalStrength[sym] > 0 ? (evenCount>total/2?'EVEN':'ODD') : null) : null;
-      let html = `<div class="card-header"><div class="market-name">${MARKETS.find(m=>m.sym===sym).name} ${isSig && tradeDir ? `<span class="trade-type-badge ${tradeDir==='EVEN'?'even':'odd'}">BUY ${tradeDir}</span>` : ''}</div></div>
+      let stats = marketWinStats.get(sym) || { wins:0, losses:0 };
+      let winRate = (stats.wins+stats.losses) ? (stats.wins/(stats.wins+stats.losses)*100).toFixed(0) : 0;
+      let html = `<div class="card-header"><div class="market-name">${MARKETS.find(m=>m.sym===sym).name} ${isSig && tradeDir ? `<span class="trade-type-badge ${tradeDir==='EVEN'?'even':'odd'}">BUY ${tradeDir}</span>` : ''}<span class="tag" style="background:${winRate>50?'#16a34a':'#64748b'}">WR:${winRate}%</span></div></div>
         <div class="price-large">${priceStore[sym]}</div>
         <div class="stat-line"><span>🎲 Even: ${evenPct}%</span><span>Odd: ${(100-evenPct).toFixed(1)}%</span><span>Window: ${windowSize}</span></div>
         <div class="digit-grid">${[0,1,2,3,4,5,6,7,8,9].map(i=>{ let perc=(winCounts[i]/total*100).toFixed(1); let cls=''; if(winCounts[i]===Math.max(...winCounts)) cls='most'; return `<div class="digit-cell ${cls}" data-digit="${i}"><span class="digit-number">${i}</span><span class="digit-percent">${perc}%</span></div>`; }).join('')}</div>
@@ -232,16 +265,18 @@
     }
     
     function updateInsights() {
-      let active = MARKETS.filter(m=>signalState[m.sym]).map(m=>({name:m.name, dir:signalStrength[m.sym]?(getEvenOddPct(m.sym, store[m.sym].slice(-windowSize)).even>50?'EVEN':'ODD'):null}));
+      let active = MARKETS.filter(m=>signalState[m.sym]).map(m=>({name:m.name, dir:signalStrength[m.sym]?(store[m.sym]?.slice(-windowSize).filter(d=>d%2===0).length > store[m.sym].slice(-windowSize).length/2?'EVEN':'ODD'):null}));
       if(active.length===0) document.getElementById('activeSignalsList').innerHTML='<span>No active signals</span>';
       else document.getElementById('activeSignalsList').innerHTML = active.map(a=>`<span class="signal-badge ${a.dir==='EVEN'?'even':'odd'}">${a.name} ${a.dir}</span>`).join('');
       MARKETS.forEach(m=>{ let li=document.querySelector(`.market-list-item[data-sym="${m.sym}"]`); if(li) li.classList.toggle('blinking', signalState[m.sym]===true); });
+      let best = MARKETS.reduce((best,m)=>{ let s=signalStrength[m.sym]||0; return s>best.s?{name:m.name,s}:best; },{name:'None',s:0});
+      document.getElementById('bestMarketLabel').innerHTML = `🏆 Best: ${best.name}${best.s?` (${best.s.toFixed(0)})`:''}`;
     }
     
     function sortCards() { let area=document.getElementById('markets'); let cards=Array.from(area.querySelectorAll('.market-card')); let order=new Map(); MARKETS.forEach((m,i)=>order.set(m.sym,i)); cards.sort((a,b)=>{ let sa=a.id.replace('mkt-',''), sb=b.id.replace('mkt-',''); if(sa===pinnedSym) return -1; if(sb===pinnedSym) return 1; return order.get(sa)-order.get(sb); }); cards.forEach(c=>area.appendChild(c)); }
     function pinMarket(sym){ pinnedSym=sym; sortCards(); document.getElementById(`mkt-${sym}`)?.scrollIntoView({behavior:'smooth',block:'center'}); }
     
-    // WebSocket connection
+    // ---- WebSocket ----
     function connect() {
       ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
       ws.onopen = () => {
@@ -275,7 +310,7 @@
           let oldSig = signalState[sym] || false;
           let newSig = checkSignal(sym);
           signalState[sym] = newSig;
-          if(!oldSig && newSig) audio.play();
+          if(!oldSig && newSig) playSound();
           else if(oldSig && !newSig) { signalStrength[sym]=0; signalConfidence[sym]=0; }
           renderMarket(sym); updateInsights(); sortCards();
         }
@@ -285,11 +320,11 @@
     function resetAndFetch() { if(ws) ws.close(); MARKETS.forEach(m=>{ store[m.sym]=[]; ready[m.sym]=false; signalState[m.sym]=false; signalStrength[m.sym]=0; signalConfidence[m.sym]=0; }); pendingTrades={}; lastSignalTime={}; connect(); }
     document.getElementById('refreshBtn').onclick = resetAndFetch;
     document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
-    document.getElementById('applyBtn').onclick = () => { let v=parseInt(document.getElementById('windowInput').value); if(v>=100 && v<=5000) { windowSize=v; document.getElementById('windowSlider').value=v; resetAndFetch(); } };
+    document.getElementById('applyBtn').onclick = () => { let v=parseInt(document.getElementById('windowInput').value); if(v>=100 && v<=2000) { windowSize=v; document.getElementById('windowSlider').value=v; resetAndFetch(); } };
     document.getElementById('windowSlider').oninput = (e) => { document.getElementById('windowInput').value=e.target.value; };
     document.getElementById('analysisSlider').oninput = (e) => { analysisTicks=parseInt(e.target.value); document.getElementById('analysisValue').innerText=analysisTicks; };
     
-    // Build market list with checkboxes
+    // Build market list
     MARKETS.forEach(m=>{ let div=document.createElement('div'); div.className='market-list-item'; div.setAttribute('data-sym',m.sym); let cb=document.createElement('input'); cb.type='checkbox'; cb.checked=true; cb.onchange=(e)=>{ marketCheckboxState[m.sym]=e.target.checked; let el=document.getElementById(`mkt-${m.sym}`); if(el) el.style.display=e.target.checked?'':'none'; }; marketCheckboxState[m.sym]=true; let span=document.createElement('span'); span.textContent=m.name; span.onclick=()=>pinMarket(m.sym); div.appendChild(cb); div.appendChild(span); document.getElementById('marketList').appendChild(div); });
     
     resetAndFetch();
