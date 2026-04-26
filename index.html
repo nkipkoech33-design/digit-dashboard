@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO – Blink, Sound & Ties</title>
+  <title>Digit Analyzer PRO – Momentum + Tie + Best Market</title>
   <style>
     :root {
       --bg: #0f172a; --surface: #1e293b; --border: #1e293b; --text: white;
@@ -13,9 +13,8 @@
     body.light {
       --bg: #f8fafc; --surface: #e2e8f0; --border: #cbd5e1; --text: #0f172a;
       --text-secondary: #475569; --good: #16a34a; --bad: #dc2626;
-      --highlight: #0284c7;
     }
-    body { background: var(--bg); color: var(--text); font-family: Arial; margin: 0; padding: 10px; padding-top: 140px; }
+    body { background: var(--bg); color: var(--text); font-family: Arial; margin: 0; padding: 10px; padding-top: 160px; }
     .controls {
       position: fixed; top: 0; left: 0; right: 0; background: var(--surface);
       padding: 10px; border-bottom: 2px solid var(--accent); z-index: 10;
@@ -27,7 +26,7 @@
     }
     .window-selector input[type=range] { width: 220px; }
     .window-selector output { font-size: 1.2em; color: var(--accent); min-width: 60px; }
-    .market { border: 1px solid var(--border); padding: 6px; border-radius: 6px; background: var(--bg); margin-bottom: 8px; }
+    .market { border: 1px solid var(--border); padding: 6px; border-radius: 6px; background: var(--bg); margin-bottom: 8px; position: relative; }
     .signal { animation: blink 0.6s infinite; border: 2px solid var(--accent); }
     @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
     .price { text-align: center; font-size: 22px; color: var(--highlight); font-weight: bold; }
@@ -51,7 +50,14 @@
     .bar-pct { font-size: 10px; min-width: 40px; text-align: right; color: var(--text-secondary); }
     .small-control { display: flex; align-items: center; gap: 5px; font-size: 12px; }
     .apply-btn { padding: 6px 14px; border-radius: 8px; background: var(--accent); color: #000; font-weight: bold; cursor: pointer; border: none; }
-    @media(max-width:600px) { .grid { grid-template-columns: repeat(5, 1fr); } .box { width: auto; } }
+    .insights-bar {
+      position: fixed; top: 50px; left: 0; right: 0; background: var(--surface);
+      padding: 6px 12px; border-bottom: 1px solid var(--border); z-index: 9;
+      display: flex; gap: 20px; overflow-x: auto; font-size: 12px; align-items: center;
+    }
+    .best-market { background: var(--accent); color: #000; padding: 4px 10px; border-radius: 12px; font-weight: bold; white-space: nowrap; }
+    .market-list-panel { margin-bottom: 10px; }
+    .market-list-item { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; margin: 2px 6px; }
   </style>
 </head>
 <body>
@@ -71,6 +77,11 @@
   <button id="themeToggle">🌓 Theme</button>
 </div>
 
+<div class="insights-bar" id="insightsBar">
+  <span class="best-market" id="bestMarketLabel">Loading best market…</span>
+</div>
+
+<div class="market-list-panel" id="marketList"></div>
 <div id="markets"></div>
 
 <script>
@@ -86,42 +97,52 @@
       {sym:"JD75",name:"Jump 75"},{sym:"JD100",name:"Jump 100"}
     ];
 
-    // Signal window (fixed at 1000 ticks for signal logic)
-    const SIGNAL_WINDOW = 1000;
-
-    let windowSize = 10000;        // display window (adjustable)
-    let analysisTicks = 100;       // even/odd bars
-    let store = {};                // full digit arrays (last up to 12000)
-    let priceStore = {};           // last formatted price
-    let ready = {};                // true once store.length >= windowSize
-    let signalState = {};          // current signal boolean per market
+    const SIGNAL_WINDOW = 1000;   // signal detection uses this window
+    let windowSize = 10000;       // display window (adjustable)
+    let analysisTicks = 100;      // for even/odd bars
+    let store = {};               // full digit arrays (last 12,000)
+    let priceStore = {};          // last formatted price
+    let ready = {};               // true once store has at least windowSize digits
+    let signalState = {};         // active signal per market
     let ws = null;
     let audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
 
-    // ---- UI elements ----
+    // ---- Build market list checkboxes ----
+    const marketListDiv = document.getElementById('marketList');
+    MARKETS.forEach(m => {
+      let lbl = document.createElement('label');
+      lbl.className = 'market-list-item';
+      lbl.innerHTML = `<input type="checkbox" class="market-checkbox" data-sym="${m.sym}" checked> ${m.name}`;
+      marketListDiv.appendChild(lbl);
+    });
+    // Attach show/hide logic
+    document.querySelectorAll('.market-checkbox').forEach(cb => {
+      cb.addEventListener('change', function() {
+        const sym = this.dataset.sym;
+        const el = document.getElementById(`mkt-${sym}`);
+        if (el) el.style.display = this.checked ? '' : 'none';
+      });
+    });
+
+    // ---- UI controls ----
     const windowSlider = document.getElementById('windowSlider');
     const windowValue = document.getElementById('windowValue');
     const applyBtn = document.getElementById('applyBtn');
     const analysisSlider = document.getElementById('analysisSlider');
     const analysisValue = document.getElementById('analysisValue');
+    const bestMarketLabel = document.getElementById('bestMarketLabel');
 
     applyBtn.addEventListener('click', () => {
       windowSize = parseInt(windowSlider.value);
       windowValue.textContent = windowSize;
-      // Re‑initialise
       resetAndFetch();
     });
-
-    windowSlider.addEventListener('input', () => {
-      windowValue.textContent = windowSlider.value;
-    });
-
+    windowSlider.addEventListener('input', () => { windowValue.textContent = windowSlider.value; });
     analysisSlider.addEventListener('input', () => {
       analysisTicks = parseInt(analysisSlider.value);
       analysisValue.textContent = analysisTicks;
       refreshAllBars();
     });
-
     document.getElementById('refreshBtn').addEventListener('click', resetAndFetch);
     document.getElementById('themeToggle').addEventListener('click', () => document.body.classList.toggle('light'));
 
@@ -166,31 +187,27 @@
           priceStore[sym] = prices.length ? parseFloat(prices[prices.length-1]).toFixed(2) : '—';
           updateReady(sym);
           renderMarket(sym);
+          updateBestMarket();
         }
-
         if (data.tick) {
           const sym = data.tick.symbol;
           const quote = parseFloat(data.tick.quote);
           const formatted = quote.toFixed(data.tick.pip_size || 2);
           const digit = parseInt(formatted.slice(-1));
-
           if (!store[sym]) store[sym] = [];
           store[sym].push(digit);
           if (store[sym].length > 12000) store[sym] = store[sym].slice(-12000);
           priceStore[sym] = formatted;
-
           updateReady(sym);
-          // Check signal change
           const oldSig = signalState[sym] || false;
           const newSig = checkSignal(sym);
           signalState[sym] = newSig;
-          if (!oldSig && newSig) audio.play();   // only beep when signal appears
+          if (!oldSig && newSig) audio.play();
           renderMarket(sym);
+          updateBestMarket();
         }
-
         if (data.error) console.warn('WS error:', data.error);
       };
-
       ws.onclose = () => console.log('WS closed');
     }
 
@@ -198,7 +215,7 @@
       ready[sym] = store[sym] && store[sym].length >= windowSize;
     }
 
-    // ---- Signal detection (based on last SIGNAL_WINDOW ticks) ----
+    // ---- Signal detection (blinks & beeps) ----
     function checkSignal(sym) {
       const full = store[sym];
       if (!full || full.length < SIGNAL_WINDOW) return false;
@@ -208,18 +225,13 @@
       arr.forEach(d => counts[d]++);
       const evenCount = counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
       const oddCount = total - evenCount;
-
-      // Basic Z-test
-      const observed = evenCount / total, expected = 0.5;
-      const z = Math.abs(observed - expected) / Math.sqrt(0.25 / total);
+      const observed = evenCount / total;
+      const z = Math.abs(observed - 0.5) / Math.sqrt(0.25 / total);
       if (z < 1.65) return false;
-
       const tf = (evenCount > oddCount) ? "EVEN" : "ODD";
       let oppDigits = (tf === "EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
       const allBelow10 = oppDigits.every(d => (counts[d] / total) * 100 < 10);
       if (!allBelow10) return false;
-
-      // Momentum (25 ticks split)
       const half = 25;
       const first = arr.slice(-50, -25), second = arr.slice(-25);
       const evenFirst = first.filter(d => d%2===0).length / half * 100;
@@ -227,20 +239,79 @@
       const mom = evenSecond - evenFirst;
       if (tf === "EVEN" && mom <= 5) return false;
       if (tf === "ODD" && mom >= -5) return false;
-
-      // Strength / Confidence (volatility factor not critical here)
       const evens = evenCount/total*100, odds = 100-evens;
       const diff = Math.abs(evens - odds);
       const maxOpposing = Math.max(...oppDigits.map(d => (counts[d]/total)*100));
-      const distanceToMax = Math.max(0, 14 - maxOpposing); // using 14% as max
+      const distanceToMax = Math.max(0, 14 - maxOpposing);
       const strength = Math.min(100, (diff*0.5 + distanceToMax*5));
       const confidence = (14 - maxOpposing)/14*100;
-      if (strength < 60 || confidence < 60) return false;
-
-      return true;
+      return strength >= 60 && confidence >= 60;
     }
 
-    // ---- Render market panel ----
+    // ---- Early momentum, tie, regime ----
+    function getEarlyMomentum(sym) {
+      const full = store[sym];
+      if (!full || full.length < 30) return { dir: 'neutral', value: 0 };
+      const arr = full.slice(-30);
+      const first = arr.slice(0, 15), second = arr.slice(15);
+      const even1 = first.filter(d => d%2===0).length / 15 * 100;
+      const even2 = second.filter(d => d%2===0).length / 15 * 100;
+      const delta = even2 - even1;
+      let dir = 'neutral';
+      if (delta > 3) dir = 'up';
+      else if (delta < -3) dir = 'down';
+      return { dir, value: delta };
+    }
+
+    function classifyRegime(sym) {
+      const full = store[sym];
+      if (!full || full.length < 50) return { type: 'Unknown', color: '#64748b' };
+      const arr = full.slice(-50).map(d => d%2===0 ? 0 : 1);
+      const mean = arr.reduce((a,b)=>a+b,0)/arr.length;
+      const variance = arr.reduce((a,b)=>a+Math.pow(b-mean,2),0)/arr.length;
+      const std = Math.sqrt(variance);
+      if (std < 0.35) return { type: 'Calm', color: '#15803d' };
+      if (std > 0.48) return { type: 'Trending', color: '#1d4ed8' };
+      return { type: 'Choppy', color: '#b45309' };
+    }
+
+    function computeTradeScore(sym) {
+      const full = store[sym];
+      if (!full || full.length < SIGNAL_WINDOW) return 0;
+      const arr = full.slice(-SIGNAL_WINDOW);
+      const total = arr.length;
+      const counts = new Array(10).fill(0);
+      arr.forEach(d => counts[d]++);
+      const evenCount = counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
+      const evenPct = (evenCount/total)*100;
+      const diff = Math.abs(evenPct - 50);
+      const oppDigits = (evenPct > 50) ? [1,3,5,7,9] : [0,2,4,6,8];
+      const maxOpposing = Math.max(...oppDigits.map(d => (counts[d]/total)*100));
+      const strength = Math.min(100, diff*0.5 + Math.max(0, 14 - maxOpposing)*5);
+      const confidence = Math.max(0, (14 - maxOpposing))/14*100;
+      const regime = classifyRegime(sym);
+      const regimeFactor = regime.type === 'Calm' ? 1.2 : (regime.type === 'Trending' ? 1.0 : 0.6);
+      const earlyMom = getEarlyMomentum(sym);
+      const momFactor = earlyMom.dir === 'up' ? 1.1 : (earlyMom.dir === 'down' ? 0.9 : 1.0);
+      return (strength/100) * (confidence/100) * regimeFactor * momFactor;
+    }
+
+    function updateBestMarket() {
+      let bestSym = null, bestScore = 0;
+      MARKETS.forEach(m => {
+        if (!ready[m.sym]) return;
+        const score = computeTradeScore(m.sym);
+        if (score > bestScore) { bestScore = score; bestSym = m.sym; }
+      });
+      if (bestSym) {
+        const mkt = MARKETS.find(m => m.sym === bestSym);
+        bestMarketLabel.textContent = `🏆 Best: ${mkt.name} (score ${(bestScore*100).toFixed(0)})`;
+      } else {
+        bestMarketLabel.textContent = 'Loading best market…';
+      }
+    }
+
+    // ---- Render a single market ----
     function renderMarket(sym) {
       const mkt = MARKETS.find(m => m.sym === sym);
       let container = document.getElementById(`mkt-${sym}`);
@@ -264,8 +335,7 @@
       const counts = new Array(10).fill(0);
       windowData.forEach(d => counts[d]++);
 
-      // Build class mapping for ties
-      const uniqueCounts = [...new Set(counts)].sort((a,b) => b - a); // descending
+      const uniqueCounts = [...new Set(counts)].sort((a,b) => b - a);
       const mostVal = uniqueCounts[0];
       const secondVal = uniqueCounts.length > 1 ? uniqueCounts[1] : null;
       const leastVal = uniqueCounts[uniqueCounts.length-1];
@@ -288,7 +358,6 @@
       const evenPct = ((evenCount/total)*100).toFixed(1);
       const oddPct = (((total-evenCount)/total)*100).toFixed(1);
 
-      // Even/odd bars for analysis window
       const aTotal = Math.min(analysisTicks, total);
       const aSlice = windowData.slice(-aTotal);
       const aEvens = aSlice.filter(d => d%2===0).length;
@@ -299,10 +368,34 @@
       const lastPrice = priceStore[sym] || '—';
       const isSig = signalState[sym] || false;
 
+      // Early momentum indicator
+      const early = getEarlyMomentum(sym);
+      let earlyHtml = '';
+      if (early.dir === 'up') earlyHtml = `<span style="color:var(--good);">📈 Evens rising +${early.value.toFixed(1)}%</span>`;
+      else if (early.dir === 'down') earlyHtml = `<span style="color:var(--bad);">📉 Odds rising ${early.value.toFixed(1)}%</span>`;
+      else earlyHtml = `<span style="color:var(--text-secondary);">➖ Steady (${early.value.toFixed(1)}%)</span>`;
+
+      // Tie detection
+      const winEvenPct = parseFloat(evenPct);
+      let tieBadge = '';
+      if (winEvenPct >= 48 && winEvenPct <= 52) {
+        tieBadge = '<span class="tie-badge" style="background:#64748b; padding:2px 6px; border-radius:10px;">⚖️ TIE</span>';
+      }
+
+      // Regime badge
+      const regime = classifyRegime(sym);
+
       container.className = 'market' + (isSig ? ' signal' : '');
 
       container.innerHTML = `
-        <b>${mkt.name}</b>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+          <b>${mkt.name}</b>
+          <div style="display:flex; gap:8px; align-items:center;">
+            ${earlyHtml}
+            ${tieBadge}
+            <span style="padding:2px 6px; border-radius:10px; font-weight:bold; background:${regime.color};">${regime.type}</span>
+          </div>
+        </div>
         <div class="price">${lastPrice}</div>
         <div class="win">🎲 EVEN ${evenPct}% | ODD ${oddPct}% (last ${windowSize})</div>
         <div class="even-bar-container">
@@ -320,12 +413,11 @@
         <div class="tick">${windowData.slice(-50).map(d => `<span class="${d%2===0?'e':'o'}">${d%2===0?'E':'O'}</span>`).join('')}</div>
       `;
 
-      // Move pointer to last digit
+      // Move pointer
       setTimeout(() => {
         const lastDigit = full[full.length-1];
         const targetBox = container.querySelector(`.box[data-digit="${lastDigit}"]`);
         if (targetBox) {
-          // Remove any existing pointer in container
           const oldPointer = container.querySelector('.pointer');
           if (oldPointer) oldPointer.remove();
           const pointer = document.createElement('div');
@@ -340,7 +432,7 @@
       MARKETS.forEach(m => renderMarket(m.sym));
     }
 
-    // Start
+    // Start the engine
     resetAndFetch();
   })();
 </script>
