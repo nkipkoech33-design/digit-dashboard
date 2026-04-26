@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO – Large Buffer Sync</title>
+  <title>Digit Analyzer PRO – Perfect Sync</title>
   <style>
     :root {
       --bg: #0f172a; --surface: #1e293b; --border: #1e293b; --text: white;
@@ -19,7 +19,6 @@
     .wrapper { display: flex; }
     .left { width: 70%; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
     .right { width: 30%; border-left: 1px solid var(--border); padding: 10px; background: var(--bg); overflow-y: auto; max-height: 100vh; }
-
     .market { border: 1px solid var(--border); padding: 6px; border-radius: 6px; background: var(--bg); }
     .price { text-align: center; font-size: 22px; color: var(--highlight); font-weight: bold; }
     .win { text-align: center; font-size: 12px; }
@@ -35,7 +34,6 @@
     .odd-bar-fill  { height: 100%; background: var(--bad); width: 0%; transition: width 0.2s; }
     .bar-label { font-size: 11px; font-weight: bold; min-width: 30px; color: var(--text-secondary); }
     .bar-pct { font-size: 10px; min-width: 40px; text-align: right; color: var(--text-secondary); }
-
     #topbar { position: fixed; top: 0; left: 0; right: 0; background: var(--surface); padding: 6px 10px; display: flex; align-items: center; gap: 15px; z-index: 20; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
     body { padding-top: 50px; }
     @media(max-width:1200px) { .left { width: 100%; } .right { display: none; } }
@@ -65,21 +63,20 @@
   (function() {
     const TOKEN = "PUT_TOKEN_HERE";
     const MARKETS = [
-      {sym:"R_10",name:"Volatility 10 Index"},{sym:"R_25",name:"Volatility 25 Index"},{sym:"R_50",name:"Volatility 50 Index"},
-      {sym:"R_75",name:"Volatility 75 Index"},{sym:"R_100",name:"Volatility 100 Index"},
-      {sym:"1HZ10V",name:"Volatility 10 (1s)"},{sym:"1HZ15V",name:"Volatility 15 (1s)"},{sym:"1HZ25V",name:"Volatility 25 (1s)"},
-      {sym:"1HZ30V",name:"Volatility 30 (1s)"},{sym:"1HZ50V",name:"Volatility 50 (1s)"},{sym:"1HZ75V",name:"Volatility 75 (1s)"},
-      {sym:"1HZ90V",name:"Volatility 90 (1s)"},{sym:"1HZ100V",name:"Volatility 100 (1s)"},
-      {sym:"JD10",name:"Jump 10 Index"},{sym:"JD25",name:"Jump 25 Index"},{sym:"JD50",name:"Jump 50 Index"},
-      {sym:"JD75",name:"Jump 75 Index"},{sym:"JD100",name:"Jump 100 Index"}
+      {sym:"R_10",name:"Volatility 10 Index",pip:2},{sym:"R_25",name:"Volatility 25 Index",pip:2},{sym:"R_50",name:"Volatility 50 Index",pip:2},
+      {sym:"R_75",name:"Volatility 75 Index",pip:2},{sym:"R_100",name:"Volatility 100 Index",pip:2},
+      {sym:"1HZ10V",name:"Volatility 10 (1s)",pip:2},{sym:"1HZ15V",name:"Volatility 15 (1s)",pip:2},{sym:"1HZ25V",name:"Volatility 25 (1s)",pip:2},
+      {sym:"1HZ30V",name:"Volatility 30 (1s)",pip:2},{sym:"1HZ50V",name:"Volatility 50 (1s)",pip:2},{sym:"1HZ75V",name:"Volatility 75 (1s)",pip:2},
+      {sym:"1HZ90V",name:"Volatility 90 (1s)",pip:2},{sym:"1HZ100V",name:"Volatility 100 (1s)",pip:2},
+      {sym:"JD10",name:"Jump 10 Index",pip:2},{sym:"JD25",name:"Jump 25 Index",pip:2},{sym:"JD50",name:"Jump 50 Index",pip:2},
+      {sym:"JD75",name:"Jump 75 Index",pip:2},{sym:"JD100",name:"Jump 100 Index",pip:2}
     ];
 
-    const BUFFER_SIZE = 5000;   // large buffer
-    const WINDOW_SIZE = 1000;   // the sliding window we display
-
-    let store = {};            // big array per market, up to BUFFER_SIZE
-    let historyReady = {};     // true once we have at least WINDOW_SIZE ticks
-    let analysisTicks = 100;
+    const BUFFER_SIZE = 5000;      // we store this many ticks per market
+    const WINDOW_SIZE  = 1000;     // the sliding window we display (matches Deriv's Last 1000)
+    let store = {};                // large array of digits per market
+    let historyReady = {};         // true once at least WINDOW_SIZE ticks are in store
+    let analysisTicks = 100;       // for the even/odd bars
 
     const analysisSlider = document.getElementById('analysisSlider');
     const analysisValue = document.getElementById('analysisValue');
@@ -89,7 +86,7 @@
       refreshAllBars();
     });
 
-    // Build market list
+    // Build market checkboxes
     const marketListDiv = document.getElementById('marketList');
     MARKETS.forEach(m => {
       let div = document.createElement('div');
@@ -115,7 +112,7 @@
         MARKETS.forEach(m => {
           store[m.sym] = [];
           historyReady[m.sym] = false;
-          // Fetch large history
+          // Fetch history and subscribe in one go
           ws.send(JSON.stringify({ticks_history: m.sym, count: BUFFER_SIZE, end: "latest", style: "ticks"}));
           ws.send(JSON.stringify({ticks: m.sym, subscribe: 1}));
         });
@@ -125,34 +122,46 @@
         const data = JSON.parse(msg.data);
         if (data.history) {
           const sym = data.echo_req.ticks_history;
-          const pip = data.history.prices.length > 0 ? (data.tick?.pip_size || 2) : 2; // fallback
-          const prices = data.history.prices.map(p => parseFloat(p).toFixed(pip));
-          const digits = prices.map(p => parseInt(p.slice(-1)));
-          store[sym] = digits.slice(-BUFFER_SIZE);  // keep the most recent up to buffer size
+          const mkt = MARKETS.find(m => m.sym === sym);
+          const pip = mkt ? mkt.pip : 2;
+
+          // Convert history prices to digits using correct pip
+          const prices = data.history.prices;
+          const digits = prices.map(p => {
+            const formatted = parseFloat(p).toFixed(pip);
+            return parseInt(formatted.slice(-1));
+          });
+
+          // Keep only the last BUFFER_SIZE digits (if more arrived)
+          store[sym] = digits.slice(-BUFFER_SIZE);
           if (store[sym].length >= WINDOW_SIZE) {
             historyReady[sym] = true;
           }
           renderMarket(sym);
         }
+
         if (data.tick) {
           const sym = data.tick.symbol;
-          const pip = data.tick.pip_size || 2;
-          const priceStr = parseFloat(data.tick.quote).toFixed(pip);
-          const digit = parseInt(priceStr.slice(-1));
+          const mkt = MARKETS.find(m => m.sym === sym);
+          const pip = mkt ? mkt.pip : 2;
+          const quote = parseFloat(data.tick.quote);
+          const formatted = quote.toFixed(pip);
+          const digit = parseInt(formatted.slice(-1));
 
           if (!store[sym]) store[sym] = [];
           store[sym].push(digit);
-          if (store[sym].length > BUFFER_SIZE) store[sym].shift();  // keep buffer from growing indefinitely
+          if (store[sym].length > BUFFER_SIZE) store[sym].shift();   // keep buffer size bounded
 
           if (store[sym].length >= WINDOW_SIZE && !historyReady[sym]) {
             historyReady[sym] = true;
           }
-          // Always re-render the market
           renderMarket(sym);
         }
+
+        if (data.error) console.warn('WS error:', data.error);
       };
 
-      ws.onclose = () => { console.log('WS closed. Reconnect?'); };
+      ws.onclose = () => console.log('WS closed');
     }
 
     document.getElementById('refreshBtn').addEventListener('click', connect);
@@ -165,48 +174,49 @@
         container.className = 'market';
         document.getElementById('markets').appendChild(container);
       }
+
       if (!historyReady[sym]) {
-        container.innerHTML = `<b>${MARKETS.find(m=>m.sym===sym).name}</b><div class="price">Loading...</div>`;
+        container.innerHTML = `<b>${MARKETS.find(m=>m.sym===sym).name}</b><div class="price">Loading…</div>`;
         return;
       }
 
       const fullBuffer = store[sym];
-      // Compute percentages from the LAST WINDOW_SIZE ticks
+      // Compute percentages from the last WINDOW_SIZE ticks
       const windowData = fullBuffer.slice(-WINDOW_SIZE);
       const total = windowData.length;
       const cnt = new Array(10).fill(0);
       windowData.forEach(d => cnt[d]++);
 
-      const perc = cnt.map(c => ((c/total)*100).toFixed(1));
-      const es = cnt[0]+cnt[2]+cnt[4]+cnt[6]+cnt[8];
-      const ep = ((es/total)*100).toFixed(1);
-      const op = (((total-es)/total)*100).toFixed(1);
+      const perc = cnt.map(c => ((c / total) * 100).toFixed(1));
+      const es = cnt[0] + cnt[2] + cnt[4] + cnt[6] + cnt[8];
+      const ep = ((es / total) * 100).toFixed(1);
+      const op = (((total - es) / total) * 100).toFixed(1);
 
-      const sorted = cnt.map((v,i)=> ({v,i})).sort((a,b)=> b.v - a.v);
+      const sorted = cnt.map((v, i) => ({v, i})).sort((a, b) => b.v - a.v);
       const most = sorted[0].i, second = sorted[1].i, secondLeast = sorted[8].i, least = sorted[9].i;
 
       function box(i) {
         let cls = "";
-        if (i===most) cls="most";
-        else if (i===second) cls="second";
-        else if (i===least) cls="least";
-        else if (i===secondLeast) cls="secondLeast";
+        if (i === most) cls = "most";
+        else if (i === second) cls = "second";
+        else if (i === least) cls = "least";
+        else if (i === secondLeast) cls = "secondLeast";
         return `<div class="box ${cls}">
           <div class="digit">${i}</div>
           <div class="percent">${perc[i]}%</div>
         </div>`;
       }
 
-      // Even/Odd bars based on the shorter ANALYSIS window (slider)
+      // Even/Odd bars based on the shorter ANALYSIS window
       const n = Math.min(analysisTicks, total);
       const slice = windowData.slice(-n);
-      const evens = slice.filter(d=> d%2===0).length;
+      const evens = slice.filter(d => d % 2 === 0).length;
       const odds = n - evens;
-      const evenPct = ((evens/n)*100).toFixed(1);
-      const oddPct = ((odds/n)*100).toFixed(1);
+      const evenPctVal = ((evens / n) * 100).toFixed(1);
+      const oddPctVal  = ((odds / n) * 100).toFixed(1);
 
-      // The price shown is the last digit of the full buffer (the most recent tick)
-      const lastDigit = fullBuffer[fullBuffer.length-1];
+      // The "price" shown is the last digit (most recent tick)
+      const lastDigit = fullBuffer[fullBuffer.length - 1];
 
       container.innerHTML = `
         <b>${MARKETS.find(m=>m.sym===sym).name}</b>
@@ -214,17 +224,17 @@
         <div class="win">🎲 EVEN ${ep}% | ODD ${op}%</div>
         <div class="even-bar-container">
           <span class="bar-label" style="color:var(--good);">EVEN</span>
-          <div class="even-bar-rail"><div class="even-bar-fill" style="width:${evenPct}%;"></div></div>
-          <span class="bar-pct">${evenPct}%</span>
+          <div class="even-bar-rail"><div class="even-bar-fill" style="width:${evenPctVal}%;"></div></div>
+          <span class="bar-pct">${evenPctVal}%</span>
         </div>
         <div class="odd-bar-container">
           <span class="bar-label" style="color:var(--bad);">ODD</span>
-          <div class="odd-bar-rail"><div class="odd-bar-fill" style="width:${oddPct}%;"></div></div>
-          <span class="bar-pct">${oddPct}%</span>
+          <div class="odd-bar-rail"><div class="odd-bar-fill" style="width:${oddPctVal}%;"></div></div>
+          <span class="bar-pct">${oddPctVal}%</span>
         </div>
         <div class="grid">${[0,2,4,6,8].map(box).join("")}</div>
         <div class="grid">${[1,3,5,7,9].map(box).join("")}</div>
-        <div class="tick">${windowData.slice(-50).map(d=>`<span class="${d%2===0?'e':'o'}">${d%2===0?'E':'O'}</span>`).join("")}</div>
+        <div class="tick">${windowData.slice(-50).map(d => `<span class="${d % 2 === 0 ? 'e' : 'o'}">${d % 2 === 0 ? 'E' : 'O'}</span>`).join("")}</div>
       `;
     }
 
@@ -236,7 +246,7 @@
 
     document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
 
-    // Start
+    // Start the connection
     connect();
   })();
 </script>
