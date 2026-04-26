@@ -3,86 +3,251 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO – Momentum + Tie + Best Market</title>
+  <title>Digit Analyzer PRO – Sidebar Layout</title>
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #0f172a; --surface: #1e293b; --border: #1e293b; --text: white;
-      --text-secondary: #94a3b8; --accent: #facc15; --good: #4ade80; --bad: #f87171;
+      --bg: #0b0f19;
+      --card: #131a2b;
+      --border: #2a3345;
+      --text: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --accent: #fbbf24;
+      --good: #4ade80;
+      --bad: #f87171;
       --highlight: #38bdf8;
+      --shadow: 0 4px 12px rgba(0,0,0,0.4);
     }
     body.light {
-      --bg: #f8fafc; --surface: #e2e8f0; --border: #cbd5e1; --text: #0f172a;
-      --text-secondary: #475569; --good: #16a34a; --bad: #dc2626;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --border: #cbd5e1;
+      --text: #0f172a;
+      --text-secondary: #475569;
+      --accent: #eab308;
+      --good: #16a34a;
+      --bad: #dc2626;
+      --highlight: #0284c7;
+      --shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
-    body { background: var(--bg); color: var(--text); font-family: Arial; margin: 0; padding: 10px; padding-top: 160px; }
-    .controls {
-      position: fixed; top: 0; left: 0; right: 0; background: var(--surface);
-      padding: 10px; border-bottom: 2px solid var(--accent); z-index: 10;
-      display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
-    .window-selector {
-      background: var(--border); border-radius: 12px; padding: 8px 15px;
-      display: flex; align-items: center; gap: 10px; font-weight: bold;
+    .top-bar {
+      background: var(--card);
+      padding: 0.75rem 1.5rem;
+      border-bottom: 2px solid var(--accent);
+      box-shadow: var(--shadow);
+      z-index: 20;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      flex-shrink: 0;
     }
-    .window-selector input[type=range] { width: 220px; }
-    .window-selector output { font-size: 1.2em; color: var(--accent); min-width: 60px; }
-    .market { border: 1px solid var(--border); padding: 6px; border-radius: 6px; background: var(--bg); margin-bottom: 8px; position: relative; }
-    .signal { animation: blink 0.6s infinite; border: 2px solid var(--accent); }
-    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-    .price { text-align: center; font-size: 22px; color: var(--highlight); font-weight: bold; }
-    .win { text-align: center; font-size: 12px; margin-top: 2px; }
-    .progress { font-size: 11px; color: var(--text-secondary); margin: 4px 0; }
-    .grid { display: grid; grid-template-columns: repeat(5, 2.5cm); gap: 10px; justify-content: center; margin-top: 8px; }
-    .box { width: 2.5cm; height: 2.5cm; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); position: relative; }
-    .most { background: green; } .second { background: blue; } .secondLeast { background: orange; } .least { background: red; }
-    .digit { font-size: 48px; font-weight: bold; }
-    .percent { font-size: 13px; }
-    .pointer { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 42px; font-weight: bold; animation: pulse 0.6s infinite; z-index: 2; }
-    .pointer.even { color: lime; } .pointer.odd { color: red; }
-    @keyframes pulse { 0%{transform: translate(-50%,-50%) scale(1);}50%{transform: translate(-50%,-50%) scale(1.25);}100%{transform: translate(-50%,-50%) scale(1);} }
-    .tick { display: grid; grid-template-columns: repeat(50, 1fr); font-size: 10px; margin-top: 8px; text-align: center; }
-    .e { color: lime; } .o { color: red; }
-    .even-bar-container, .odd-bar-container { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
-    .even-bar-rail, .odd-bar-rail { flex: 1; height: 8px; background: var(--border); border-radius: 10px; overflow: hidden; }
-    .even-bar-fill { height: 100%; background: var(--good); width: 0%; transition: width 0.2s; }
-    .odd-bar-fill  { height: 100%; background: var(--bad); width: 0%; transition: width 0.2s; }
-    .bar-label { font-size: 11px; font-weight: bold; min-width: 30px; color: var(--text-secondary); }
-    .bar-pct { font-size: 10px; min-width: 40px; text-align: right; color: var(--text-secondary); }
-    .small-control { display: flex; align-items: center; gap: 5px; font-size: 12px; }
-    .apply-btn { padding: 6px 14px; border-radius: 8px; background: var(--accent); color: #000; font-weight: bold; cursor: pointer; border: none; }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg);
+      padding: 0.4rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .control-group input[type=range] { width: 120px; accent-color: var(--accent); }
+    .btn {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 0.5rem 1.2rem;
+      border-radius: 2rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
     .insights-bar {
-      position: fixed; top: 50px; left: 0; right: 0; background: var(--surface);
-      padding: 6px 12px; border-bottom: 1px solid var(--border); z-index: 9;
-      display: flex; gap: 20px; overflow-x: auto; font-size: 12px; align-items: center;
+      background: var(--card);
+      padding: 0.5rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      z-index: 15;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      font-size: 0.9rem;
+      font-weight: 500;
+      flex-shrink: 0;
     }
-    .best-market { background: var(--accent); color: #000; padding: 4px 10px; border-radius: 12px; font-weight: bold; white-space: nowrap; }
-    .market-list-panel { margin-bottom: 10px; }
-    .market-list-item { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; margin: 2px 6px; }
+    .best-badge {
+      background: var(--accent);
+      color: #000;
+      padding: 0.3rem 1rem;
+      border-radius: 2rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .main-layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    .markets-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .sidebar {
+      width: 260px;
+      background: var(--card);
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 1rem;
+      box-shadow: var(--shadow);
+      flex-shrink: 0;
+    }
+    .sidebar-title {
+      font-weight: 700;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+      color: var(--accent);
+    }
+    .market-list-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+    }
+    .market-list-item:hover { background: var(--bg); }
+    .market-card {
+      background: var(--card);
+      border-radius: 1.2rem;
+      padding: 1rem;
+      box-shadow: var(--shadow);
+      border: 2px solid transparent;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .market-card.signal-active {
+      border-color: var(--accent);
+      box-shadow: 0 0 15px var(--accent);
+      animation: pulse-border 1.5s infinite;
+    }
+    @keyframes pulse-border {
+      0% { box-shadow: 0 0 5px var(--accent); }
+      50% { box-shadow: 0 0 20px var(--accent); }
+      100% { box-shadow: 0 0 5px var(--accent); }
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+    }
+    .market-name { font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 0.4rem; }
+    .price-large { font-size: 2rem; font-weight: 800; text-align: center; color: var(--highlight); margin: 0.4rem 0; }
+    .stat-line { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); margin: 0.2rem 0; }
+    .digit-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; margin: 0.8rem 0; }
+    .digit-cell {
+      aspect-ratio: 1;
+      background: var(--bg);
+      border-radius: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      transition: transform 0.1s;
+    }
+    .digit-cell.most { background: #166534; border-color: #22c55e; }
+    .digit-cell.second { background: #1e3a8a; border-color: #3b82f6; }
+    .digit-cell.least { background: #7f1d1d; border-color: #ef4444; }
+    .digit-cell.second-least { background: #9a3412; border-color: #f97316; }
+    .digit-number { font-size: 1.8rem; }
+    .digit-percent { font-size: 0.7rem; opacity: 0.9; }
+    .pointer-dot {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2rem;
+      z-index: 2;
+      animation: pulse-dot 0.8s infinite;
+    }
+    .pointer-dot.even { color: #4ade80; }
+    .pointer-dot.odd { color: #f87171; }
+    @keyframes pulse-dot {
+      0% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.3); }
+      100% { transform: translate(-50%, -50%) scale(1); }
+    }
+    .tick-strip {
+      display: flex;
+      gap: 2px;
+      margin-top: 0.5rem;
+      font-size: 0.7rem;
+      opacity: 0.8;
+      justify-content: center;
+    }
+    .tag {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 1rem;
+      font-weight: 600;
+    }
+    .loading-text { text-align: center; color: var(--text-secondary); padding: 2rem; }
+    @media (max-width: 800px) {
+      .main-layout { flex-direction: column; }
+      .sidebar { width: 100%; border-left: none; border-top: 1px solid var(--border); max-height: 200px; }
+      .markets-area { height: calc(100vh - 300px); }
+    }
   </style>
 </head>
 <body>
-<div class="controls">
-  <div class="window-selector">
-    <span>🕒 Tick Window:</span>
+<div class="top-bar">
+  <div class="control-group">
+    <span>🕒 Window</span>
     <input type="range" id="windowSlider" min="100" max="10000" value="10000" step="100">
     <output id="windowValue">10000</output>
-    <button class="apply-btn" id="applyBtn">Apply</button>
+    <button class="btn" id="applyBtn">Apply</button>
   </div>
-  <div class="small-control">
-    <span>🔍 Analysis bars:</span>
+  <div class="control-group">
+    <span>🔍 Bars</span>
     <input type="range" id="analysisSlider" min="10" max="1000" value="100" step="10">
-    <span id="analysisValue">100</span>
+    <output id="analysisValue">100</output>
   </div>
-  <button id="refreshBtn">🔄 Re‑Sync</button>
-  <button id="themeToggle">🌓 Theme</button>
+  <button class="btn btn-outline" id="refreshBtn">🔄 Re‑Sync</button>
+  <button class="btn btn-outline" id="themeToggle">🌓 Theme</button>
 </div>
 
 <div class="insights-bar" id="insightsBar">
-  <span class="best-market" id="bestMarketLabel">Loading best market…</span>
+  <span class="best-badge" id="bestMarketLabel">🏆 Loading best market…</span>
 </div>
 
-<div class="market-list-panel" id="marketList"></div>
-<div id="markets"></div>
+<div class="main-layout">
+  <div class="markets-area" id="markets"></div>
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-title">📋 Markets</div>
+    <div id="marketList"></div>
+  </div>
+</div>
 
 <script>
   (function() {
@@ -97,17 +262,14 @@
       {sym:"JD75",name:"Jump 75"},{sym:"JD100",name:"Jump 100"}
     ];
 
-    const SIGNAL_WINDOW = 1000;   // signal detection uses this window
-    let windowSize = 10000;       // display window (adjustable)
-    let analysisTicks = 100;      // for even/odd bars
-    let store = {};               // full digit arrays (last 12,000)
-    let priceStore = {};          // last formatted price
-    let ready = {};               // true once store has at least windowSize digits
-    let signalState = {};         // active signal per market
+    const SIGNAL_WINDOW = 1000;
+    let windowSize = 10000;
+    let analysisTicks = 100;
+    let store = {}, priceStore = {}, ready = {}, signalState = {};
     let ws = null;
     let audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
 
-    // ---- Build market list checkboxes ----
+    // Build market list in sidebar
     const marketListDiv = document.getElementById('marketList');
     MARKETS.forEach(m => {
       let lbl = document.createElement('label');
@@ -115,7 +277,6 @@
       lbl.innerHTML = `<input type="checkbox" class="market-checkbox" data-sym="${m.sym}" checked> ${m.name}`;
       marketListDiv.appendChild(lbl);
     });
-    // Attach show/hide logic
     document.querySelectorAll('.market-checkbox').forEach(cb => {
       cb.addEventListener('change', function() {
         const sym = this.dataset.sym;
@@ -124,7 +285,7 @@
       });
     });
 
-    // ---- UI controls ----
+    // Controls
     const windowSlider = document.getElementById('windowSlider');
     const windowValue = document.getElementById('windowValue');
     const applyBtn = document.getElementById('applyBtn');
@@ -157,7 +318,6 @@
       connect();
     }
 
-    // ---- Fetch 5000 + 5000 ticks ----
     function connect() {
       ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
       ws.onopen = () => {
@@ -206,23 +366,18 @@
           renderMarket(sym);
           updateBestMarket();
         }
-        if (data.error) console.warn('WS error:', data.error);
+        if (data.error) console.warn(data.error);
       };
       ws.onclose = () => console.log('WS closed');
     }
 
-    function updateReady(sym) {
-      ready[sym] = store[sym] && store[sym].length >= windowSize;
-    }
+    function updateReady(sym) { ready[sym] = store[sym] && store[sym].length >= windowSize; }
 
-    // ---- Signal detection (blinks & beeps) ----
+    // Signal detection (unchanged)
     function checkSignal(sym) {
-      const full = store[sym];
-      if (!full || full.length < SIGNAL_WINDOW) return false;
-      const arr = full.slice(-SIGNAL_WINDOW);
-      const total = arr.length;
-      const counts = new Array(10).fill(0);
-      arr.forEach(d => counts[d]++);
+      const full = store[sym]; if (!full || full.length < SIGNAL_WINDOW) return false;
+      const arr = full.slice(-SIGNAL_WINDOW); const total = arr.length;
+      const counts = new Array(10).fill(0); arr.forEach(d => counts[d]++);
       const evenCount = counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
       const oddCount = total - evenCount;
       const observed = evenCount / total;
@@ -230,8 +385,7 @@
       if (z < 1.65) return false;
       const tf = (evenCount > oddCount) ? "EVEN" : "ODD";
       let oppDigits = (tf === "EVEN") ? [1,3,5,7,9] : [0,2,4,6,8];
-      const allBelow10 = oppDigits.every(d => (counts[d] / total) * 100 < 10);
-      if (!allBelow10) return false;
+      if (!oppDigits.every(d => (counts[d] / total) * 100 < 10)) return false;
       const half = 25;
       const first = arr.slice(-50, -25), second = arr.slice(-25);
       const evenFirst = first.filter(d => d%2===0).length / half * 100;
@@ -248,24 +402,19 @@
       return strength >= 60 && confidence >= 60;
     }
 
-    // ---- Early momentum, tie, regime ----
     function getEarlyMomentum(sym) {
-      const full = store[sym];
-      if (!full || full.length < 30) return { dir: 'neutral', value: 0 };
+      const full = store[sym]; if (!full || full.length < 30) return { dir: 'neutral', value: 0 };
       const arr = full.slice(-30);
       const first = arr.slice(0, 15), second = arr.slice(15);
       const even1 = first.filter(d => d%2===0).length / 15 * 100;
       const even2 = second.filter(d => d%2===0).length / 15 * 100;
       const delta = even2 - even1;
-      let dir = 'neutral';
-      if (delta > 3) dir = 'up';
-      else if (delta < -3) dir = 'down';
+      let dir = 'neutral'; if (delta > 3) dir = 'up'; else if (delta < -3) dir = 'down';
       return { dir, value: delta };
     }
 
     function classifyRegime(sym) {
-      const full = store[sym];
-      if (!full || full.length < 50) return { type: 'Unknown', color: '#64748b' };
+      const full = store[sym]; if (!full || full.length < 50) return { type: 'Unknown', color: '#64748b' };
       const arr = full.slice(-50).map(d => d%2===0 ? 0 : 1);
       const mean = arr.reduce((a,b)=>a+b,0)/arr.length;
       const variance = arr.reduce((a,b)=>a+Math.pow(b-mean,2),0)/arr.length;
@@ -276,12 +425,9 @@
     }
 
     function computeTradeScore(sym) {
-      const full = store[sym];
-      if (!full || full.length < SIGNAL_WINDOW) return 0;
-      const arr = full.slice(-SIGNAL_WINDOW);
-      const total = arr.length;
-      const counts = new Array(10).fill(0);
-      arr.forEach(d => counts[d]++);
+      const full = store[sym]; if (!full || full.length < SIGNAL_WINDOW) return 0;
+      const arr = full.slice(-SIGNAL_WINDOW); const total = arr.length;
+      const counts = new Array(10).fill(0); arr.forEach(d => counts[d]++);
       const evenCount = counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
       const evenPct = (evenCount/total)*100;
       const diff = Math.abs(evenPct - 50);
@@ -298,141 +444,87 @@
 
     function updateBestMarket() {
       let bestSym = null, bestScore = 0;
-      MARKETS.forEach(m => {
-        if (!ready[m.sym]) return;
-        const score = computeTradeScore(m.sym);
-        if (score > bestScore) { bestScore = score; bestSym = m.sym; }
-      });
-      if (bestSym) {
-        const mkt = MARKETS.find(m => m.sym === bestSym);
-        bestMarketLabel.textContent = `🏆 Best: ${mkt.name} (score ${(bestScore*100).toFixed(0)})`;
-      } else {
-        bestMarketLabel.textContent = 'Loading best market…';
-      }
+      MARKETS.forEach(m => { if (!ready[m.sym]) return; const score = computeTradeScore(m.sym); if (score > bestScore) { bestScore = score; bestSym = m.sym; } });
+      if (bestSym) { const mkt = MARKETS.find(m => m.sym === bestSym); bestMarketLabel.textContent = `🏆 Best: ${mkt.name} (score ${(bestScore*100).toFixed(0)})`; }
+      else bestMarketLabel.textContent = 'Loading best market…';
     }
 
-    // ---- Render a single market ----
     function renderMarket(sym) {
       const mkt = MARKETS.find(m => m.sym === sym);
       let container = document.getElementById(`mkt-${sym}`);
       if (!container) {
         container = document.createElement('div');
         container.id = `mkt-${sym}`;
-        container.className = 'market';
+        container.className = 'market-card';
         document.getElementById('markets').appendChild(container);
       }
 
       if (!ready[sym]) {
         const have = store[sym] ? store[sym].length : 0;
-        const pct = windowSize ? Math.min(100, Math.floor(have / windowSize * 100)) : 0;
-        container.innerHTML = `<b>${mkt.name}</b><div class="price">⌛ Loading…</div><div class="progress">Fetched ${have} / ${windowSize} ticks (${pct}%)</div>`;
+        container.innerHTML = `<div class="loading-text">⌛ Loading ${mkt.name}... (${have}/${windowSize})</div>`;
         return;
       }
 
-      const full = store[sym];
-      const windowData = full.slice(-windowSize);
-      const total = windowData.length;
-      const counts = new Array(10).fill(0);
-      windowData.forEach(d => counts[d]++);
-
+      const full = store[sym], windowData = full.slice(-windowSize), total = windowData.length;
+      const counts = new Array(10).fill(0); windowData.forEach(d => counts[d]++);
       const uniqueCounts = [...new Set(counts)].sort((a,b) => b - a);
       const mostVal = uniqueCounts[0];
       const secondVal = uniqueCounts.length > 1 ? uniqueCounts[1] : null;
       const leastVal = uniqueCounts[uniqueCounts.length-1];
       const secondLeastVal = uniqueCounts.length > 1 ? uniqueCounts[uniqueCounts.length-2] : null;
 
-      function box(i) {
+      function cell(i) {
         let cls = '';
         if (counts[i] === mostVal) cls = 'most';
         else if (secondVal !== null && counts[i] === secondVal) cls = 'second';
         else if (counts[i] === leastVal) cls = 'least';
-        else if (secondLeastVal !== null && counts[i] === secondLeastVal) cls = 'secondLeast';
+        else if (secondLeastVal !== null && counts[i] === secondLeastVal) cls = 'second-least';
         const perc = ((counts[i]/total)*100).toFixed(1);
-        return `<div class="box ${cls}" data-digit="${i}">
-          <div class="digit">${i}</div>
-          <div class="percent">${perc}%</div>
-        </div>`;
+        return `<div class="digit-cell ${cls}" data-digit="${i}"><span class="digit-number">${i}</span><span class="digit-percent">${perc}%</span></div>`;
       }
 
       const evenCount = counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
       const evenPct = ((evenCount/total)*100).toFixed(1);
       const oddPct = (((total-evenCount)/total)*100).toFixed(1);
-
       const aTotal = Math.min(analysisTicks, total);
       const aSlice = windowData.slice(-aTotal);
       const aEvens = aSlice.filter(d => d%2===0).length;
-      const aOdds = aTotal - aEvens;
       const aEvenPct = ((aEvens/aTotal)*100).toFixed(1);
-      const aOddPct = ((aOdds/aTotal)*100).toFixed(1);
-
-      const lastPrice = priceStore[sym] || '—';
-      const isSig = signalState[sym] || false;
-
-      // Early momentum indicator
+      const aOddPct = (((aTotal-aEvens)/aTotal)*100).toFixed(1);
       const early = getEarlyMomentum(sym);
-      let earlyHtml = '';
-      if (early.dir === 'up') earlyHtml = `<span style="color:var(--good);">📈 Evens rising +${early.value.toFixed(1)}%</span>`;
-      else if (early.dir === 'down') earlyHtml = `<span style="color:var(--bad);">📉 Odds rising ${early.value.toFixed(1)}%</span>`;
-      else earlyHtml = `<span style="color:var(--text-secondary);">➖ Steady (${early.value.toFixed(1)}%)</span>`;
-
-      // Tie detection
-      const winEvenPct = parseFloat(evenPct);
-      let tieBadge = '';
-      if (winEvenPct >= 48 && winEvenPct <= 52) {
-        tieBadge = '<span class="tie-badge" style="background:#64748b; padding:2px 6px; border-radius:10px;">⚖️ TIE</span>';
-      }
-
-      // Regime badge
       const regime = classifyRegime(sym);
-
-      container.className = 'market' + (isSig ? ' signal' : '');
+      const isSig = signalState[sym] || false;
+      container.className = 'market-card' + (isSig ? ' signal-active' : '');
 
       container.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
-          <b>${mkt.name}</b>
-          <div style="display:flex; gap:8px; align-items:center;">
-            ${earlyHtml}
-            ${tieBadge}
-            <span style="padding:2px 6px; border-radius:10px; font-weight:bold; background:${regime.color};">${regime.type}</span>
+        <div class="card-header">
+          <div class="market-name">${mkt.name} <span class="tag" style="background:${regime.color}">${regime.type}</span></div>
+          <div style="display:flex; gap:6px;">
+            ${early.dir === 'up' ? '<span class="tag" style="background:#16a34a;">📈 Rising +'+early.value.toFixed(1)+'%</span>' : (early.dir === 'down' ? '<span class="tag" style="background:#dc2626;">📉 Falling '+early.value.toFixed(1)+'%</span>' : '<span class="tag" style="background:#64748b;">➖ Steady</span>')}
+            ${parseFloat(evenPct)>=48 && parseFloat(evenPct)<=52 ? '<span class="tag" style="background:#64748b;">⚖️ TIE</span>' : ''}
           </div>
         </div>
-        <div class="price">${lastPrice}</div>
-        <div class="win">🎲 EVEN ${evenPct}% | ODD ${oddPct}% (last ${windowSize})</div>
-        <div class="even-bar-container">
-          <span class="bar-label" style="color:var(--good);">EVEN</span>
-          <div class="even-bar-rail"><div class="even-bar-fill" style="width:${aEvenPct}%;"></div></div>
-          <span class="bar-pct">${aEvenPct}%</span>
-        </div>
-        <div class="odd-bar-container">
-          <span class="bar-label" style="color:var(--bad);">ODD</span>
-          <div class="odd-bar-rail"><div class="odd-bar-fill" style="width:${aOddPct}%;"></div></div>
-          <span class="bar-pct">${aOddPct}%</span>
-        </div>
-        <div class="grid">${[0,2,4,6,8].map(box).join('')}</div>
-        <div class="grid">${[1,3,5,7,9].map(box).join('')}</div>
-        <div class="tick">${windowData.slice(-50).map(d => `<span class="${d%2===0?'e':'o'}">${d%2===0?'E':'O'}</span>`).join('')}</div>
+        <div class="price-large">${priceStore[sym]}</div>
+        <div class="stat-line"><span>🎲 Even: ${evenPct}%</span><span>Odd: ${oddPct}%</span><span>Window: ${windowSize}</span></div>
+        <div class="digit-grid">${[0,2,4,6,8].map(cell).join('')}${[1,3,5,7,9].map(cell).join('')}</div>
+        <div class="tick-strip">${windowData.slice(-50).map(d => `<span style="color:${d%2===0?'#4ade80':'#f87171'}">${d%2===0?'E':'O'}</span>`).join(' ')}</div>
       `;
 
-      // Move pointer
       setTimeout(() => {
         const lastDigit = full[full.length-1];
-        const targetBox = container.querySelector(`.box[data-digit="${lastDigit}"]`);
-        if (targetBox) {
-          const oldPointer = container.querySelector('.pointer');
-          if (oldPointer) oldPointer.remove();
-          const pointer = document.createElement('div');
-          pointer.className = 'pointer ' + (lastDigit%2===0 ? 'even' : 'odd');
+        const target = container.querySelector(`.digit-cell[data-digit="${lastDigit}"]`);
+        if (target) {
+          const old = container.querySelector('.pointer-dot');
+          if (old) old.remove();
+          const pointer = document.createElement('span');
+          pointer.className = 'pointer-dot ' + (lastDigit%2===0 ? 'even' : 'odd');
           pointer.textContent = '●';
-          targetBox.appendChild(pointer);
+          target.appendChild(pointer);
         }
       }, 10);
     }
 
-    function refreshAllBars() {
-      MARKETS.forEach(m => renderMarket(m.sym));
-    }
-
-    // Start the engine
+    function refreshAllBars() { MARKETS.forEach(m => renderMarket(m.sym)); }
     resetAndFetch();
   })();
 </script>
