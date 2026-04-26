@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Digit Analyzer PRO – Reversal Suite (with Demo Mode)</title>
+  <title>Digit Analyzer PRO – Live Trading (Deriv)</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -17,7 +17,9 @@
       --highlight: #0284c7; --shadow: 0 2px 8px rgba(0,0,0,0.08); }
     body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif;
       height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-    .status-bar { background: var(--card); padding: 0.2rem 1rem; font-size: 0.7rem; border-bottom: 1px solid var(--border); display: flex; gap: 1rem; flex-shrink: 0; }
+    .token-bar { background: #1e293b; padding: 0.3rem 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; font-size: 0.8rem; flex-shrink: 0; }
+    .token-input { background: #0f172a; border: 1px solid var(--border); color: var(--text); padding: 0.2rem 0.5rem; border-radius: 1rem; width: 300px; font-family: monospace; }
+    .status-bar { background: var(--card); padding: 0.2rem 1rem; font-size: 0.7rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; flex-shrink: 0; }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
     .status-dot.connecting { background: #eab308; } .status-dot.live { background: #22c55e; } .status-dot.error { background: #ef4444; }
     .top-bar { background: var(--card); padding: 0.4rem 1rem; border-bottom: 2px solid var(--accent);
@@ -55,7 +57,13 @@
   </style>
 </head>
 <body>
-<div class="status-bar"><span id="connectionStatus"><span class="status-dot connecting"></span> Connecting...</span><span id="dataCount">0 markets ready</span></div>
+<div class="token-bar">
+  <span>🔑 Deriv API Token:</span>
+  <input type="text" id="tokenInput" class="token-input" placeholder="Paste your token here (from Deriv)" value="PUT_TOKEN_HERE">
+  <button id="setTokenBtn" class="btn">Connect</button>
+  <span id="tokenStatus" style="font-size:0.7rem;"></span>
+</div>
+<div class="status-bar"><span id="connectionStatus"><span class="status-dot connecting"></span> Disconnected</span><span id="dataCount">0 markets ready</span></div>
 <div class="top-bar">
   <div class="control-group">📊 TF:<select id="tfPreset"><option value="50/100/250/500">All</option><option value="50/100">50+100</option><option value="250/500">250+500</option></select></div>
   <div class="control-group">🎚️ Sens:<input type="range" id="sensitivitySlider" min="0.5" max="1.8" step="0.01" value="1.0"><span id="sensitivityValue">1.0</span></div>
@@ -76,14 +84,7 @@
 </div>
 <script>
   (function() {
-    const TOKEN = "PUT_TOKEN_HERE"; // ⚠️ REPLACE WITH YOUR DERIV TOKEN OR LEAVE FOR DEMO MODE
-    const USE_DEMO = (TOKEN === "PUT_TOKEN_HERE" || TOKEN.trim() === "");
-    const MARKETS = [
-      {sym:"R_10",name:"V10"},{sym:"R_25",name:"V25"},{sym:"R_50",name:"V50"},{sym:"R_75",name:"V75"},{sym:"R_100",name:"V100"},
-      {sym:"1HZ10V",name:"10s"},{sym:"1HZ25V",name:"25s"},{sym:"1HZ50V",name:"50s"},{sym:"1HZ75V",name:"75s"},{sym:"1HZ100V",name:"100s"},
-      {sym:"JD10",name:"J10"},{sym:"JD25",name:"J25"},{sym:"JD50",name:"J50"},{sym:"JD75",name:"J75"},{sym:"JD100",name:"J100"}
-    ];
-    // ========== PAPER TRADING ==========
+    // ---------- PAPER TRADING ----------
     let virtualBalance = 10000, dailyProfit = 0, stakePerTrade = 100;
     let tradeHistory = [];
     function updateBalanceUI() { document.getElementById('balanceDisplay').innerText = virtualBalance.toFixed(0); const col = dailyProfit>=0?'#4ade80':'#f87171'; document.getElementById('dailyProfit').innerHTML = `<span style="color:${col}">${dailyProfit>=0?'+':''}${dailyProfit.toFixed(0)}</span>`; }
@@ -92,37 +93,46 @@
     document.getElementById('resetBalanceBtn').onclick = () => { virtualBalance=10000; dailyProfit=0; tradeHistory=[]; updateBalanceUI(); renderHistory(); };
     document.getElementById('stakeInput').onchange = (e) => { stakePerTrade = parseFloat(e.target.value) || 100; };
     function renderHistory() { let html = tradeHistory.slice(0,15).map(t=>`<div>${t.time} ${t.sym} ${t.dir} ${t.outcome==='win'?'✅':'❌'} ${t.profit>=0?'+'+t.profit:t.profit} Q:${t.quality}</div>`).join(''); document.getElementById('historyList').innerHTML = html || 'No signals yet'; }
-    // ========== SOUND ==========
+    
+    // ---------- SOUND ----------
     let muted = false, audioPlayer = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
     function playSound() { if(!muted) audioPlayer.play().catch(e=>{}); }
     document.getElementById('soundSelect').onchange = (e) => { audioPlayer = new Audio({beep:"https://actions.google.com/sounds/v1/alarms/beep_short.ogg",alert:"https://actions.google.com/sounds/v1/alarms/beep_soft.ogg",ping:"https://actions.google.com/sounds/v1/alarms/ding.ogg"}[e.target.value]); };
     document.getElementById('muteBtn').onclick = () => { muted = !muted; document.getElementById('muteBtn').innerText = muted ? '🔇' : '🔊'; };
-    // ========== TIMEFRAMES ==========
+    
+    // ---------- TIMEFRAMES & SENSITIVITY ----------
     let timeframes = [50,100,250,500];
     let tfEnabled = [true,true,true,true];
     function setTFPreset(preset) { if(preset==='50/100/250/500') tfEnabled=[true,true,true,true]; else if(preset==='50/100') tfEnabled=[true,true,false,false]; else if(preset==='250/500') tfEnabled=[false,false,true,true]; }
-    document.getElementById('tfPreset').onchange = (e) => { setTFPreset(e.target.value); addDebug(`TF preset: ${e.target.value}`); };
-    // ========== SENSITIVITY ==========
+    document.getElementById('tfPreset').onchange = (e) => { setTFPreset(e.target.value); console.log(`TF preset: ${e.target.value}`); };
     let sensitivity = 1.0;
     document.getElementById('sensitivitySlider').oninput = (e) => { sensitivity = parseFloat(e.target.value); document.getElementById('sensitivityValue').innerText = sensitivity.toFixed(2); };
-    // ========== PROFILES ==========
+    
+    // ---------- PROFILES ----------
     let profiles = { default: { sensitivity:1.0, tfEnabled:[true,true,true,true] } };
     let currentProfile = "default";
-    function saveProfile(name) { profiles[name] = { sensitivity, tfEnabled:[...tfEnabled] }; addDebug(`Profile ${name} saved`); }
-    function loadProfile(name) { if(profiles[name]) { sensitivity = profiles[name].sensitivity; tfEnabled = [...profiles[name].tfEnabled]; document.getElementById('sensitivitySlider').value = sensitivity; document.getElementById('sensitivityValue').innerText = sensitivity; setTFPresetFromArray(); addDebug(`Profile ${name} loaded`); } }
+    function saveProfile(name) { profiles[name] = { sensitivity, tfEnabled:[...tfEnabled] }; console.log(`Profile ${name} saved`); }
+    function loadProfile(name) { if(profiles[name]) { sensitivity = profiles[name].sensitivity; tfEnabled = [...profiles[name].tfEnabled]; document.getElementById('sensitivitySlider').value = sensitivity; document.getElementById('sensitivityValue').innerText = sensitivity; setTFPresetFromArray(); console.log(`Profile ${name} loaded`); } }
     function setTFPresetFromArray() { let str = tfEnabled.map((v,i)=>v?timeframes[i]:null).filter(v=>v).join('/'); document.getElementById('tfPreset').value = str; }
     function buildProfileSelect() { let sel = document.getElementById('profileSelect'); sel.innerHTML = '<option value="default">Default</option>'; for(let p in profiles) if(p!='default') sel.innerHTML += `<option value="${p}">${p}</option>`; sel.onchange = (e) => loadProfile(e.target.value); }
     document.getElementById('autoProfile')?.addEventListener('change', (e) => { if(e.target.checked && currentProfile!='default') saveProfile(currentProfile); });
-    // ========== STATE ==========
-    let store = {}, priceStore = {}, ready = {}, signalState = {}, pinnedSym = null, ws = null;
+    
+    // ---------- GLOBAL STATE ----------
+    const MARKETS = [
+      {sym:"R_10",name:"V10"},{sym:"R_25",name:"V25"},{sym:"R_50",name:"V50"},{sym:"R_75",name:"V75"},{sym:"R_100",name:"V100"},
+      {sym:"1HZ10V",name:"10s"},{sym:"1HZ25V",name:"25s"},{sym:"1HZ50V",name:"50s"},{sym:"1HZ75V",name:"75s"},{sym:"1HZ100V",name:"100s"},
+      {sym:"JD10",name:"J10"},{sym:"JD25",name:"J25"},{sym:"JD50",name:"J50"},{sym:"JD75",name:"J75"},{sym:"JD100",name:"J100"}
+    ];
+    let store = {}, priceStore = {}, ready = {}, signalState = {}, pinnedSym = null;
     let lastSignalTime = {}, signalStrength = {}, signalConfidence = {}, signalQuality = {}, signalExpiry = {};
     let pendingTrades = {}, lastDigitMap = {};
     let marketCheckboxState = {};
-    let debugMessages = [];
-    function addDebug(msg) { debugMessages.unshift(msg); if(debugMessages.length>8) debugMessages.pop(); }
-    // ========== HELPER ==========
+    let ws = null;
+    
+    // ---------- HELPER ----------
     function getEvenPct(arr) { if(!arr.length) return 50; return (arr.filter(d=>d%2===0).length/arr.length)*100; }
-    // ========== SIGNAL LOGIC ==========
+    
+    // ---------- SIGNAL LOGIC (multi‑timeframe reversal) ----------
     function checkSignal(sym) {
       if(!ready[sym]) return false;
       const full = store[sym];
@@ -138,7 +148,6 @@
         if(full.length < tf) continue;
         let data = full.slice(-tf);
         let evenPct = getEvenPct(data);
-        let isSaturated = (evenPct >= 60 + (5/sensitivity)) || (evenPct <= 40 - (5/sensitivity));
         let quarter = Math.max(10, Math.floor(tf/4));
         let recent = data.slice(-quarter), older = data.slice(0,quarter);
         let recentEven = getEvenPct(recent), olderEven = getEvenPct(older);
@@ -174,7 +183,7 @@
         signalExpiry[sym] = now + 8000;
         pendingTrades[sym] = { sym, direction: finalDir, timestamp: now, quality: signalQuality[sym] };
         lastSignalTime[sym]=now;
-        addDebug(`✅ ${sym} ${finalDir} Q=${signalQuality[sym]} (${tfCount} TFs)`);
+        console.log(`✅ ${sym} ${finalDir} Q=${signalQuality[sym]} (${tfCount} TFs)`);
         playSound();
         updateSessionStats(sym, finalDir, quality);
       }
@@ -182,19 +191,24 @@
     }
     setInterval(()=>{ let now=Date.now(); for(let sym in signalExpiry) if(signalExpiry[sym] && now>signalExpiry[sym]) { signalState[sym]=false; delete signalExpiry[sym]; renderMarket(sym); updateDashboard(); } }, 1000);
     function resolvePendingTrade(sym) { let entry = pendingTrades[sym]; if(!entry) return; let lastDigit = lastDigitMap[sym]; if(lastDigit===undefined) return; let win = (entry.direction==='EVEN' && lastDigit%2===0) || (entry.direction==='ODD' && lastDigit%2===1); applyTradeOutcome(sym, entry.direction, win, entry.quality); delete pendingTrades[sym]; signalState[sym]=false; delete signalExpiry[sym]; renderMarket(sym); updateDashboard(); updateCorrelation(); if(win) recordWin(sym); }
-    // ========== SESSION STATS ==========
+    
+    // ---------- SESSION STATS ----------
     let sessionStats = { signals:0, wins:0, totalQuality:0, markets:{}, hourCounts:{} };
     function updateSessionStats(sym, dir, qual) { sessionStats.signals++; sessionStats.totalQuality += qual; let hour = new Date().getHours(); sessionStats.hourCounts[hour] = (sessionStats.hourCounts[hour]||0)+1; if(!sessionStats.markets[sym]) sessionStats.markets[sym]={signals:0,wins:0}; sessionStats.markets[sym].signals++; renderSessionStats(); }
     function recordWin(sym) { if(sessionStats.markets[sym]) sessionStats.markets[sym].wins++; sessionStats.wins++; renderSessionStats(); }
     function renderSessionStats() { let winRate = sessionStats.signals ? (sessionStats.wins/sessionStats.signals*100).toFixed(0) : 0; let avgQual = sessionStats.signals ? (sessionStats.totalQuality/sessionStats.signals).toFixed(0) : 0; let html = `<div>Signals: ${sessionStats.signals} | Wins: ${sessionStats.wins} | WR: ${winRate}%</div><div>Avg Quality: ${avgQual}</div><div>Best hour: ${Object.entries(sessionStats.hourCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'-'}</div><div>Top market: ${Object.entries(sessionStats.markets).sort((a,b)=>b[1].signals-a[1].signals)[0]?.[0]||'-'}</div>`; document.getElementById('sessionStats').innerHTML = html; }
     document.getElementById('resetStatsBtn').onclick = () => { sessionStats = { signals:0, wins:0, totalQuality:0, markets:{}, hourCounts:{} }; renderSessionStats(); };
-    // ========== CORRELATION ==========
+    
+    // ---------- CORRELATION ----------
     function updateCorrelation() { let active = MARKETS.filter(m=>signalState[m.sym]).map(m=>{ let dir = signalStrength[m.sym] ? (getEvenPct(store[m.sym]?.slice(-500))>50?'EVEN':'ODD') : null; return {sym:m.sym, name:m.name, dir}; }).filter(a=>a.dir); if(active.length<2) { document.getElementById('correlationDiv').innerHTML = 'Need at least 2 active signals'; return; } let evenMarkets = active.filter(a=>a.dir==='EVEN').length, oddMarkets = active.filter(a=>a.dir==='ODD').length; let html = `<div>⬆️ EVEN: ${evenMarkets} | ⬇️ ODD: ${oddMarkets}</div><div>Divergence: ${Math.abs(evenMarkets-oddMarkets)} market(s) opposite</div>`; if(evenMarkets>0 && oddMarkets>0) html += `<span style="color:var(--accent)">⚠️ Mixed signals – caution</span>`; document.getElementById('correlationDiv').innerHTML = html; }
-    // ========== COMPACT DASHBOARD ==========
-    function updateDashboard() { let active = MARKETS.filter(m=>signalState[m.sym]).map(m=>{ let dir = signalStrength[m.sym] ? (getEvenPct(store[m.sym]?.slice(-500))>50?'EVEN':'ODD') : null; let expiry = signalExpiry[m.sym] ? Math.max(0, Math.ceil((signalExpiry[m.sym]-Date.now())/1000)) : 0; return { name:m.name, dir, quality: signalQuality[m.sym]||0, expiry }; }).filter(a=>a.dir); document.getElementById('dashboardCount').innerHTML = `(${active.length})`; if(active.length===0) { document.getElementById('compactDashboard').innerHTML = 'No active signals'; return; } let html = `<table class="compact-table"><tr><th>Market</th><th>Dir</th><th>Q</th><th>Exp</th></tr>`+active.map(a=>`<tr><td>${a.name}</td><td class="${a.dir==='EVEN'?'even':'odd'}">${a.dir}</td><td class="${a.quality>=70?'quality-high':(a.quality>=40?'quality-mid':'quality-low')}">${a.quality}</td><td class="countdown">${a.expiry}s</td></tr>`).join('')+`</table>`; document.getElementById('compactDashboard').innerHTML = html; }
-    // ========== EXPORT ==========
+    
+    // ---------- COMPACT DASHBOARD ----------
+    function updateDashboard() { let active = MARKETS.filter(m=>signalState[m.sym]).map(m=>{ let dir = signalStrength[m.sym] ? (getEvenPct(store[m.sym]?.slice(-500))>50?'EVEN':'ODD') : null; let expiry = signalExpiry[m.sym] ? Math.max(0, Math.ceil((signalExpiry[m.sym]-Date.now())/1000)) : 0; return { name:m.name, dir, quality: signalQuality[m.sym]||0, expiry }; }).filter(a=>a.dir); document.getElementById('dashboardCount').innerHTML = `(${active.length})`; if(active.length===0) { document.getElementById('compactDashboard').innerHTML = 'No active signals'; return; } let html = `<table class="compact-table"><tr><th>Market</th><th>Dir</th><th>Q</th><th>Exp</th></tr>`+active.map(a=>`<tr><td>${a.name}</td><td class="${a.dir==='EVEN'?'even':'odd'}">${a.dir}</td><td class="${a.quality>=70?'quality-high':(a.quality>=40?'quality-mid':'quality-low')}">${a.quality}</td><td class="countdown">${a.expiry}s</td>`).join('')+`</table>`; document.getElementById('compactDashboard').innerHTML = html; }
+    
+    // ---------- EXPORT CSV ----------
     document.getElementById('exportBtn').onclick = () => { let csvRows = [["Time","Market","Direction","Outcome","Profit","Quality"]]; tradeHistory.forEach(t=>{ csvRows.push([t.time, t.sym, t.dir, t.outcome, t.profit, t.quality]); }); let csv = csvRows.map(row=>row.join(",")).join("\n"); let blob = new Blob([csv], {type:"text/csv"}); let a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`signals_${new Date().toISOString()}.csv`; a.click(); };
-    // ========== UI RENDERING ==========
+    
+    // ---------- UI RENDERING ----------
     function renderMarket(sym) {
       let container = document.getElementById(`mkt-${sym}`);
       if(!container) { container=document.createElement('div'); container.id=`mkt-${sym}`; container.className='market-card'; document.getElementById('markets').appendChild(container); }
@@ -224,20 +238,34 @@
     }
     function sortCards() { let area=document.getElementById('markets'); let cards=Array.from(area.querySelectorAll('.market-card')); let order=new Map(); MARKETS.forEach((m,i)=>order.set(m.sym,i)); cards.sort((a,b)=>{ let sa=a.id.replace('mkt-',''), sb=b.id.replace('mkt-',''); if(sa===pinnedSym) return -1; if(sb===pinnedSym) return 1; return (order.get(sa)||999)-(order.get(sb)||999); }); cards.forEach(c=>area.appendChild(c)); }
     function pinMarket(sym){ pinnedSym=sym; sortCards(); document.getElementById(`mkt-${sym}`)?.scrollIntoView({behavior:'smooth',block:'center'}); }
-    // ========== WEBSOCKET (with demo fallback) ==========
-    let readyCount = 0;
-    function updateStatus(status, colorClass) { document.getElementById('connectionStatus').innerHTML = `<span class="status-dot ${colorClass}"></span> ${status}`; }
-    function connect() {
-      updateStatus("Connecting...", "connecting");
+    
+    // ---------- LIVE WEBSOCKET CONNECTION (Deriv) ----------
+    let currentToken = "";
+    function setToken(token) { currentToken = token; localStorage.setItem("deriv_token", token); document.getElementById("tokenStatus").innerText = "Token set, reconnect."; }
+    function loadSavedToken() { let saved = localStorage.getItem("deriv_token"); if(saved && saved !== "PUT_TOKEN_HERE") { document.getElementById("tokenInput").value = saved; setToken(saved); } }
+    function connectLive() {
+      if(ws) { ws.close(); ws = null; }
+      let token = document.getElementById("tokenInput").value.trim();
+      if(!token || token === "PUT_TOKEN_HERE") { document.getElementById("connectionStatus").innerHTML = '<span class="status-dot error"></span> No valid token'; document.getElementById("tokenStatus").innerText = "❌ Enter your Deriv token"; return; }
+      setToken(token);
+      document.getElementById("connectionStatus").innerHTML = '<span class="status-dot connecting"></span> Connecting...';
       ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
       ws.onopen = () => {
-        if(!USE_DEMO) ws.send(JSON.stringify({authorize: TOKEN}));
-        MARKETS.forEach(m => { ws.send(JSON.stringify({ticks_history: m.sym, count: 500, end: "latest", style: "ticks"})); });
-        setTimeout(() => { MARKETS.forEach(m => { ws.send(JSON.stringify({ticks: m.sym, subscribe: 1})); }); }, 1500);
-        updateStatus(USE_DEMO ? "Demo Mode (public ticks)" : "Authorized", "live");
+        ws.send(JSON.stringify({authorize: token}));
+        // Wait for authorization response before subscribing
       };
       ws.onmessage = (msg) => {
         let data = JSON.parse(msg.data);
+        if(data.msg_type === "authorize" && data.error) {
+          document.getElementById("connectionStatus").innerHTML = '<span class="status-dot error"></span> Auth failed: '+data.error.message;
+          return;
+        }
+        if(data.msg_type === "authorize" && !data.error) {
+          document.getElementById("connectionStatus").innerHTML = '<span class="status-dot live"></span> Live (authorized)';
+          // After auth, request history for all markets
+          MARKETS.forEach(m => { ws.send(JSON.stringify({ticks_history: m.sym, count: 600, end: "latest", style: "ticks"})); });
+          setTimeout(() => { MARKETS.forEach(m => { ws.send(JSON.stringify({ticks: m.sym, subscribe: 1})); }); }, 2000);
+        }
         if(data.history) {
           let sym = data.echo_req.ticks_history;
           let prices = data.history.prices;
@@ -246,7 +274,7 @@
           store[sym] = store[sym].concat(digits).slice(-10000);
           priceStore[sym] = prices.length ? parseFloat(prices[prices.length-1]).toFixed(2) : '—';
           ready[sym] = store[sym].length >= 500;
-          if(ready[sym]) readyCount++;
+          let readyCount = MARKETS.filter(m=>ready[m.sym]).length;
           document.getElementById('dataCount').innerText = `${readyCount}/${MARKETS.length} markets ready`;
           renderMarket(sym); updateInsights(); sortCards();
         }
@@ -261,25 +289,31 @@
           lastDigitMap[sym]=digit;
           ready[sym] = store[sym].length >= 500;
           resolvePendingTrade(sym);
-          let oldSig = signalState[sym]||false;
+          let oldSig = signalState[sym] || false;
           let newSig = checkSignal(sym);
           signalState[sym] = newSig;
           if(!oldSig && newSig) playSound();
           else if(oldSig && !newSig) { signalStrength[sym]=0; signalConfidence[sym]=0; }
           renderMarket(sym); updateInsights(); sortCards(); updateDashboard(); updateCorrelation();
+          let readyCount = MARKETS.filter(m=>ready[m.sym]).length;
+          document.getElementById('dataCount').innerText = `${readyCount}/${MARKETS.length} markets ready`;
         }
-        if(data.error) { console.warn(data.error); updateStatus("Error: "+data.error.message, "error"); }
+        if(data.error && data.error.code !== "AuthorizationRequired") console.warn(data.error);
       };
-      ws.onclose = () => { updateStatus("Disconnected - retrying...", "error"); setTimeout(connect, 5000); };
-      ws.onerror = () => { updateStatus("Connection error", "error"); };
+      ws.onclose = () => { document.getElementById("connectionStatus").innerHTML = '<span class="status-dot error"></span> Disconnected'; };
+      ws.onerror = (err) => { console.error(err); document.getElementById("connectionStatus").innerHTML = '<span class="status-dot error"></span> Connection error'; };
     }
-    function resetAndFetch() { if(ws) ws.close(); readyCount=0; MARKETS.forEach(m=>{ store[m.sym]=[]; ready[m.sym]=false; signalState[m.sym]=false; signalStrength[m.sym]=0; signalConfidence[m.sym]=0; }); pendingTrades={}; lastSignalTime={}; signalExpiry={}; connect(); }
+    function resetAndFetch() { if(ws) ws.close(); MARKETS.forEach(m=>{ store[m.sym]=[]; ready[m.sym]=false; signalState[m.sym]=false; signalStrength[m.sym]=0; signalConfidence[m.sym]=0; }); pendingTrades={}; lastSignalTime={}; signalExpiry={}; connectLive(); }
     document.getElementById('refreshBtn').onclick = resetAndFetch;
+    document.getElementById('setTokenBtn').onclick = () => { connectLive(); };
     document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
-    // Build market list
+    
+    // Build market list with checkboxes
     MARKETS.forEach(m=>{ let div=document.createElement('div'); div.className='market-list-item'; div.setAttribute('data-sym',m.sym); let cb=document.createElement('input'); cb.type='checkbox'; cb.checked=true; cb.onchange=(e)=>{ marketCheckboxState[m.sym]=e.target.checked; let el=document.getElementById(`mkt-${m.sym}`); if(el) el.style.display=e.target.checked?'':'none'; }; marketCheckboxState[m.sym]=true; let span=document.createElement('span'); span.textContent=m.name; span.onclick=()=>pinMarket(m.sym); div.appendChild(cb); div.appendChild(span); document.getElementById('marketList').appendChild(div); });
     buildProfileSelect();
-    resetAndFetch();
+    loadSavedToken();
+    // Auto-connect if token already exists
+    if(localStorage.getItem("deriv_token") && localStorage.getItem("deriv_token") !== "PUT_TOKEN_HERE") connectLive();
     setInterval(()=>{ updateDashboard(); if(document.getElementById('autoProfile')?.checked && currentProfile!='default') saveProfile(currentProfile); }, 5000);
   })();
 </script>
