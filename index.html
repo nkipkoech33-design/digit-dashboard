@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digit Analyzer PRO – All Active Signals</title>
+  <title>Digit Analyzer PRO – Final Upgrade</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -157,8 +157,17 @@
       font-size: 0.8rem;
       cursor: pointer;
       border-bottom: 1px solid var(--border);
+      transition: background 0.2s;
     }
     .market-list-item:hover { background: var(--bg); }
+    .market-list-item.blinking {
+      animation: listBlink 0.8s infinite;
+    }
+    @keyframes listBlink {
+      0% { color: var(--text); }
+      50% { color: var(--accent); }
+      100% { color: var(--text); }
+    }
     .market-card {
       background: var(--card);
       border-radius: 1rem;
@@ -169,12 +178,12 @@
     }
     .market-card.signal-active {
       border-color: var(--accent);
-      box-shadow: 0 0 12px var(--accent);
+      box-shadow: 0 0 15px var(--accent);
       animation: pulse-border 1.5s infinite;
     }
     @keyframes pulse-border {
       0% { box-shadow: 0 0 5px var(--accent); }
-      50% { box-shadow: 0 0 18px var(--accent); }
+      50% { box-shadow: 0 0 20px var(--accent); }
       100% { box-shadow: 0 0 5px var(--accent); }
     }
     .card-header {
@@ -188,11 +197,21 @@
     .price-large { font-size: 1.8rem; font-weight: 800; text-align: center; color: var(--highlight); margin: 0.3rem 0; }
     .stat-line { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-secondary); margin: 0.15rem 0; }
 
+    .trade-type-badge {
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.25rem 0.8rem;
+      border-radius: 2rem;
+      letter-spacing: 0.5px;
+    }
+    .trade-type-badge.even { background: #14532d; color: #86efac; border: 1px solid #22c55e; }
+    .trade-type-badge.odd  { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+
     .digit-grid {
       display: grid;
       grid-template-columns: repeat(5, 80px);
-      gap: 5px;
-      margin: 0.4rem 0;
+      gap: 12px;
+      margin: 0.6rem 0 0.4rem 0;
       justify-content: center;
     }
     .digit-cell {
@@ -258,6 +277,9 @@
       .main-layout { flex-direction: column; }
       .sidebar { width: 100%; border-left: none; border-top: 1px solid var(--border); max-height: 180px; }
       .markets-area { height: calc(100vh - 280px); }
+      .digit-grid { grid-template-columns: repeat(5, 60px); }
+      .digit-cell { width: 60px; height: 60px; }
+      .digit-number { font-size: 1.4rem; }
     }
   </style>
 </head>
@@ -310,6 +332,7 @@
     let windowSize = 10000;
     let analysisTicks = 100;
     let store = {}, priceStore = {}, ready = {}, signalState = {};
+    let latestScore = {};       // cache score per market for sorting
     let ws = null;
     let audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
 
@@ -318,11 +341,21 @@
     MARKETS.forEach(m => {
       let lbl = document.createElement('label');
       lbl.className = 'market-list-item';
+      lbl.setAttribute('data-sym', m.sym);
       lbl.innerHTML = `<input type="checkbox" class="market-checkbox" data-sym="${m.sym}" checked> ${m.name}`;
+      lbl.addEventListener('click', (e) => {
+        // Scroll to the corresponding market card
+        const card = document.getElementById(`mkt-${m.sym}`);
+        if (card) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
       marketListDiv.appendChild(lbl);
     });
+
     document.querySelectorAll('.market-checkbox').forEach(cb => {
-      cb.addEventListener('change', function() {
+      cb.addEventListener('change', function(e) {
+        e.stopPropagation();  // prevent label's click from also scrolling
         const sym = this.dataset.sym;
         const el = document.getElementById(`mkt-${sym}`);
         if (el) el.style.display = this.checked ? '' : 'none';
@@ -359,6 +392,7 @@
         priceStore[m.sym] = '—';
         ready[m.sym] = false;
         signalState[m.sym] = false;
+        latestScore[m.sym] = 0;
       });
       connect();
     }
@@ -393,6 +427,7 @@
           updateReady(sym);
           renderMarket(sym);
           updateInsights();
+          sortCards();
         }
         if (data.tick) {
           const sym = data.tick.symbol;
@@ -410,6 +445,7 @@
           if (!oldSig && newSig) audio.play();
           renderMarket(sym);
           updateInsights();
+          sortCards();
         }
         if (data.error) console.warn(data.error);
       };
@@ -499,8 +535,14 @@
       MARKETS.forEach(m => {
         if (!ready[m.sym] || !signalState[m.sym]) return;
         const score = computeTradeScore(m.sym);
+        latestScore[m.sym] = score;
         if (score > bestScore) { bestScore = score; bestSym = m.sym; }
       });
+      // Also update scores for non‑signal markets (to rank them at zero)
+      MARKETS.forEach(m => {
+        if (!signalState[m.sym]) latestScore[m.sym] = 0;
+      });
+
       if (bestSym) {
         const mkt = MARKETS.find(m => m.sym === bestSym);
         bestMarketLabel.textContent = `🏆 Best: ${mkt.name} (${(bestScore*100).toFixed(0)})`;
@@ -524,6 +566,30 @@
           return `<span class="signal-badge ${dirClass}">${s.name} ${dirLabel} (${(s.score*100).toFixed(0)})</span>`;
         }).join('');
       }
+
+      // Update blinking on sidebar items
+      MARKETS.forEach(m => {
+        const listItem = document.querySelector(`.market-list-item[data-sym="${m.sym}"]`);
+        if (listItem) {
+          listItem.classList.toggle('blinking', signalState[m.sym] === true);
+        }
+      });
+    }
+
+    function sortCards() {
+      const area = document.getElementById('markets');
+      if (!area) return;
+      const cards = Array.from(area.querySelectorAll('.market-card'));
+      // Sort by latestScore descending
+      cards.sort((a, b) => {
+        const symA = a.id.replace('mkt-', '');
+        const symB = b.id.replace('mkt-', '');
+        const scoreA = latestScore[symA] || 0;
+        const scoreB = latestScore[symB] || 0;
+        return scoreB - scoreA;
+      });
+      // Re‑append in sorted order
+      cards.forEach(card => area.appendChild(card));
     }
 
     function renderMarket(sym) {
@@ -571,11 +637,21 @@
       const early = getEarlyMomentum(sym);
       const regime = classifyRegime(sym);
       const isSig = signalState[sym] || false;
+      const tradeDir = isSig ? getSignalDirection(sym) : null;
+
+      // Build trade type badge
+      let tradeTypeHtml = '';
+      if (isSig && tradeDir) {
+        const dirClass = tradeDir === 'EVEN' ? 'even' : 'odd';
+        const label = tradeDir === 'EVEN' ? 'BUY EVEN' : 'BUY ODD';
+        tradeTypeHtml = `<span class="trade-type-badge ${dirClass}">${label}</span>`;
+      }
+
       container.className = 'market-card' + (isSig ? ' signal-active' : '');
 
       container.innerHTML = `
         <div class="card-header">
-          <div class="market-name">${mkt.name} <span class="tag" style="background:${regime.color}">${regime.type}</span></div>
+          <div class="market-name">${mkt.name} ${tradeTypeHtml} <span class="tag" style="background:${regime.color}">${regime.type}</span></div>
           <div style="display:flex; gap:6px;">
             ${early.dir === 'up' ? '<span class="tag" style="background:#16a34a;">📈 Rising +'+early.value.toFixed(1)+'%</span>' : (early.dir === 'down' ? '<span class="tag" style="background:#dc2626;">📉 Falling '+early.value.toFixed(1)+'%</span>' : '<span class="tag" style="background:#64748b;">➖ Steady</span>')}
             ${parseFloat(evenPct)>=48 && parseFloat(evenPct)<=52 ? '<span class="tag" style="background:#64748b;">⚖️ TIE</span>' : ''}
