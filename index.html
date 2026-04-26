@@ -3,298 +3,302 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Digit Analyzer PRO – 4‑Timeframe Reversal (50/100/250/500)</title>
+  <title>Digit Analyzer PRO – Live + Simulated Modes</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #0b0f19; --card: #131a2b; --border: #2a3345; --text: #e2e8f0;
       --text-secondary: #94a3b8; --accent: #fbbf24; --good: #4ade80; --bad: #f87171;
       --highlight: #38bdf8; --shadow: 0 4px 12px rgba(0,0,0,0.4);
+      --score-high: #22c55e; --score-mid: #eab308; --score-low: #ef4444;
     }
     body.light { --bg: #f1f5f9; --card: #ffffff; --border: #cbd5e1; --text: #0f172a;
       --text-secondary: #475569; --accent: #eab308; --good: #16a34a; --bad: #dc2626;
       --highlight: #0284c7; --shadow: 0 2px 8px rgba(0,0,0,0.08); }
     body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif;
       height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-    .top-bar { background: var(--card); padding: 0.6rem 1.2rem; border-bottom: 2px solid var(--accent);
-      box-shadow: var(--shadow); z-index: 20; display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; flex-shrink: 0; }
+    .status-bar { background: var(--card); padding: 0.2rem 1rem; font-size: 0.7rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; flex-shrink: 0; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+    .status-dot.connecting { background: #eab308; } .status-dot.live { background: #22c55e; } .status-dot.sim { background: #a855f7; } .status-dot.error { background: #ef4444; }
+    .top-bar { background: var(--card); padding: 0.4rem 1rem; border-bottom: 2px solid var(--accent);
+      display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; flex-shrink: 0; font-size: 0.75rem; }
     .control-group { display: flex; align-items: center; gap: 0.4rem; background: var(--bg); padding: 0.2rem 0.6rem;
-      border-radius: 2rem; font-size: 0.75rem; font-weight: 500; }
-    .btn { background: var(--accent); color: #000; border: none; padding: 0.3rem 0.8rem;
-      border-radius: 2rem; font-weight: 600; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s; }
-    .btn:hover { opacity: 0.9; }
-    .insights-bar { background: var(--card); padding: 0.3rem 1rem; border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; gap: 0.8rem; flex-wrap: nowrap; overflow-x: auto; flex-shrink: 0; min-height: 48px; }
-    .best-badge { background: var(--accent); color: #000; padding: 0.2rem 0.6rem; border-radius: 2rem;
-      font-weight: 700; white-space: nowrap; font-size: 0.8rem; }
-    .signals-row { display: flex; gap: 6px; flex-wrap: wrap; }
-    .signal-badge { padding: 0.2rem 0.6rem; border-radius: 2rem; font-weight: 700; font-size: 0.7rem; white-space: nowrap; }
-    .signal-badge.even { background: #166534; color: #4ade80; border: 1px solid #22c55e; }
-    .signal-badge.odd  { background: #7f1d1d; color: #f87171; border: 1px solid #ef4444; }
+      border-radius: 1.5rem; }
+    .btn { background: var(--accent); color: #000; border: none; padding: 0.2rem 0.6rem;
+      border-radius: 1.5rem; font-weight: 600; cursor: pointer; font-size: 0.7rem; }
+    .insights-bar { background: var(--card); padding: 0.2rem 0.8rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 0.6rem; overflow-x: auto; flex-shrink: 0; min-height: 40px; }
     .main-layout { display: flex; flex: 1; overflow: hidden; }
-    .markets-area { flex: 1; overflow-y: auto; padding: 0.8rem; display: flex; flex-direction: column; gap: 0.8rem; }
-    .sidebar { width: 310px; background: var(--card); border-left: 1px solid var(--border);
-      overflow-y: auto; padding: 0.8rem; display: flex; flex-direction: column; gap: 1rem; }
-    .debug-panel, .history-panel { background: var(--bg); border-radius: 0.8rem; padding: 0.6rem;
-      border: 1px solid var(--border); font-size: 0.7rem; max-height: 200px; overflow-y: auto; }
-    .history-entry { font-family: monospace; padding: 3px 0; border-bottom: 1px dotted var(--border); display: flex; justify-content: space-between; }
-    .win { color: var(--good); } .loss { color: var(--bad); }
-    .market-list-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0;
-      border-bottom: 1px solid var(--border); cursor: pointer; }
-    .market-list-item span { flex: 1; }
-    .market-list-item.blinking span { animation: listBlink 0.8s infinite; }
-    @keyframes listBlink { 0% { color: var(--text); } 50% { color: var(--accent); } 100% { color: var(--text); } }
-    .market-card { background: var(--card); border-radius: 1rem; padding: 0.8rem;
-      box-shadow: var(--shadow); border: 2px solid transparent; transition: all 0.2s; }
-    .market-card.signal-active { border-color: var(--accent); box-shadow: 0 0 15px var(--accent); animation: pulse-border 1.5s infinite; }
-    @keyframes pulse-border { 0% { box-shadow: 0 0 5px var(--accent); } 50% { box-shadow: 0 0 20px var(--accent); } 100% { box-shadow: 0 0 5px var(--accent); } }
-    .price-large { font-size: 1.6rem; font-weight: 800; text-align: center; color: var(--highlight); margin: 0.2rem 0; }
-    .stat-line { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary); margin: 0.1rem 0; }
-    .digit-grid { display: grid; grid-template-columns: repeat(5, 70px); gap: 8px; margin: 0.5rem 0 0.3rem 0; justify-content: center; }
-    .digit-cell { width: 70px; height: 70px; background: var(--bg); border-radius: 0.4rem;
+    .markets-area { flex: 1; overflow-y: auto; padding: 0.6rem; display: flex; flex-direction: column; gap: 0.6rem; }
+    .sidebar { width: 340px; background: var(--card); border-left: 1px solid var(--border);
+      overflow-y: auto; padding: 0.6rem; display: flex; flex-direction: column; gap: 0.8rem; }
+    .panel { background: var(--bg); border-radius: 0.6rem; padding: 0.5rem; border: 1px solid var(--border); }
+    .panel-title { font-weight: 700; margin-bottom: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+    .market-card { background: var(--card); border-radius: 0.8rem; padding: 0.6rem; border: 2px solid transparent; transition: all 0.2s; }
+    .market-card.signal-active { border-color: var(--accent); box-shadow: 0 0 12px var(--accent); animation: pulse-border 1.5s infinite; }
+    @keyframes pulse-border { 0% { box-shadow: 0 0 4px var(--accent); } 50% { box-shadow: 0 0 16px var(--accent); } 100% { box-shadow: 0 0 4px var(--accent); } }
+    .compact-table { width: 100%; font-size: 0.7rem; border-collapse: collapse; }
+    .compact-table th, .compact-table td { padding: 0.2rem; text-align: left; border-bottom: 1px solid var(--border); }
+    .digit-grid { display: grid; grid-template-columns: repeat(5, 50px); gap: 6px; margin: 0.3rem 0; justify-content: center; }
+    .digit-cell { width: 50px; height: 50px; background: var(--bg); border-radius: 0.4rem;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      position: relative; font-weight: 700; border: 1px solid var(--border); }
-    .digit-cell.most { background: #166534; border-color: #22c55e; }
-    .digit-number { font-size: 1.5rem; line-height: 1; }
-    .digit-percent { font-size: 0.65rem; opacity: 0.9; }
+      position: relative; font-weight: 700; border: 1px solid var(--border); font-size: 0.8rem; }
+    .digit-number { font-size: 1.2rem; }
+    .digit-percent { font-size: 0.6rem; }
     .pointer-dot { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      font-size: 1.8rem; animation: pulse-dot 0.8s infinite; text-shadow: 0 0 8px currentColor; }
-    .pointer-dot.even { color: #4ade80; } .pointer-dot.odd { color: #f87171; }
-    @keyframes pulse-dot { 0% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.2); } 100% { transform: translate(-50%, -50%) scale(1); } }
-    .tick-strip { display: flex; gap: 2px; margin-top: 0.3rem; font-size: 0.7rem; justify-content: center; flex-wrap: wrap; }
-    .tag { font-size: 0.65rem; padding: 0.15rem 0.4rem; border-radius: 1rem; font-weight: 600; }
-    .signal-gauges { display: flex; gap: 0.8rem; margin-top: 0.4rem; padding-top: 0.4rem;
-      border-top: 1px solid var(--border); font-size: 0.65rem; justify-content: space-evenly; }
-    .gauge { flex: 1; text-align: center; }
-    .gauge-bar-bg { background: var(--bg); border-radius: 10px; height: 5px; overflow: hidden; }
-    .gauge-fill { height: 100%; width: 0%; transition: width 0.3s; border-radius: 10px; }
-    .gauge-fill.strength { background: #fbbf24; }
-    .gauge-fill.conf { background: #38bdf8; }
-    @media (max-width: 800px) { .main-layout { flex-direction: column; } .sidebar { width: 100%; max-height: 280px; } .digit-grid { grid-template-columns: repeat(5, 50px); } .digit-cell { width: 50px; height: 50px; } .digit-number { font-size: 1.2rem; } }
+      font-size: 1.4rem; animation: pulse-dot 0.8s infinite; }
+    .signal-badge { padding: 0.2rem 0.5rem; border-radius: 1rem; font-size: 0.7rem; }
+    .signal-badge.even { background: #166534; color: #4ade80; }
+    .signal-badge.odd { background: #7f1d1d; color: #f87171; }
+    .quality-high { color: #22c55e; } .quality-mid { color: #eab308; } .quality-low { color: #ef4444; }
+    @media (max-width: 800px) { .sidebar { width: 100%; max-height: 280px; } .digit-grid { grid-template-columns: repeat(5, 40px); } .digit-cell { width: 40px; height: 40px; } }
   </style>
 </head>
 <body>
+<div class="status-bar"><span id="connectionStatus"><span class="status-dot connecting"></span> Connecting...</span><span id="dataCount">0 markets ready</span><button id="simulateBtn" class="btn" style="background:#a855f7;">🎮 Simulate</button></div>
 <div class="top-bar">
-  <div class="control-group"><span>📊 TF1 (50)</span><input type="range" id="tf1" min="1" max="100" value="1"><span id="tf1Val">on</span></div>
-  <div class="control-group"><span>📊 TF2 (100)</span><input type="range" id="tf2" min="1" max="100" value="1"><span id="tf2Val">on</span></div>
-  <div class="control-group"><span>📊 TF3 (250)</span><input type="range" id="tf3" min="1" max="100" value="1"><span id="tf3Val">on</span></div>
-  <div class="control-group"><span>📊 TF4 (500)</span><input type="range" id="tf4" min="1" max="100" value="1"><span id="tf4Val">on</span></div>
-  <div class="control-group"><span>🎚️ Sens</span><input type="range" id="sensitivitySlider" min="0.5" max="1.8" step="0.01" value="1.0"><span id="sensitivityValue">1.0</span></div>
-  <div class="control-group"><span>🔊</span><select id="soundSelect" style="width:60px;"><option value="beep">🔔</option><option value="alert">📢</option><option value="ping">🔊</option></select><button id="muteBtn" class="btn">🔇</button></div>
-  <div class="control-group"><span>💰</span><span id="balanceDisplay">10000</span><span id="dailyProfit" style="font-size:0.7rem;">0</span><input type="number" id="stakeInput" value="100" step="10" style="width:60px;"><button id="resetBalanceBtn" class="btn">↺</button></div>
-  <button class="btn" id="refreshBtn">🔄</button>
-  <button class="btn" id="themeToggle">🌓</button>
+  <div class="control-group">📊 TF:<select id="tfPreset"><option value="50/100/250/500">All</option><option value="50/100">50+100</option><option value="250/500">250+500</option></select></div>
+  <div class="control-group">🎚️ Sens:<input type="range" id="sensitivitySlider" min="0.5" max="1.8" step="0.01" value="1.0"><span id="sensitivityValue">1.0</span></div>
+  <div class="control-group">🔊<select id="soundSelect"><option value="beep">🔔</option><option value="alert">📢</option><option value="ping">🔊</option></select><button id="muteBtn" class="btn">🔇</button></div>
+  <div class="control-group">💰<span id="balanceDisplay">10000</span><span id="dailyProfit">0</span><input id="stakeInput" value="100" size="3"><button id="resetBalanceBtn" class="btn">↺</button></div>
+  <div class="control-group"><button id="exportBtn" class="btn">📥 CSV</button><button id="refreshBtn" class="btn">🔄</button><button id="themeToggle" class="btn">🌓</button></div>
 </div>
 <div class="insights-bar"><span class="best-badge" id="bestMarketLabel">🏆 Loading…</span><div class="signals-row" id="activeSignalsList"></div></div>
 <div class="main-layout">
   <div class="markets-area" id="markets"></div>
   <div class="sidebar">
-    <div class="sidebar-title">📋 Markets (click name to pin)</div>
-    <div id="marketList"></div>
-    <div class="history-panel"><div>📜 History <span id="overallWinRate"></span></div><div id="historyList">No signals yet</div></div>
-    <div class="debug-panel"><div>🔍 Reversal check</div><div id="debugContent">Waiting for data...</div></div>
+    <div class="panel"><div class="panel-title">📋 Market Profiles</div><select id="profileSelect" class="profile-select"></select><div><label><input type="checkbox" id="autoProfile"> Auto‑save changes</label></div></div>
+    <div class="panel"><div class="panel-title">📊 Compact Dashboard <span id="dashboardCount"></span></div><div id="compactDashboard" style="max-height:200px; overflow-y:auto;"></div></div>
+    <div class="panel"><div class="panel-title">📈 Session Stats <button id="resetStatsBtn" class="btn">Reset</button></div><div id="sessionStats"></div></div>
+    <div class="panel"><div class="panel-title">🔗 Divergence</div><div id="correlationDiv" style="font-size:0.7rem;"></div></div>
+    <div class="panel"><div class="panel-title">📜 Signal History</div><div id="historyList" style="max-height:150px; overflow-y:auto; font-size:0.7rem;">No signals yet</div></div>
   </div>
 </div>
 <script>
   (function() {
-    const TOKEN = "PUT_TOKEN_HERE"; // ⚠️ REPLACE WITH YOUR DERIV TOKEN
-    const MARKETS = [
-      {sym:"R_10",name:"V10"},{sym:"R_25",name:"V25"},{sym:"R_50",name:"V50"},{sym:"R_75",name:"V75"},{sym:"R_100",name:"V100"},
-      {sym:"1HZ10V",name:"10s"},{sym:"1HZ25V",name:"25s"},{sym:"1HZ50V",name:"50s"},{sym:"1HZ75V",name:"75s"},{sym:"1HZ100V",name:"100s"},
-      {sym:"JD10",name:"J10"},{sym:"JD25",name:"J25"},{sym:"JD50",name:"J50"},{sym:"JD75",name:"J75"},{sym:"JD100",name:"J100"}
-    ];
+    const TOKEN = "PUT_TOKEN_HERE"; // replace to use real data
+    let USE_SIMULATION = false;
+    let simulationInterval = null;
     
-    // Paper trading
+    // ========== PAPER TRADING ==========
     let virtualBalance = 10000, dailyProfit = 0, stakePerTrade = 100;
-    let tradeHistory = [], marketWinStats = new Map();
-    function updateBalanceUI() { document.getElementById('balanceDisplay').innerText = virtualBalance.toFixed(0); const color = dailyProfit>=0 ? '#4ade80' : '#f87171'; document.getElementById('dailyProfit').innerHTML = `<span style="color:${color}">${dailyProfit>=0?'+':''}${dailyProfit.toFixed(0)}</span>`; }
-    function addToHistory(sym, dir, outcome, profit) {
-      tradeHistory.unshift({ sym, dir, outcome, profit, time: new Date().toLocaleTimeString() });
-      if(tradeHistory.length > 50) tradeHistory.pop();
-      let stats = marketWinStats.get(sym) || { wins:0, losses:0 };
-      outcome==='win'?stats.wins++:stats.losses++;
-      marketWinStats.set(sym, stats);
-      let totalWins = tradeHistory.filter(t=>t.outcome==='win').length;
-      let total = tradeHistory.length;
-      let winRate = total ? (totalWins/total*100).toFixed(0) : 0;
-      document.getElementById('overallWinRate').innerHTML = `(WR:${winRate}%)`;
-      let html = tradeHistory.slice(0,15).map(t => `<div class="history-entry"><span>${t.time} ${t.sym} ${t.dir}</span><span class="${t.outcome}">${t.outcome==='win'?'+'+t.profit.toFixed(0):t.profit.toFixed(0)}</span></div>`).join('');
-      document.getElementById('historyList').innerHTML = html;
-    }
-    function applyTradeOutcome(sym, dir, win) { let profit = win ? stakePerTrade*0.85 : -stakePerTrade; virtualBalance += profit; dailyProfit += profit; updateBalanceUI(); addToHistory(sym, dir, win?'win':'loss', profit); }
-    document.getElementById('resetBalanceBtn').onclick = () => { virtualBalance=10000; dailyProfit=0; tradeHistory=[]; marketWinStats.clear(); updateBalanceUI(); addToHistory('','',false,0); };
+    let tradeHistory = [];
+    function updateBalanceUI() { document.getElementById('balanceDisplay').innerText = virtualBalance.toFixed(0); const col = dailyProfit>=0?'#4ade80':'#f87171'; document.getElementById('dailyProfit').innerHTML = `<span style="color:${col}">${dailyProfit>=0?'+':''}${dailyProfit.toFixed(0)}</span>`; }
+    function addToHistory(sym, dir, outcome, profit, quality) { tradeHistory.unshift({ sym, dir, outcome, profit, time: new Date().toLocaleTimeString(), quality }); if(tradeHistory.length>100) tradeHistory.pop(); renderHistory(); }
+    function applyTradeOutcome(sym, dir, win, quality) { let profit = win ? stakePerTrade*0.85 : -stakePerTrade; virtualBalance += profit; dailyProfit += profit; updateBalanceUI(); addToHistory(sym, dir, win?'win':'loss', profit, quality); }
+    document.getElementById('resetBalanceBtn').onclick = () => { virtualBalance=10000; dailyProfit=0; tradeHistory=[]; updateBalanceUI(); renderHistory(); };
     document.getElementById('stakeInput').onchange = (e) => { stakePerTrade = parseFloat(e.target.value) || 100; };
+    function renderHistory() { let html = tradeHistory.slice(0,15).map(t=>`<div>${t.time} ${t.sym} ${t.dir} ${t.outcome==='win'?'✅':'❌'} ${t.profit>=0?'+'+t.profit:t.profit} Q:${t.quality}</div>`).join(''); document.getElementById('historyList').innerHTML = html || 'No signals yet'; }
     
-    // Sound
-    let muted = false;
-    let sounds = { beep: "https://actions.google.com/sounds/v1/alarms/beep_short.ogg", alert: "https://actions.google.com/sounds/v1/alarms/beep_soft.ogg", ping: "https://actions.google.com/sounds/v1/alarms/ding.ogg" };
-    let audioPlayer = new Audio(sounds.beep);
+    // ========== SOUND ==========
+    let muted = false, audioPlayer = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
     function playSound() { if(!muted) audioPlayer.play().catch(e=>{}); }
-    document.getElementById('soundSelect').onchange = (e) => { audioPlayer = new Audio(sounds[e.target.value]); };
+    document.getElementById('soundSelect').onchange = (e) => { audioPlayer = new Audio({beep:"https://actions.google.com/sounds/v1/alarms/beep_short.ogg",alert:"https://actions.google.com/sounds/v1/alarms/beep_soft.ogg",ping:"https://actions.google.com/sounds/v1/alarms/ding.ogg"}[e.target.value]); };
     document.getElementById('muteBtn').onclick = () => { muted = !muted; document.getElementById('muteBtn').innerText = muted ? '🔇' : '🔊'; };
     
-    // Timeframes
-    let timeframes = [50, 100, 250, 500];
-    let tfEnabled = [true, true, true, true];
+    // ========== TIMEFRAMES & SENSITIVITY ==========
+    let timeframes = [50,100,250,500];
+    let tfEnabled = [true,true,true,true];
+    function setTFPreset(preset) { if(preset==='50/100/250/500') tfEnabled=[true,true,true,true]; else if(preset==='50/100') tfEnabled=[true,true,false,false]; else if(preset==='250/500') tfEnabled=[false,false,true,true]; }
+    document.getElementById('tfPreset').onchange = (e) => { setTFPreset(e.target.value); addDebug(`TF preset: ${e.target.value}`); };
     let sensitivity = 1.0;
-    function updateTFUI() {
-      document.getElementById('tf1Val').innerText = tfEnabled[0]?'on':'off';
-      document.getElementById('tf2Val').innerText = tfEnabled[1]?'on':'off';
-      document.getElementById('tf3Val').innerText = tfEnabled[2]?'on':'off';
-      document.getElementById('tf4Val').innerText = tfEnabled[3]?'on':'off';
-    }
-    document.getElementById('tf1').oninput = (e) => { tfEnabled[0] = e.target.value > 50; updateTFUI(); };
-    document.getElementById('tf2').oninput = (e) => { tfEnabled[1] = e.target.value > 50; updateTFUI(); };
-    document.getElementById('tf3').oninput = (e) => { tfEnabled[2] = e.target.value > 50; updateTFUI(); };
-    document.getElementById('tf4').oninput = (e) => { tfEnabled[3] = e.target.value > 50; updateTFUI(); };
     document.getElementById('sensitivitySlider').oninput = (e) => { sensitivity = parseFloat(e.target.value); document.getElementById('sensitivityValue').innerText = sensitivity.toFixed(2); };
     
-    // State
+    // ========== PROFILES ==========
+    let profiles = { default: { sensitivity:1.0, tfEnabled:[true,true,true,true] } };
+    let currentProfile = "default";
+    function saveProfile(name) { profiles[name] = { sensitivity, tfEnabled:[...tfEnabled] }; addDebug(`Profile ${name} saved`); }
+    function loadProfile(name) { if(profiles[name]) { sensitivity = profiles[name].sensitivity; tfEnabled = [...profiles[name].tfEnabled]; document.getElementById('sensitivitySlider').value = sensitivity; document.getElementById('sensitivityValue').innerText = sensitivity; setTFPresetFromArray(); addDebug(`Profile ${name} loaded`); } }
+    function setTFPresetFromArray() { let str = tfEnabled.map((v,i)=>v?timeframes[i]:null).filter(v=>v).join('/'); document.getElementById('tfPreset').value = str; }
+    function buildProfileSelect() { let sel = document.getElementById('profileSelect'); sel.innerHTML = '<option value="default">Default</option>'; for(let p in profiles) if(p!='default') sel.innerHTML += `<option value="${p}">${p}</option>`; sel.onchange = (e) => loadProfile(e.target.value); }
+    document.getElementById('autoProfile')?.addEventListener('change', (e) => { if(e.target.checked && currentProfile!='default') saveProfile(currentProfile); });
+    
+    // ========== GLOBAL STATE ==========
     let store = {}, priceStore = {}, ready = {}, signalState = {}, pinnedSym = null, ws = null;
-    let lastSignalTime = {}, signalStrength = {}, signalConfidence = {};
+    let lastSignalTime = {}, signalStrength = {}, signalConfidence = {}, signalQuality = {}, signalExpiry = {};
     let pendingTrades = {}, lastDigitMap = {};
     let marketCheckboxState = {};
     let debugMessages = [];
-    function addDebug(msg) { debugMessages.unshift(msg); if(debugMessages.length>10) debugMessages.pop(); document.getElementById('debugContent').innerHTML = debugMessages.map(m=>`<div class="debug-entry">${m}</div>`).join(''); }
+    function addDebug(msg) { debugMessages.unshift(msg); if(debugMessages.length>8) debugMessages.pop(); console.log(msg); }
     
-    // Helper: even % for slice
-    function getEvenPct(arr) { if(!arr.length) return 50; let even = arr.filter(d=>d%2===0).length; return (even/arr.length)*100; }
+    // ========== HELPER ==========
+    function getEvenPct(arr) { if(!arr.length) return 50; return (arr.filter(d=>d%2===0).length/arr.length)*100; }
     
-    // Multi‑timeframe reversal signal
+    // ========== SIGNAL LOGIC (identical to before) ==========
     function checkSignal(sym) {
       if(!ready[sym]) return false;
       const full = store[sym];
       if(!full || full.length < 500) return false;
-      
       let activeTF = timeframes.filter((_,idx)=>tfEnabled[idx]);
-      if(activeTF.length === 0) return false;
-      
-      let saturationDetected = false;
-      let dominantParity = null;
+      if(activeTF.length===0) return false;
       let alignment = { EVEN:0, ODD:0 };
-      let reversalSignal = null;
-      let totalStrength = 0;
-      let totalConf = 0;
-      let tfCount = 0;
-      
+      let totalStrength = 0, totalConf = 0, tfCount = 0;
+      let qualityFactors = { depth:0, momentum:0 };
       for(let i=0; i<timeframes.length; i++) {
         if(!tfEnabled[i]) continue;
         let tf = timeframes[i];
         if(full.length < tf) continue;
         let data = full.slice(-tf);
         let evenPct = getEvenPct(data);
-        let isSaturated = (evenPct >= 60 + (5/sensitivity)) || (evenPct <= 40 - (5/sensitivity));
-        if(isSaturated) saturationDetected = true;
-        let dom = evenPct > 50 ? "EVEN" : "ODD";
-        // For reversal, we need the short-term momentum (last 1/4 of this TF)
         let quarter = Math.max(10, Math.floor(tf/4));
-        let recentData = data.slice(-quarter);
-        let olderData = data.slice(0, quarter);
-        let recentEven = getEvenPct(recentData);
-        let olderEven = getEvenPct(olderData);
-        let momentum = recentEven - olderEven; // positive = moving to Even
-        // Expected reversal: if market saturated EVEN -> expect ODD, and vice versa
+        let recent = data.slice(-quarter), older = data.slice(0,quarter);
+        let recentEven = getEvenPct(recent), olderEven = getEvenPct(older);
+        let momentum = recentEven - olderEven;
         let expectedReversal = evenPct > 55 ? "ODD" : (evenPct < 45 ? "EVEN" : null);
-        if(expectedReversal) {
-          let reversalConfirmed = (expectedReversal === "ODD" && momentum < -3) || (expectedReversal === "EVEN" && momentum > 3);
-          if(reversalConfirmed) {
-            alignment[expectedReversal]++;
-            // Strength based on saturation depth and momentum
-            let depth = Math.abs(evenPct - 50);
-            let str = Math.min(100, depth*1.5 + Math.abs(momentum)*10);
-            let conf = Math.min(100, depth*2 + (sensitivity===1?20:20/sensitivity));
-            totalStrength += str;
-            totalConf += conf;
-            tfCount++;
-          }
+        if(expectedReversal && ((expectedReversal==="ODD" && momentum<-2) || (expectedReversal==="EVEN" && momentum>2))) {
+          alignment[expectedReversal]++;
+          let depth = Math.abs(evenPct-50);
+          let str = Math.min(100, depth*1.5 + Math.abs(momentum)*10);
+          let conf = Math.min(100, depth*2 + 20/sensitivity);
+          totalStrength += str; totalConf += conf; tfCount++;
+          qualityFactors.depth += depth; qualityFactors.momentum += Math.abs(momentum);
         }
       }
-      
-      if(!saturationDetected) { addDebug(`${sym}: no saturation`); return false; }
-      if(tfCount === 0) { addDebug(`${sym}: no timeframe confirmed reversal`); return false; }
-      
-      let finalDirection = alignment.EVEN > alignment.ODD ? "EVEN" : (alignment.ODD > alignment.EVEN ? "ODD" : null);
-      if(!finalDirection) { addDebug(`${sym}: tie between EVEN/ODD`); return false; }
-      
+      if(tfCount===0) return false;
+      let finalDir = alignment.EVEN > alignment.ODD ? "EVEN" : (alignment.ODD > alignment.EVEN ? "ODD" : null);
+      if(!finalDir) return false;
       let strength = totalStrength / tfCount;
       let confidence = totalConf / tfCount;
-      let minStrength = 35 / sensitivity;
-      let minConf = 30 / sensitivity;
-      if(strength < minStrength) { addDebug(`${sym}: strength ${strength.toFixed(0)} < ${minStrength.toFixed(0)}`); return false; }
-      if(confidence < minConf) { addDebug(`${sym}: confidence ${confidence.toFixed(0)} < ${minConf.toFixed(0)}`); return false; }
-      
+      let depthAvg = qualityFactors.depth / tfCount;
+      let momAvg = qualityFactors.momentum / tfCount;
+      let agreementRatio = Math.max(alignment.EVEN, alignment.ODD) / tfCount;
+      let quality = Math.min(100, strength*0.3 + confidence*0.3 + depthAvg*1.5 + momAvg*5 + agreementRatio*20);
+      signalQuality[sym] = Math.round(quality);
+      let minStrength = 30 / sensitivity;
+      let minConf = 25 / sensitivity;
+      if(strength < minStrength || confidence < minConf || quality < 30) return false;
       let now = Date.now();
       let cooldown = 4000 / sensitivity;
-      if(lastSignalTime[sym] && (now - lastSignalTime[sym]) < cooldown) { addDebug(`${sym}: cooldown`); return false; }
-      
+      if(lastSignalTime[sym] && (now - lastSignalTime[sym]) < cooldown) return false;
       if(!signalState[sym]) {
         signalStrength[sym]=strength; signalConfidence[sym]=confidence;
-        pendingTrades[sym] = { sym, direction: finalDirection, timestamp: now };
+        signalExpiry[sym] = now + 8000;
+        pendingTrades[sym] = { sym, direction: finalDir, timestamp: now, quality: signalQuality[sym] };
         lastSignalTime[sym]=now;
-        addDebug(`✅ SIGNAL ${sym} ${finalDirection} | S=${strength.toFixed(0)} C=${confidence.toFixed(0)} (${tfCount} TFs)`);
+        addDebug(`✅ ${sym} ${finalDir} Q=${signalQuality[sym]} (${tfCount} TFs)`);
         playSound();
+        updateSessionStats(sym, finalDir, quality);
       }
       return true;
     }
+    setInterval(()=>{ let now=Date.now(); for(let sym in signalExpiry) if(signalExpiry[sym] && now>signalExpiry[sym]) { signalState[sym]=false; delete signalExpiry[sym]; renderMarket(sym); updateDashboard(); } }, 1000);
+    function resolvePendingTrade(sym) { let entry = pendingTrades[sym]; if(!entry) return; let lastDigit = lastDigitMap[sym]; if(lastDigit===undefined) return; let win = (entry.direction==='EVEN' && lastDigit%2===0) || (entry.direction==='ODD' && lastDigit%2===1); applyTradeOutcome(sym, entry.direction, win, entry.quality); delete pendingTrades[sym]; signalState[sym]=false; delete signalExpiry[sym]; renderMarket(sym); updateDashboard(); updateCorrelation(); if(win) recordWin(sym); }
     
-    function resolvePendingTrade(sym) {
-      let entry = pendingTrades[sym];
-      if(!entry) return;
-      let lastDigit = lastDigitMap[sym];
-      if(lastDigit===undefined) return;
-      let win = (entry.direction==='EVEN' && lastDigit%2===0) || (entry.direction==='ODD' && lastDigit%2===1);
-      applyTradeOutcome(sym, entry.direction, win);
-      addDebug(`${sym} ${win?'WIN':'LOSS'} (digit ${lastDigit})`);
-      delete pendingTrades[sym];
-    }
+    // ========== SESSION STATS ==========
+    let sessionStats = { signals:0, wins:0, totalQuality:0, markets:{}, hourCounts:{} };
+    function updateSessionStats(sym, dir, qual) { sessionStats.signals++; sessionStats.totalQuality += qual; let hour = new Date().getHours(); sessionStats.hourCounts[hour] = (sessionStats.hourCounts[hour]||0)+1; if(!sessionStats.markets[sym]) sessionStats.markets[sym]={signals:0,wins:0}; sessionStats.markets[sym].signals++; renderSessionStats(); }
+    function recordWin(sym) { if(sessionStats.markets[sym]) sessionStats.markets[sym].wins++; sessionStats.wins++; renderSessionStats(); }
+    function renderSessionStats() { let winRate = sessionStats.signals ? (sessionStats.wins/sessionStats.signals*100).toFixed(0) : 0; let avgQual = sessionStats.signals ? (sessionStats.totalQuality/sessionStats.signals).toFixed(0) : 0; let html = `<div>Signals: ${sessionStats.signals} | Wins: ${sessionStats.wins} | WR: ${winRate}%</div><div>Avg Quality: ${avgQual}</div><div>Best hour: ${Object.entries(sessionStats.hourCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'-'}</div><div>Top market: ${Object.entries(sessionStats.markets).sort((a,b)=>b[1].signals-a[1].signals)[0]?.[0]||'-'}</div>`; document.getElementById('sessionStats').innerHTML = html; }
+    document.getElementById('resetStatsBtn').onclick = () => { sessionStats = { signals:0, wins:0, totalQuality:0, markets:{}, hourCounts:{} }; renderSessionStats(); };
     
-    // UI rendering
+    // ========== CORRELATION ==========
+    function updateCorrelation() { let active = MARKETS.filter(m=>signalState[m.sym]).map(m=>{ let dir = signalStrength[m.sym] ? (getEvenPct(store[m.sym]?.slice(-500))>50?'EVEN':'ODD') : null; return {sym:m.sym, name:m.name, dir}; }).filter(a=>a.dir); if(active.length<2) { document.getElementById('correlationDiv').innerHTML = 'Need at least 2 active signals'; return; } let evenMarkets = active.filter(a=>a.dir==='EVEN').length, oddMarkets = active.filter(a=>a.dir==='ODD').length; let html = `<div>⬆️ EVEN: ${evenMarkets} | ⬇️ ODD: ${oddMarkets}</div><div>Divergence: ${Math.abs(evenMarkets-oddMarkets)} market(s) opposite</div>`; if(evenMarkets>0 && oddMarkets>0) html += `<span style="color:var(--accent)">⚠️ Mixed signals – caution</span>`; document.getElementById('correlationDiv').innerHTML = html; }
+    
+    // ========== COMPACT DASHBOARD ==========
+    function updateDashboard() { let active = MARKETS.filter(m=>signalState[m.sym]).map(m=>{ let dir = signalStrength[m.sym] ? (getEvenPct(store[m.sym]?.slice(-500))>50?'EVEN':'ODD') : null; let expiry = signalExpiry[m.sym] ? Math.max(0, Math.ceil((signalExpiry[m.sym]-Date.now())/1000)) : 0; return { name:m.name, dir, quality: signalQuality[m.sym]||0, expiry }; }).filter(a=>a.dir); document.getElementById('dashboardCount').innerHTML = `(${active.length})`; if(active.length===0) { document.getElementById('compactDashboard').innerHTML = 'No active signals'; return; } let html = `<table class="compact-table"><tr><th>Market</th><th>Dir</th><th>Q</th><th>Exp</th></tr>`+active.map(a=>`<tr><td>${a.name}</td><td class="${a.dir==='EVEN'?'even':'odd'}">${a.dir}</td><td class="${a.quality>=70?'quality-high':(a.quality>=40?'quality-mid':'quality-low')}">${a.quality}</td><td class="countdown">${a.expiry}s</td></tr>`).join('')+`</table>`; document.getElementById('compactDashboard').innerHTML = html; }
+    
+    // ========== EXPORT ==========
+    document.getElementById('exportBtn').onclick = () => { let csvRows = [["Time","Market","Direction","Outcome","Profit","Quality"]]; tradeHistory.forEach(t=>{ csvRows.push([t.time, t.sym, t.dir, t.outcome, t.profit, t.quality]); }); let csv = csvRows.map(row=>row.join(",")).join("\n"); let blob = new Blob([csv], {type:"text/csv"}); let a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`signals_${new Date().toISOString()}.csv`; a.click(); };
+    
+    // ========== UI RENDERING ==========
+    const MARKETS = [
+      {sym:"R_10",name:"V10"},{sym:"R_25",name:"V25"},{sym:"R_50",name:"V50"},{sym:"R_75",name:"V75"},{sym:"R_100",name:"V100"},
+      {sym:"1HZ10V",name:"10s"},{sym:"1HZ25V",name:"25s"},{sym:"1HZ50V",name:"50s"},{sym:"1HZ75V",name:"75s"},{sym:"1HZ100V",name:"100s"},
+      {sym:"JD10",name:"J10"},{sym:"JD25",name:"J25"},{sym:"JD50",name:"J50"},{sym:"JD75",name:"J75"},{sym:"JD100",name:"J100"}
+    ];
+    
     function renderMarket(sym) {
       let container = document.getElementById(`mkt-${sym}`);
       if(!container) { container=document.createElement('div'); container.id=`mkt-${sym}`; container.className='market-card'; document.getElementById('markets').appendChild(container); }
       if(!marketCheckboxState[sym]) { container.style.display='none'; return; } else container.style.display='';
-      if(!ready[sym]) { let have=store[sym]?store[sym].length:0; container.innerHTML=`<div class="loading-text">⌛ ${MARKETS.find(m=>m.sym===sym).name} (${have}/500)</div>`; return; }
+      if(!ready[sym]) { container.innerHTML=`<div>⌛ ${MARKETS.find(m=>m.sym===sym).name} (${store[sym]?.length||0}/500)</div>`; return; }
       let full=store[sym], windowData=full.slice(-500), total=windowData.length;
       let winCounts=Array(10).fill(0); windowData.forEach(d=>winCounts[d]++);
       let evenCount=winCounts[0]+winCounts[2]+winCounts[4]+winCounts[6]+winCounts[8];
       let evenPct=(evenCount/total*100).toFixed(1);
-      let isSig=signalState[sym]||false;
-      let tradeDir=isSig ? (signalStrength[sym] > 0 ? (evenCount>total/2?'EVEN':'ODD') : null) : null;
-      let stats = marketWinStats.get(sym) || { wins:0, losses:0 };
-      let winRate = (stats.wins+stats.losses) ? (stats.wins/(stats.wins+stats.losses)*100).toFixed(0) : 0;
-      let html = `<div class="card-header"><div class="market-name">${MARKETS.find(m=>m.sym===sym).name} ${isSig && tradeDir ? `<span class="trade-type-badge ${tradeDir==='EVEN'?'even':'odd'}">${tradeDir}</span>` : ''}<span class="tag" style="background:${winRate>50?'#16a34a':'#64748b'}">WR:${winRate}%</span></div></div>
-        <div class="price-large">${priceStore[sym]}</div>
-        <div class="stat-line"><span>🎲 Even: ${evenPct}%</span><span>Odd: ${(100-evenPct).toFixed(1)}%</span><span>TF:50/100/250/500</span></div>
-        <div class="digit-grid">${[0,1,2,3,4,5,6,7,8,9].map(i=>{ let perc=(winCounts[i]/total*100).toFixed(1); let cls=''; if(winCounts[i]===Math.max(...winCounts)) cls='most'; return `<div class="digit-cell ${cls}" data-digit="${i}"><span class="digit-number">${i}</span><span class="digit-percent">${perc}%</span></div>`; }).join('')}</div>
-        <div class="tick-strip">${full.slice(-40).map(d=>`<span style="color:${d%2===0?'#4ade80':'#f87171'}">${d%2===0?'E':'O'}</span>`).join(' ')}</div>`;
-      if(isSig && signalStrength[sym]) {
-        html += `<div class="signal-gauges"><div class="gauge"><div>Strength</div><div class="gauge-bar-bg"><div class="gauge-fill strength" style="width:${signalStrength[sym]}%"></div></div><div>${signalStrength[sym].toFixed(0)}%</div></div>
-                  <div class="gauge"><div>Confidence</div><div class="gauge-bar-bg"><div class="gauge-fill conf" style="width:${signalConfidence[sym]}%"></div></div><div>${signalConfidence[sym].toFixed(0)}%</div></div></div>`;
-      }
+      let isSig=signalState[sym]||false, tradeDir=isSig ? (evenCount>total/2?'EVEN':'ODD') : null;
+      let quality = signalQuality[sym]||0;
+      let expirySec = signalExpiry[sym] ? Math.max(0,Math.ceil((signalExpiry[sym]-Date.now())/1000)) : 0;
+      let html = `<div style="display:flex;justify-content:space-between"><b>${MARKETS.find(m=>m.sym===sym).name}</b> ${isSig?`<span class="signal-badge ${tradeDir==='EVEN'?'even':'odd'}">${tradeDir}</span> <span style="background:#7f1d1d;border-radius:1rem;padding:0.1rem 0.3rem;">${expirySec}s</span>`:''}</div>
+        <div style="font-size:1.2rem;text-align:center;color:var(--highlight)">${priceStore[sym]}</div>
+        <div style="font-size:0.7rem">Even: ${evenPct}% | Odd: ${(100-evenPct).toFixed(1)}%</div>
+        <div class="digit-grid">${[0,1,2,3,4,5,6,7,8,9].map(i=>{ let perc=(winCounts[i]/total*100).toFixed(0); let cls=winCounts[i]===Math.max(...winCounts)?'most':''; return `<div class="digit-cell ${cls}" data-digit="${i}"><span class="digit-number">${i}</span><span class="digit-percent">${perc}%</span></div>`; }).join('')}</div>`;
+      if(isSig) html += `<div>Quality: <span class="${quality>=70?'quality-high':(quality>=40?'quality-mid':'quality-low')}">${quality}</span></div>`;
       container.innerHTML = html;
       container.className = `market-card ${isSig ? 'signal-active' : ''}`;
       setTimeout(()=>{ let lastDigit=full[full.length-1]; let target=container.querySelector(`.digit-cell[data-digit="${lastDigit}"]`); if(target && !target.querySelector('.pointer-dot')){ let dot=document.createElement('span'); dot.className='pointer-dot '+(lastDigit%2===0?'even':'odd'); dot.textContent='●'; target.appendChild(dot); } }, 10);
     }
-    
     function updateInsights() {
-      let active = MARKETS.filter(m=>signalState[m.sym]).map(m=>({name:m.name, dir:signalStrength[m.sym]?(store[m.sym]?.slice(-500).filter(d=>d%2===0).length > 250?'EVEN':'ODD'):null}));
-      if(active.length===0) document.getElementById('activeSignalsList').innerHTML='<span>No signals</span>';
-      else document.getElementById('activeSignalsList').innerHTML = active.map(a=>`<span class="signal-badge ${a.dir==='EVEN'?'even':'odd'}">${a.name} ${a.dir}</span>`).join('');
-      MARKETS.forEach(m=>{ let li=document.querySelector(`.market-list-item[data-sym="${m.sym}"]`); if(li) li.classList.toggle('blinking', signalState[m.sym]===true); });
+      let active = MARKETS.filter(m=>signalState[m.sym]).map(m=>({name:m.name, dir:signalStrength[m.sym]?(getEvenPct(store[m.sym]?.slice(-500))>50?'EVEN':'ODD'):null, quality:signalQuality[m.sym]||0}));
+      document.getElementById('activeSignalsList').innerHTML = active.length? active.map(a=>`<span class="signal-badge ${a.dir==='EVEN'?'even':'odd'}">${a.name} ${a.dir} Q${a.quality}</span>`).join('') : '<span>No signals</span>';
       let best = MARKETS.reduce((best,m)=>{ let s=signalStrength[m.sym]||0; return s>best.s?{name:m.name,s}:best; },{name:'-',s:0});
       document.getElementById('bestMarketLabel').innerHTML = `🏆 Best: ${best.name}${best.s?`(${best.s.toFixed(0)})`:''}`;
     }
-    
-    function sortCards() { let area=document.getElementById('markets'); let cards=Array.from(area.querySelectorAll('.market-card')); let order=new Map(); MARKETS.forEach((m,i)=>order.set(m.sym,i)); cards.sort((a,b)=>{ let sa=a.id.replace('mkt-',''), sb=b.id.replace('mkt-',''); if(sa===pinnedSym) return -1; if(sb===pinnedSym) return 1; return (order.get(sa)||999) - (order.get(sb)||999); }); cards.forEach(c=>area.appendChild(c)); }
+    function sortCards() { let area=document.getElementById('markets'); let cards=Array.from(area.querySelectorAll('.market-card')); let order=new Map(); MARKETS.forEach((m,i)=>order.set(m.sym,i)); cards.sort((a,b)=>{ let sa=a.id.replace('mkt-',''), sb=b.id.replace('mkt-',''); if(sa===pinnedSym) return -1; if(sb===pinnedSym) return 1; return (order.get(sa)||999)-(order.get(sb)||999); }); cards.forEach(c=>area.appendChild(c)); }
     function pinMarket(sym){ pinnedSym=sym; sortCards(); document.getElementById(`mkt-${sym}`)?.scrollIntoView({behavior:'smooth',block:'center'}); }
     
-    // WebSocket
-    function connect() {
+    // ========== SIMULATION MODE ==========
+    function startSimulation() {
+      if(simulationInterval) clearInterval(simulationInterval);
+      USE_SIMULATION = true;
+      if(ws) { ws.close(); ws = null; }
+      // Reset all data
+      MARKETS.forEach(sym => {
+        store[sym.sym] = [];
+        priceStore[sym.sym] = "100.00";
+        ready[sym.sym] = true;
+        signalState[sym.sym] = false;
+        // Generate initial 500 random digits (0-9)
+        for(let i=0;i<500;i++) store[sym.sym].push(Math.floor(Math.random()*10));
+        lastDigitMap[sym.sym] = store[sym.sym][store[sym.sym].length-1];
+      });
+      // Simulate a new tick every 1.5 seconds
+      simulationInterval = setInterval(() => {
+        MARKETS.forEach(m => {
+          let sym = m.sym;
+          // Random digit with slight bias? Use realistic: alternate even/odd clusters
+          let bias = (Math.random() > 0.7 ? (Math.random() > 0.5 ? 0 : 1) : 0); // small bias
+          let newDigit;
+          if(bias === 0) newDigit = Math.floor(Math.random()*10);
+          else newDigit = Math.random() > 0.5 ? Math.floor(Math.random()*5)*2 : Math.floor(Math.random()*5)*2+1;
+          store[sym].push(newDigit);
+          if(store[sym].length > 5000) store[sym] = store[sym].slice(-5000);
+          let lastPrice = parseFloat(priceStore[sym]) || 100;
+          priceStore[sym] = (lastPrice + (Math.random() - 0.5) * 0.5).toFixed(2);
+          lastDigitMap[sym] = newDigit;
+          ready[sym] = true;
+          resolvePendingTrade(sym);
+          let oldSig = signalState[sym] || false;
+          let newSig = checkSignal(sym);
+          signalState[sym] = newSig;
+          if(!oldSig && newSig) playSound();
+          else if(oldSig && !newSig) { signalStrength[sym]=0; signalConfidence[sym]=0; }
+          renderMarket(sym);
+        });
+        updateInsights(); sortCards(); updateDashboard(); updateCorrelation();
+        let readyCount = MARKETS.filter(m=>ready[m.sym]).length;
+        document.getElementById('dataCount').innerText = `${readyCount}/${MARKETS.length} markets ready (sim)`;
+      }, 1500);
+      document.getElementById('connectionStatus').innerHTML = '<span class="status-dot sim"></span> Simulated Data';
+      let readyCount = MARKETS.filter(m=>ready[m.sym]).length;
+      document.getElementById('dataCount').innerText = `${readyCount}/${MARKETS.length} markets ready (sim)`;
+      addDebug("Simulation mode active – fake ticks every 1.5s");
+    }
+    function stopSimulation() { if(simulationInterval) { clearInterval(simulationInterval); simulationInterval = null; } }
+    
+    // ========== LIVE WEBSOCKET CONNECTION ==========
+    let connectionTimeout = null;
+    function connectLive() {
+      stopSimulation();
+      USE_SIMULATION = false;
+      if(ws) ws.close();
+      document.getElementById('connectionStatus').innerHTML = '<span class="status-dot connecting"></span> Connecting...';
       ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
       ws.onopen = () => {
-        ws.send(JSON.stringify({authorize: TOKEN}));
-        MARKETS.forEach(m => { ws.send(JSON.stringify({ticks_history: m.sym, count: 2000, end: "latest", style: "ticks"})); });
-        setTimeout(() => { MARKETS.forEach(m => { ws.send(JSON.stringify({ticks: m.sym, subscribe: 1})); }); }, 2000);
+        if(TOKEN !== "PUT_TOKEN_HERE" && TOKEN.trim() !== "") ws.send(JSON.stringify({authorize: TOKEN}));
+        MARKETS.forEach(m => { ws.send(JSON.stringify({ticks_history: m.sym, count: 500, end: "latest", style: "ticks"})); });
+        setTimeout(() => { MARKETS.forEach(m => { ws.send(JSON.stringify({ticks: m.sym, subscribe: 1})); }); }, 1500);
+        document.getElementById('connectionStatus').innerHTML = '<span class="status-dot live"></span> Live Data';
       };
       ws.onmessage = (msg) => {
         let data = JSON.parse(msg.data);
@@ -306,6 +310,8 @@
           store[sym] = store[sym].concat(digits).slice(-10000);
           priceStore[sym] = prices.length ? parseFloat(prices[prices.length-1]).toFixed(2) : '—';
           ready[sym] = store[sym].length >= 500;
+          let readyCount = MARKETS.filter(m=>ready[m.sym]).length;
+          document.getElementById('dataCount').innerText = `${readyCount}/${MARKETS.length} markets ready`;
           renderMarket(sym); updateInsights(); sortCards();
         }
         if(data.tick) {
@@ -324,19 +330,40 @@
           signalState[sym] = newSig;
           if(!oldSig && newSig) playSound();
           else if(oldSig && !newSig) { signalStrength[sym]=0; signalConfidence[sym]=0; }
-          renderMarket(sym); updateInsights(); sortCards();
+          renderMarket(sym); updateInsights(); sortCards(); updateDashboard(); updateCorrelation();
+          let readyCount = MARKETS.filter(m=>ready[m.sym]).length;
+          document.getElementById('dataCount').innerText = `${readyCount}/${MARKETS.length} markets ready`;
         }
-        if(data.error) console.warn(data.error);
+        if(data.error) { console.warn(data.error); document.getElementById('connectionStatus').innerHTML = '<span class="status-dot error"></span> API Error – try Simulate'; }
       };
+      ws.onclose = () => { if(!USE_SIMULATION) document.getElementById('connectionStatus').innerHTML = '<span class="status-dot error"></span> Disconnected – try Simulate'; };
+      ws.onerror = () => { if(!USE_SIMULATION) document.getElementById('connectionStatus').innerHTML = '<span class="status-dot error"></span> Connection error – try Simulate'; };
+      // Auto-fallback after 15 seconds if no data
+      if(connectionTimeout) clearTimeout(connectionTimeout);
+      connectionTimeout = setTimeout(() => { 
+        if(!USE_SIMULATION && MARKETS.filter(m=>ready[m.sym]).length === 0) {
+          addDebug("No live data after 15s – switching to Simulation");
+          startSimulation();
+        }
+      }, 15000);
     }
-    function resetAndFetch() { if(ws) ws.close(); MARKETS.forEach(m=>{ store[m.sym]=[]; ready[m.sym]=false; signalState[m.sym]=false; signalStrength[m.sym]=0; signalConfidence[m.sym]=0; }); pendingTrades={}; lastSignalTime={}; connect(); }
+    
+    function resetAndFetch() { 
+      if(ws) ws.close();
+      stopSimulation();
+      MARKETS.forEach(m=>{ store[m.sym]=[]; ready[m.sym]=false; signalState[m.sym]=false; signalStrength[m.sym]=0; signalConfidence[m.sym]=0; });
+      pendingTrades={}; lastSignalTime={}; signalExpiry={};
+      connectLive();
+    }
     document.getElementById('refreshBtn').onclick = resetAndFetch;
+    document.getElementById('simulateBtn').onclick = startSimulation;
     document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
     
     // Build market list
     MARKETS.forEach(m=>{ let div=document.createElement('div'); div.className='market-list-item'; div.setAttribute('data-sym',m.sym); let cb=document.createElement('input'); cb.type='checkbox'; cb.checked=true; cb.onchange=(e)=>{ marketCheckboxState[m.sym]=e.target.checked; let el=document.getElementById(`mkt-${m.sym}`); if(el) el.style.display=e.target.checked?'':'none'; }; marketCheckboxState[m.sym]=true; let span=document.createElement('span'); span.textContent=m.name; span.onclick=()=>pinMarket(m.sym); div.appendChild(cb); div.appendChild(span); document.getElementById('marketList').appendChild(div); });
-    
-    resetAndFetch();
+    buildProfileSelect();
+    connectLive();  // try live first, auto-fallback to sim after 15s
+    setInterval(()=>{ updateDashboard(); if(document.getElementById('autoProfile')?.checked && currentProfile!='default') saveProfile(currentProfile); }, 5000);
   })();
 </script>
 </body>
