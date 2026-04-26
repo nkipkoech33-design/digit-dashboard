@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Digit Analyzer PRO – 4‑Timeframe Reversal (50/100/250/500)</title>
+  <title>Digit Analyzer PRO – Adjustable Signal Duration</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -80,6 +80,7 @@
   <div class="control-group"><span>📊 TF3 (250)</span><input type="range" id="tf3" min="1" max="100" value="1"><span id="tf3Val">on</span></div>
   <div class="control-group"><span>📊 TF4 (500)</span><input type="range" id="tf4" min="1" max="100" value="1"><span id="tf4Val">on</span></div>
   <div class="control-group"><span>🎚️ Sens</span><input type="range" id="sensitivitySlider" min="0.5" max="1.8" step="0.01" value="1.0"><span id="sensitivityValue">1.0</span></div>
+  <div class="control-group"><span>⏱️ Signal (sec)</span><input type="range" id="durationSlider" min="5" max="60" value="20" step="1"><span id="durationValue">20</span></div>
   <div class="control-group"><span>🔊</span><select id="soundSelect" style="width:60px;"><option value="beep">🔔</option><option value="alert">📢</option><option value="ping">🔊</option></select><button id="muteBtn" class="btn">🔇</button></div>
   <div class="control-group"><span>💰</span><span id="balanceDisplay">10000</span><span id="dailyProfit" style="font-size:0.7rem;">0</span><input type="number" id="stakeInput" value="100" step="10" style="width:60px;"><button id="resetBalanceBtn" class="btn">↺</button></div>
   <button class="btn" id="refreshBtn">🔄</button>
@@ -133,6 +134,11 @@
     document.getElementById('soundSelect').onchange = (e) => { audioPlayer = new Audio(sounds[e.target.value]); };
     document.getElementById('muteBtn').onclick = () => { muted = !muted; document.getElementById('muteBtn').innerText = muted ? '🔇' : '🔊'; };
     
+    // Signal duration (seconds)
+    let signalDurationSec = 20;
+    document.getElementById('durationSlider').oninput = (e) => { signalDurationSec = parseInt(e.target.value); document.getElementById('durationValue').innerText = signalDurationSec; };
+    document.getElementById('durationValue').innerText = signalDurationSec;
+    
     // Timeframes
     let timeframes = [50, 100, 250, 500];
     let tfEnabled = [true, true, true, true];
@@ -151,7 +157,7 @@
     
     // State
     let store = {}, priceStore = {}, ready = {}, signalState = {}, pinnedSym = null, ws = null;
-    let lastSignalTime = {}, signalStrength = {}, signalConfidence = {};
+    let lastSignalTime = {}, signalStrength = {}, signalConfidence = {}, signalExpiryTime = {};
     let pendingTrades = {}, lastDigitMap = {};
     let marketCheckboxState = {};
     let debugMessages = [];
@@ -170,12 +176,8 @@
       if(activeTF.length === 0) return false;
       
       let saturationDetected = false;
-      let dominantParity = null;
       let alignment = { EVEN:0, ODD:0 };
-      let reversalSignal = null;
-      let totalStrength = 0;
-      let totalConf = 0;
-      let tfCount = 0;
+      let totalStrength = 0, totalConf = 0, tfCount = 0;
       
       for(let i=0; i<timeframes.length; i++) {
         if(!tfEnabled[i]) continue;
@@ -185,21 +187,17 @@
         let evenPct = getEvenPct(data);
         let isSaturated = (evenPct >= 60 + (5/sensitivity)) || (evenPct <= 40 - (5/sensitivity));
         if(isSaturated) saturationDetected = true;
-        let dom = evenPct > 50 ? "EVEN" : "ODD";
-        // For reversal, we need the short-term momentum (last 1/4 of this TF)
         let quarter = Math.max(10, Math.floor(tf/4));
         let recentData = data.slice(-quarter);
         let olderData = data.slice(0, quarter);
         let recentEven = getEvenPct(recentData);
         let olderEven = getEvenPct(olderData);
-        let momentum = recentEven - olderEven; // positive = moving to Even
-        // Expected reversal: if market saturated EVEN -> expect ODD, and vice versa
+        let momentum = recentEven - olderEven;
         let expectedReversal = evenPct > 55 ? "ODD" : (evenPct < 45 ? "EVEN" : null);
         if(expectedReversal) {
           let reversalConfirmed = (expectedReversal === "ODD" && momentum < -3) || (expectedReversal === "EVEN" && momentum > 3);
           if(reversalConfirmed) {
             alignment[expectedReversal]++;
-            // Strength based on saturation depth and momentum
             let depth = Math.abs(evenPct - 50);
             let str = Math.min(100, depth*1.5 + Math.abs(momentum)*10);
             let conf = Math.min(100, depth*2 + (sensitivity===1?20:20/sensitivity));
@@ -214,28 +212,47 @@
       if(tfCount === 0) { addDebug(`${sym}: no timeframe confirmed reversal`); return false; }
       
       let finalDirection = alignment.EVEN > alignment.ODD ? "EVEN" : (alignment.ODD > alignment.EVEN ? "ODD" : null);
-      if(!finalDirection) { addDebug(`${sym}: tie between EVEN/ODD`); return false; }
+      if(!finalDirection) { addDebug(`${sym}: tie`); return false; }
       
       let strength = totalStrength / tfCount;
       let confidence = totalConf / tfCount;
       let minStrength = 35 / sensitivity;
       let minConf = 30 / sensitivity;
       if(strength < minStrength) { addDebug(`${sym}: strength ${strength.toFixed(0)} < ${minStrength.toFixed(0)}`); return false; }
-      if(confidence < minConf) { addDebug(`${sym}: confidence ${confidence.toFixed(0)} < ${minConf.toFixed(0)}`); return false; }
+      if(confidence < minConf) { addDebug(`${sym}: conf ${confidence.toFixed(0)} < ${minConf.toFixed(0)}`); return false; }
       
       let now = Date.now();
       let cooldown = 4000 / sensitivity;
       if(lastSignalTime[sym] && (now - lastSignalTime[sym]) < cooldown) { addDebug(`${sym}: cooldown`); return false; }
       
+      // New signal only if not already active OR if it's a different direction (but we won't override)
       if(!signalState[sym]) {
         signalStrength[sym]=strength; signalConfidence[sym]=confidence;
+        signalExpiryTime[sym] = now + (signalDurationSec * 1000);
         pendingTrades[sym] = { sym, direction: finalDirection, timestamp: now };
         lastSignalTime[sym]=now;
-        addDebug(`✅ SIGNAL ${sym} ${finalDirection} | S=${strength.toFixed(0)} C=${confidence.toFixed(0)} (${tfCount} TFs)`);
+        addDebug(`✅ SIGNAL ${sym} ${finalDirection} | S=${strength.toFixed(0)} C=${confidence.toFixed(0)} (${tfCount} TFs) | lasts ${signalDurationSec}s`);
         playSound();
+      } else {
+        // Refresh expiry only if signal still exists (optional)
+        signalExpiryTime[sym] = now + (signalDurationSec * 1000);
       }
       return true;
     }
+    
+    // Expiry timer (runs every second)
+    setInterval(() => {
+      let now = Date.now();
+      for(let sym in signalExpiryTime) {
+        if(signalExpiryTime[sym] && now > signalExpiryTime[sym]) {
+          signalState[sym] = false;
+          delete signalExpiryTime[sym];
+          renderMarket(sym);
+          updateInsights();
+          updateDashboard();
+        }
+      }
+    }, 1000);
     
     function resolvePendingTrade(sym) {
       let entry = pendingTrades[sym];
@@ -246,9 +263,21 @@
       applyTradeOutcome(sym, entry.direction, win);
       addDebug(`${sym} ${win?'WIN':'LOSS'} (digit ${lastDigit})`);
       delete pendingTrades[sym];
+      // Don't clear signalState here – let expiry handle it
     }
     
-    // UI rendering
+    // UI rendering (compact dashboard for active signals with countdown)
+    function updateDashboard() {
+      let active = MARKETS.filter(m=>signalState[m.sym]).map(m=>{
+        let dir = signalStrength[m.sym] ? (getEvenPct(store[m.sym]?.slice(-500))>50?'EVEN':'ODD') : null;
+        let remaining = signalExpiryTime[m.sym] ? Math.max(0, Math.ceil((signalExpiryTime[m.sym]-Date.now())/1000)) : 0;
+        return { name: m.name, dir, remaining };
+      }).filter(a=>a.dir);
+      if(active.length===0) {
+        // no active signals in sidebar dashboard – can ignore
+      }
+    }
+    
     function renderMarket(sym) {
       let container = document.getElementById(`mkt-${sym}`);
       if(!container) { container=document.createElement('div'); container.id=`mkt-${sym}`; container.className='market-card'; document.getElementById('markets').appendChild(container); }
@@ -262,6 +291,7 @@
       let tradeDir=isSig ? (signalStrength[sym] > 0 ? (evenCount>total/2?'EVEN':'ODD') : null) : null;
       let stats = marketWinStats.get(sym) || { wins:0, losses:0 };
       let winRate = (stats.wins+stats.losses) ? (stats.wins/(stats.wins+stats.losses)*100).toFixed(0) : 0;
+      let remainingSec = signalExpiryTime[sym] ? Math.max(0, Math.ceil((signalExpiryTime[sym]-Date.now())/1000)) : 0;
       let html = `<div class="card-header"><div class="market-name">${MARKETS.find(m=>m.sym===sym).name} ${isSig && tradeDir ? `<span class="trade-type-badge ${tradeDir==='EVEN'?'even':'odd'}">${tradeDir}</span>` : ''}<span class="tag" style="background:${winRate>50?'#16a34a':'#64748b'}">WR:${winRate}%</span></div></div>
         <div class="price-large">${priceStore[sym]}</div>
         <div class="stat-line"><span>🎲 Even: ${evenPct}%</span><span>Odd: ${(100-evenPct).toFixed(1)}%</span><span>TF:50/100/250/500</span></div>
@@ -269,7 +299,8 @@
         <div class="tick-strip">${full.slice(-40).map(d=>`<span style="color:${d%2===0?'#4ade80':'#f87171'}">${d%2===0?'E':'O'}</span>`).join(' ')}</div>`;
       if(isSig && signalStrength[sym]) {
         html += `<div class="signal-gauges"><div class="gauge"><div>Strength</div><div class="gauge-bar-bg"><div class="gauge-fill strength" style="width:${signalStrength[sym]}%"></div></div><div>${signalStrength[sym].toFixed(0)}%</div></div>
-                  <div class="gauge"><div>Confidence</div><div class="gauge-bar-bg"><div class="gauge-fill conf" style="width:${signalConfidence[sym]}%"></div></div><div>${signalConfidence[sym].toFixed(0)}%</div></div></div>`;
+                  <div class="gauge"><div>Confidence</div><div class="gauge-bar-bg"><div class="gauge-fill conf" style="width:${signalConfidence[sym]}%"></div></div><div>${signalConfidence[sym].toFixed(0)}%</div></div>
+                  <div class="gauge"><div>Expires</div><div>${remainingSec}s</div></div></div>`;
       }
       container.innerHTML = html;
       container.className = `market-card ${isSig ? 'signal-active' : ''}`;
@@ -329,7 +360,7 @@
         if(data.error) console.warn(data.error);
       };
     }
-    function resetAndFetch() { if(ws) ws.close(); MARKETS.forEach(m=>{ store[m.sym]=[]; ready[m.sym]=false; signalState[m.sym]=false; signalStrength[m.sym]=0; signalConfidence[m.sym]=0; }); pendingTrades={}; lastSignalTime={}; connect(); }
+    function resetAndFetch() { if(ws) ws.close(); MARKETS.forEach(m=>{ store[m.sym]=[]; ready[m.sym]=false; signalState[m.sym]=false; signalStrength[m.sym]=0; signalConfidence[m.sym]=0; }); pendingTrades={}; lastSignalTime={}; signalExpiryTime={}; connect(); }
     document.getElementById('refreshBtn').onclick = resetAndFetch;
     document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
     
