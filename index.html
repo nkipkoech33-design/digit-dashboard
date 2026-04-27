@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Digit Analyzer – Real Balance + Simulated Reversal Trading</title>
+  <title>Digit Analyzer – Live Demo + Reversal Trading (Token Embedded)</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -16,15 +16,13 @@
       --highlight: #0284c7; --shadow: 0 2px 8px rgba(0,0,0,0.08); }
     body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif;
       height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-    .token-bar { background: #1e293b; padding: 0.5rem 1rem; display: flex; gap: 1rem; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
-    .token-input { background: #0f172a; border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.8rem; border-radius: 2rem; width: 300px; font-family: monospace; }
-    .btn { background: var(--accent); color: #000; border: none; padding: 0.3rem 1rem; border-radius: 2rem; font-weight: 600; cursor: pointer; font-size: 0.8rem; }
     .status-bar { background: var(--card); padding: 0.3rem 1rem; font-size: 0.8rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; flex-shrink: 0; }
     .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
     .status-dot.live { background: #22c55e; } .status-dot.error { background: #ef4444; }
     .top-bar { background: var(--card); padding: 0.6rem 1rem; border-bottom: 2px solid var(--accent);
       display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center; flex-shrink: 0; }
     .control-group { display: flex; align-items: center; gap: 0.5rem; background: var(--bg); padding: 0.3rem 0.8rem; border-radius: 2rem; font-size: 0.85rem; }
+    .btn { background: var(--accent); color: #000; border: none; padding: 0.3rem 1rem; border-radius: 2rem; font-weight: 600; cursor: pointer; font-size: 0.8rem; }
     .insights-bar { background: var(--card); padding: 0.4rem 1rem; border-bottom: 1px solid var(--border);
       display: flex; align-items: center; gap: 1rem; overflow-x: auto; flex-shrink: 0; min-height: 55px; }
     .best-badge { background: var(--accent); color: #000; padding: 0.3rem 0.8rem; border-radius: 2rem; font-weight: 700; font-size: 0.85rem; }
@@ -85,13 +83,7 @@
   </style>
 </head>
 <body>
-<div class="token-bar">
-  <span>🔑 Deriv API Token (demo or real):</span>
-  <input type="text" id="tokenInput" class="token-input" placeholder="Paste your token here" value="PUT_TOKEN_HERE">
-  <button id="connectBtn" class="btn">Connect & Fetch Balance</button>
-  <span id="tokenStatus" style="font-size:0.8rem;"></span>
-</div>
-<div class="status-bar"><span id="connectionStatus"><span class="status-dot live"></span> Disconnected</span><span id="dataCount">0 markets ready</span></div>
+<div class="status-bar"><span id="connectionStatus"><span class="status-dot live"></span> Initializing...</span><span id="dataCount">0 markets ready</span></div>
 <div class="top-bar">
   <div class="control-group"><span>📊 100t</span><input type="range" id="shortThresh" min="60" max="80" value="70" step="1"><span id="shortVal">70%</span></div>
   <div class="control-group"><span>📊 250t</span><input type="range" id="thresh250" min="50" max="70" value="57" step="1"><span id="val250">57%</span></div>
@@ -122,11 +114,15 @@
     <div class="sidebar-title">📋 Markets (click name to pin)</div>
     <div id="marketList"></div>
     <div class="history-panel"><div>📜 Trade History <span id="overallWR"></span></div><div id="historyList">No trades yet</div></div>
-    <div class="debug-panel"><div>🔍 Signal & Session Log</div><div id="debugContent">Connecting...</div></div>
+    <div class="debug-panel"><div>🔍 Signal & Session Log</div><div id="debugContent">Initializing...</div></div>
   </div>
 </div>
 <script>
   (function() {
+    // =================== EMBEDDED TOKEN ===================
+    const API_TOKEN = "4l9ExuW8tconjJO";   // <-- Your token (demo account)
+    // ======================================================
+    
     const MARKETS = [
       {sym:"R_10",name:"Volatility 10"},{sym:"R_25",name:"Volatility 25"},{sym:"R_50",name:"Volatility 50"},
       {sym:"R_75",name:"Volatility 75"},{sym:"R_100",name:"Volatility 100"},
@@ -142,20 +138,12 @@
     let targetMult = 1.0;
     let maxSteps = 10;
     
-    // Per-market session data (for simulated trading)
-    let sessions = new Map(); // key -> { active, direction, initialStake, cumulativePL, currentStake, step }
-    
+    // Per-market session data
+    let sessions = new Map();
     function getSession(sym) {
       if(!sessions.has(sym)) sessions.set(sym, { active: false, direction: null, initialStake: 0, cumulativePL: 0, currentStake: baseStake, step: 1 });
       return sessions.get(sym);
     }
-    
-    function updateSimUI() {
-      document.getElementById('simBalance').innerText = simulatedBalance.toFixed(2);
-      let sess = getSession(""); // just for UI, we'll show latest session values
-      // Actually we need to show the session that is currently active. We'll track the last active session globally for UI.
-    }
-    
     function updateSessionUI(sym) {
       let sess = getSession(sym);
       if(sess.active) {
@@ -168,7 +156,6 @@
         document.getElementById('sessionPL').innerText = "0.00";
       }
     }
-    
     function endSession(sym) {
       let sess = getSession(sym);
       if(sess.active) {
@@ -182,17 +169,10 @@
         updateSessionUI(sym);
       }
     }
-    
     function startSession(sym, direction, firstStake) {
       let sess = getSession(sym);
-      if(sess.active) {
-        addDebug(`Session already active for ${sym}. Cannot start new.`);
-        return false;
-      }
-      if(simulatedBalance < firstStake) {
-        addDebug(`Insufficient simulated balance (${simulatedBalance.toFixed(2)} < ${firstStake}) – cannot start session.`);
-        return false;
-      }
+      if(sess.active) { addDebug(`Session already active for ${sym}.`); return false; }
+      if(simulatedBalance < firstStake) { addDebug(`Insufficient simulated balance (${simulatedBalance.toFixed(2)} < ${firstStake})`); return false; }
       sess.active = true;
       sess.direction = direction;
       sess.initialStake = firstStake;
@@ -203,35 +183,30 @@
       addDebug(`🟢 New simulated session on ${sym} (${direction}). Target profit: $${(firstStake * targetMult).toFixed(2)}`);
       return true;
     }
-    
     function applySimulatedTradeOutcome(sym, win, stakeUsed) {
       let sess = getSession(sym);
       if(!sess.active) return false;
       let profit = win ? stakeUsed * 0.85 : -stakeUsed;
       simulatedBalance += profit;
-      updateSimUI();
+      document.getElementById('simBalance').innerText = simulatedBalance.toFixed(2);
       sess.cumulativePL += profit;
       addDebug(`${sym} ${win?'WIN':'LOSS'} | Sim P/L: ${profit.toFixed(2)} | Session P&L: ${sess.cumulativePL.toFixed(2)} | Sim Balance: ${simulatedBalance.toFixed(2)}`);
       updateSessionUI(sym);
-      
       let target = sess.initialStake * targetMult;
       if(sess.cumulativePL >= target) {
         addDebug(`🎯 Target reached! Simulated session closed for ${sym}.`);
         endSession(sym);
         return true;
       }
-      
       if(win) {
         sess.currentStake = baseStake;
         sess.step = 1;
-        addDebug(`Win – reset Martingale to ${sess.currentStake.toFixed(2)}`);
       } else {
         if(sess.step < maxSteps) {
           sess.currentStake = sess.currentStake * martingaleMult;
           sess.step++;
-          addDebug(`Loss – Martingale step ${sess.step}, next stake ${sess.currentStake.toFixed(2)}`);
         } else {
-          addDebug(`Max Martingale steps (${maxSteps}) reached. Closing simulated session.`);
+          addDebug(`Max Martingale steps (${maxSteps}) reached. Closing session.`);
           endSession(sym);
           return true;
         }
@@ -244,7 +219,7 @@
       return true;
     }
     
-    // ----- Strategy parameters (adjustable) -----
+    // ----- Strategy parameters -----
     let shortPct = 70, thresh250 = 57, thresh500 = 55, thresh1000 = 52;
     let sensitivity = 1.0, signalSec = 20;
     document.getElementById('shortThresh').oninput = (e) => { shortPct = parseInt(e.target.value); document.getElementById('shortVal').innerText = shortPct+'%'; };
@@ -267,7 +242,7 @@
     document.getElementById('soundSelect').onchange = (e) => { audio = new Audio(sounds[e.target.value]); };
     document.getElementById('muteBtn').onclick = () => { muted = !muted; document.getElementById('muteBtn').innerText = muted ? '🔇' : '🔊'; };
     
-    // ----- Market data & signal logic (reversal) -----
+    // ----- Market data -----
     let store = {}, priceStore = {}, ready = {}, signalActive = {}, pinned = null, tickWs = null;
     let lastSignalTime = {}, signalStrength = {}, signalConf = {}, signalExpiry = {};
     let lastDigit = {};
@@ -275,11 +250,9 @@
     let debug = [];
     let trades = [];
     let readyCount = 0;
-    let pendingSimTrades = {}; // per market pending simulated trade
+    let pendingSimTrades = {};
     
     function addDebug(msg) { debug.unshift(msg); if(debug.length>25) debug.pop(); document.getElementById('debugContent').innerHTML = debug.map(m=>`<div>${m}</div>`).join(''); }
-    function updateRealBalanceUI() { document.getElementById('realBalance').innerText = realBalance.toFixed(2); }
-    
     function getEvenPct(arr) { if(!arr.length) return 50; return (arr.filter(d=>d%2===0).length/arr.length)*100; }
     function isSaturated(data, tf, bias) {
       if(!data || data.length < tf) return false;
@@ -294,30 +267,25 @@
       if(!ready[sym]) return false;
       let full = store[sym];
       if(!full || full.length < 1000) return false;
-      
       let short = full.slice(-100);
       let shortEven = getEvenPct(short);
       let shortBias = shortEven > 50 ? "EVEN" : "ODD";
       let extreme = (shortBias === "EVEN" && shortEven >= shortPct) || (shortBias === "ODD" && shortEven <= (100 - shortPct));
       if(!extreme) return false;
-      
       let allSat = [250,500,1000].every(tf => isSaturated(full, tf, shortBias));
       if(!allSat) return false;
-      
       let expectedReversal = shortBias === "EVEN" ? "ODD" : "EVEN";
-      let depth = Math.abs(shortEven - 50);
-      let strength = Math.min(100, depth * 1.5) / sensitivity;
-      let confidence = Math.min(100, (shortBias==="EVEN" ? shortEven-(shortPct-5) : (100-shortEven)-(shortPct-5)) * 2) / sensitivity;
-      if(strength < 40 || confidence < 35) return false;
-      
+      let depth = Math.abs(shortEven-50);
+      let strength = Math.min(100, depth*1.5)/sensitivity;
+      let confidence = Math.min(100, (shortBias==="EVEN"? shortEven-(shortPct-5): (100-shortEven)-(shortPct-5))*2)/sensitivity;
+      if(strength<40 || confidence<35) return false;
       let now = Date.now();
-      let cooldown = 5000 / sensitivity;
-      if(lastSignalTime[sym] && now - lastSignalTime[sym] < cooldown) return false;
-      
+      let cooldown = 5000/sensitivity;
+      if(lastSignalTime[sym] && now-lastSignalTime[sym] < cooldown) return false;
       let sess = getSession(sym);
       if(!sess.active) {
         if(startSession(sym, expectedReversal, baseStake)) {
-          addDebug(`🔔 SIGNAL ${sym} ${expectedReversal} | starting simulated session with stake $${baseStake.toFixed(2)}`);
+          addDebug(`🔔 SIGNAL ${sym} ${expectedReversal} | start session stake $${baseStake}`);
           signalStrength[sym]=strength; signalConf[sym]=confidence;
           signalExpiry[sym]=now+signalSec*1000;
           lastSignalTime[sym]=now;
@@ -330,7 +298,6 @@
       }
       return true;
     }
-    
     setInterval(()=>{ let n=Date.now(); for(let s in signalExpiry) if(signalExpiry[s] && n>signalExpiry[s]) { signalActive[s]=false; delete signalExpiry[s]; renderMarket(s); updateInsights(); } },1000);
     
     function resolvePendingSimTrade(sym, digit) {
@@ -352,7 +319,7 @@
       document.getElementById('historyList').innerHTML = html;
     }
     
-    // ----- UI Rendering (big cells) -----
+    // ----- UI Rendering -----
     function renderMarket(sym) {
       let cont = document.getElementById(`mkt-${sym}`);
       if(!cont) { cont=document.createElement('div'); cont.id=`mkt-${sym}`; cont.className='market-card'; document.getElementById('markets').appendChild(cont); }
@@ -394,10 +361,10 @@
     function pinMarket(sym){ pinned=sym; sortCards(); document.getElementById(`mkt-${sym}`)?.scrollIntoView({behavior:'smooth',block:'center'}); }
     
     // ----- Fetch real balance using token -----
-    async function fetchBalance(tokenVal) {
+    function fetchBalance() {
       return new Promise((resolve) => {
         let balWs = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
-        balWs.onopen = () => balWs.send(JSON.stringify({authorize: tokenVal}));
+        balWs.onopen = () => balWs.send(JSON.stringify({authorize: API_TOKEN}));
         balWs.onmessage = (msg) => {
           let data = JSON.parse(msg.data);
           if(data.msg_type === "authorize") { if(data.error) { resolve(null); balWs.close(); return; } balWs.send(JSON.stringify({balance: 1})); }
@@ -408,22 +375,19 @@
       });
     }
     
-    async function connectWithToken() {
-      let newToken = document.getElementById('tokenInput').value.trim();
-      if(!newToken || newToken === "PUT_TOKEN_HERE") { addDebug("Please enter a valid Deriv token"); return; }
-      document.getElementById('connectionStatus').innerHTML = '<span class="status-dot live"></span> Authorizing...';
-      let bal = await fetchBalance(newToken);
+    async function init() {
+      document.getElementById('connectionStatus').innerHTML = '<span class="status-dot live"></span> Fetching balance...';
+      let bal = await fetchBalance();
       if(bal !== null) {
         realBalance = bal;
-        simulatedBalance = bal; // start simulated balance equal to real balance
-        updateRealBalanceUI();
+        simulatedBalance = bal;
+        document.getElementById('realBalance').innerText = realBalance.toFixed(2);
         document.getElementById('simBalance').innerText = simulatedBalance.toFixed(2);
         addDebug(`✅ Authorized. Real balance: ${realBalance.toFixed(2)} | Simulated balance: ${simulatedBalance.toFixed(2)}`);
         document.getElementById('connectionStatus').innerHTML = '<span class="status-dot live"></span> Live + Balance OK';
-        if(tickWs) tickWs.close();
         startTickStream();
       } else {
-        addDebug("❌ Authorization failed – invalid token or network issue");
+        addDebug("❌ Authorization failed – token invalid or network issue");
         document.getElementById('connectionStatus').innerHTML = '<span class="status-dot error"></span> Auth failed';
       }
     }
@@ -479,16 +443,12 @@
     
     function resetAll() { if(tickWs) tickWs.close(); store={}; ready={}; signalActive={}; readyCount=0; sessions.clear(); pendingSimTrades={}; startTickStream(); }
     document.getElementById('refreshBtn').onclick = resetAll;
-    document.getElementById('connectBtn').onclick = connectWithToken;
     document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
     
     // Build market list
     MARKETS.forEach(m=>{ let div=document.createElement('div'); div.className='market-list-item'; div.setAttribute('data-sym',m.sym); let cb=document.createElement('input'); cb.type='checkbox'; cb.checked=true; cb.onchange=(e)=>{ checkboxState[m.sym]=e.target.checked; let el=document.getElementById(`mkt-${m.sym}`); if(el) el.style.display=e.target.checked?'':'none'; }; checkboxState[m.sym]=true; let span=document.createElement('span'); span.textContent=m.name; span.onclick=()=>pinMarket(m.sym); div.appendChild(cb); div.appendChild(span); document.getElementById('marketList').appendChild(div); });
     
-    // Auto-load token if saved
-    let saved = localStorage.getItem("deriv_demo_token");
-    if(saved && saved !== "PUT_TOKEN_HERE") { document.getElementById('tokenInput').value = saved; connectWithToken(); }
-    document.getElementById('tokenInput').addEventListener('change', (e) => { localStorage.setItem("deriv_demo_token", e.target.value); });
+    init();
   })();
 </script>
 </body>
