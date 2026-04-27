@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Digit Analyzer – Demo/Real Account Switch | Reversal Trading</title>
+  <title>Digit Analyzer – Adjustable Multi‑TF Exhaustion</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -14,33 +14,33 @@
     body.light { --bg: #f1f5f9; --card: #ffffff; --border: #cbd5e1; --text: #0f172a;
       --text-secondary: #475569; --accent: #eab308; --good: #16a34a; --bad: #dc2626;
       --highlight: #0284c7; --shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif;
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif;
       height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-    .token-bar { background: #1e293b; padding: 0.5rem 1rem; display: flex; gap: 1rem; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
-    .token-input { background: #0f172a; border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.8rem; border-radius: 2rem; width: 300px; font-family: monospace; }
-    .btn { background: var(--accent); color: #000; border: none; padding: 0.3rem 1rem; border-radius: 2rem; font-weight: 600; cursor: pointer; font-size: 0.8rem; }
-    .status-bar { background: var(--card); padding: 0.3rem 1rem; font-size: 0.8rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; flex-shrink: 0; }
-    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-    .status-dot.live { background: #22c55e; } .status-dot.error { background: #ef4444; }
     .top-bar { background: var(--card); padding: 0.6rem 1rem; border-bottom: 2px solid var(--accent);
-      display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center; flex-shrink: 0; }
-    .control-group { display: flex; align-items: center; gap: 0.5rem; background: var(--bg); padding: 0.3rem 0.8rem; border-radius: 2rem; font-size: 0.85rem; }
-    .insights-bar { background: var(--card); padding: 0.4rem 1rem; border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; gap: 1rem; overflow-x: auto; flex-shrink: 0; min-height: 55px; }
-    .best-badge { background: var(--accent); color: #000; padding: 0.3rem 0.8rem; border-radius: 2rem; font-weight: 700; font-size: 0.85rem; }
+      box-shadow: var(--shadow); display: flex; flex-wrap: wrap; gap: 0.7rem; align-items: center; flex-shrink: 0; font-size: 0.8rem; }
+    .control-group { display: flex; align-items: center; gap: 0.4rem; background: var(--bg); padding: 0.2rem 0.7rem;
+      border-radius: 2rem; }
+    .btn { background: var(--accent); color: #000; border: none; padding: 0.3rem 0.8rem;
+      border-radius: 2rem; font-weight: 600; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s; }
+    .btn:hover { opacity: 0.9; }
+    .insights-bar { background: var(--card); padding: 0.3rem 1rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 1rem; overflow-x: auto; flex-shrink: 0; min-height: 48px; }
+    .best-badge { background: var(--accent); color: #000; padding: 0.2rem 0.7rem; border-radius: 2rem;
+      font-weight: 700; white-space: nowrap; font-size: 0.85rem; }
     .signals-row { display: flex; gap: 8px; flex-wrap: wrap; }
-    .signal-badge { padding: 0.3rem 0.8rem; border-radius: 2rem; font-weight: 700; font-size: 0.75rem; }
+    .signal-badge { padding: 0.2rem 0.7rem; border-radius: 2rem; font-weight: 700; font-size: 0.75rem;
+      white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
     .signal-badge.even { background: #166534; color: #4ade80; border: 1px solid #22c55e; }
-    .signal-badge.odd { background: #7f1d1d; color: #f87171; border: 1px solid #ef4444; }
+    .signal-badge.odd  { background: #7f1d1d; color: #f87171; border: 1px solid #ef4444; }
     .main-layout { display: flex; flex: 1; overflow: hidden; }
     .markets-area { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
-    .sidebar { width: 380px; background: var(--card); border-left: 1px solid var(--border);
-      overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
-    .trade-panel { background: var(--bg); border-radius: 1rem; padding: 0.8rem; border: 1px solid var(--accent); }
-    .trade-panel div { margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+    .sidebar { width: 280px; background: var(--card); border-left: 1px solid var(--border);
+      overflow-y: auto; padding: 1rem; box-shadow: var(--shadow); flex-shrink: 0; }
+    .sidebar-title { font-weight: 700; margin-bottom: 0.8rem; font-size: 1rem; color: var(--accent); }
     .market-list-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0;
-      border-bottom: 1px solid var(--border); cursor: pointer; font-size: 0.9rem; }
+      font-size: 0.9rem; border-bottom: 1px solid var(--border); cursor: pointer; }
     .market-list-item span { flex: 1; }
+    .market-list-item span:hover { color: var(--accent); }
     .market-list-item.blinking span { animation: listBlink 0.8s infinite; }
     @keyframes listBlink { 0% { color: var(--text); } 50% { color: var(--accent); } 100% { color: var(--text); } }
     .market-card { background: var(--card); border-radius: 1rem; padding: 1rem;
@@ -48,55 +48,52 @@
     .market-card.signal-active { border-color: var(--accent); box-shadow: 0 0 15px var(--accent);
       animation: pulse-border 1.5s infinite; }
     @keyframes pulse-border { 0% { box-shadow: 0 0 5px var(--accent); } 50% { box-shadow: 0 0 20px var(--accent); } 100% { box-shadow: 0 0 5px var(--accent); } }
+    .card-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem; }
     .market-name { font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
     .price-large { font-size: 2rem; font-weight: 800; text-align: center; color: var(--highlight); margin: 0.5rem 0; }
-    .stat-line { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); margin: 0.3rem 0; }
-    .digit-grid { display: grid; grid-template-columns: repeat(5, 90px); gap: 12px; margin: 1rem 0 0.6rem 0; justify-content: center; }
-    .digit-cell { width: 90px; height: 90px; background: var(--bg); border-radius: 0.8rem;
+    .stat-line { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); margin: 0.2rem 0; }
+    .trade-type-badge { font-size: 0.9rem; font-weight: 700; padding: 0.3rem 0.9rem;
+      border-radius: 2rem; letter-spacing: 0.5px; }
+    .trade-type-badge.even { background: #14532d; color: #86efac; border: 1px solid #22c55e; }
+    .trade-type-badge.odd  { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+    .digit-grid { display: grid; grid-template-columns: repeat(5, 85px); gap: 12px;
+      margin: 0.8rem 0 0.5rem 0; justify-content: center; }
+    .digit-cell { width: 85px; height: 85px; background: var(--bg); border-radius: 0.5rem;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      position: relative; font-weight: 700; border: 2px solid var(--border); }
+      position: relative; font-weight: 700; border: 1px solid var(--border); }
     .digit-cell.most { background: #166534; border-color: #22c55e; }
     .digit-number { font-size: 2rem; line-height: 1; }
-    .digit-percent { font-size: 0.8rem; opacity: 0.9; margin-top: 4px; }
+    .digit-percent { font-size: 0.8rem; opacity: 0.9; }
     .pointer-dot { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      font-size: 2.4rem; z-index: 2; animation: pulse-dot 0.8s infinite; text-shadow: 0 0 10px currentColor; }
+      font-size: 2.2rem; z-index: 2; animation: pulse-dot 0.8s infinite;
+      text-shadow: 0 0 8px currentColor; }
     .pointer-dot.even { color: #4ade80; } .pointer-dot.odd { color: #f87171; }
-    @keyframes pulse-dot { 0% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.2); } 100% { transform: translate(-50%, -50%) scale(1); } }
-    .tick-strip { display: flex; gap: 2px; margin-top: 0.6rem; font-size: 0.85rem; justify-content: center; flex-wrap: wrap; }
-    .tick-strip span { padding: 2px 3px; border-radius: 4px; background: var(--bg); }
-    .tag { font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 1rem; font-weight: 600; }
-    .signal-gauges { display: flex; gap: 1rem; margin-top: 0.6rem; padding-top: 0.6rem;
-      border-top: 1px solid var(--border); font-size: 0.75rem; justify-content: space-evenly; }
+    @keyframes pulse-dot { 0% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.3); } 100% { transform: translate(-50%, -50%) scale(1); } }
+    .tick-strip { display: flex; gap: 2px; margin-top: 0.5rem; font-size: 0.85rem;
+      justify-content: center; flex-wrap: wrap; }
+    .tag { font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 1rem; font-weight: 600; }
+    .signal-gauges { display: flex; gap: 1.2rem; margin-top: 0.6rem; padding-top: 0.6rem;
+      border-top: 1px solid var(--border); font-size: 0.8rem; justify-content: space-evenly; }
     .gauge { flex: 1; text-align: center; }
-    .gauge-bar-bg { background: var(--bg); border-radius: 8px; height: 6px; overflow: hidden; margin: 4px 0; }
-    .gauge-fill { height: 100%; width: 0%; transition: width 0.3s; border-radius: 8px; }
+    .gauge-bar-bg { background: var(--bg); border-radius: 10px; height: 8px; overflow: hidden; margin: 4px 0; }
+    .gauge-fill { height: 100%; width: 0%; transition: width 0.3s; border-radius: 10px; }
     .gauge-fill.strength { background: #fbbf24; }
     .gauge-fill.conf { background: #38bdf8; }
     .history-panel, .debug-panel { background: var(--bg); border-radius: 0.8rem; padding: 0.6rem;
-      border: 1px solid var(--border); font-size: 0.75rem; max-height: 200px; overflow-y: auto; }
+      border: 1px solid var(--border); font-size: 0.75rem; max-height: 200px; overflow-y: auto; margin-top: 1rem; }
     .history-entry { font-family: monospace; padding: 4px 0; border-bottom: 1px dotted var(--border); display: flex; justify-content: space-between; }
     .win { color: var(--good); } .loss { color: var(--bad); }
     @media (max-width: 800px) {
-      .digit-grid { grid-template-columns: repeat(5, 60px); gap: 8px; }
-      .digit-cell { width: 60px; height: 60px; }
-      .digit-number { font-size: 1.4rem; }
-      .sidebar { width: 100%; max-height: 260px; }
+      .main-layout { flex-direction: column; }
+      .sidebar { width: 100%; border-left: none; border-top: 1px solid var(--border); max-height: 200px; }
+      .markets-area { height: calc(100vh - 320px); }
+      .digit-grid { grid-template-columns: repeat(5, 65px); }
+      .digit-cell { width: 65px; height: 65px; }
+      .digit-number { font-size: 1.6rem; }
     }
   </style>
 </head>
 <body>
-<div class="token-bar">
-  <span>🔑 Account Type:</span>
-  <select id="accountType" class="btn" style="background:#0f172a; color:var(--text);">
-    <option value="demo">Demo</option>
-    <option value="real">Real</option>
-  </select>
-  <span>🔑 API Token:</span>
-  <input type="text" id="tokenInput" class="token-input" placeholder="Paste your token here" value="4l9ExuW8tconjJO">
-  <button id="connectBtn" class="btn">Connect & Fetch Balance</button>
-  <span id="tokenStatus" style="font-size:0.8rem;"></span>
-</div>
-<div class="status-bar"><span id="connectionStatus"><span class="status-dot live"></span> Initializing...</span><span id="dataCount">0 markets ready</span></div>
 <div class="top-bar">
   <div class="control-group"><span>📊 100t</span><input type="range" id="shortThresh" min="60" max="80" value="70" step="1"><span id="shortVal">70%</span></div>
   <div class="control-group"><span>📊 250t</span><input type="range" id="thresh250" min="50" max="70" value="57" step="1"><span id="val250">57%</span></div>
@@ -104,34 +101,24 @@
   <div class="control-group"><span>📊 1000t</span><input type="range" id="thresh1000" min="45" max="65" value="52" step="1"><span id="val1000">52%</span></div>
   <div class="control-group"><span>🎚️ Sens</span><input type="range" id="sensitivity" min="0.5" max="1.5" step="0.01" value="1.0"><span id="sensVal">1.0</span></div>
   <div class="control-group"><span>⏱️ Signal (sec)</span><input type="range" id="duration" min="5" max="60" value="20" step="1"><span id="durVal">20</span></div>
-  <div class="control-group"><span>🔊</span><select id="soundSelect"><option value="beep">🔔</option><option value="alert">📢</option><option value="ping">🔊</option></select><button id="muteBtn" class="btn">🔇</button></div>
-  <button class="btn" id="refreshBtn">🔄 Reconnect</button>
+  <div class="control-group"><span>🔊</span><select id="soundSelect"><option value="beep">🔔 Beep</option><option value="alert">📢 Alert</option><option value="ping">🔊 Ping</option></select><button id="muteBtn" class="btn">🔇 Mute</button></div>
+  <div class="control-group"><span>💰</span><span id="balance">10000</span><span id="dailyPL">0</span><input id="stake" value="100" size="4"><button id="resetBal" class="btn">↺</button></div>
+  <button class="btn" id="refresh">🔄 Re‑Sync</button>
   <button class="btn" id="themeToggle">🌓 Theme</button>
 </div>
-<div class="insights-bar"><span class="best-badge" id="bestLabel">🏆 Waiting for data...</span><div class="signals-row" id="activeSignals"></div></div>
+<div class="insights-bar"><span class="best-badge" id="bestLabel">🏆 Loading…</span><div class="signals-row" id="activeSignals"></div></div>
 <div class="main-layout">
   <div class="markets-area" id="markets"></div>
   <div class="sidebar">
-    <div class="trade-panel">
-      <div><span>💰 Balance (API):</span><span id="realBalance" style="font-weight:bold; color:var(--good);">---</span></div>
-      <div><span>🎮 Simulated Balance:</span><span id="simBalance" style="font-weight:bold; color:var(--highlight);">---</span></div>
-      <div><span>💵 Base Stake ($):</span><input type="number" id="baseStake" value="10" step="1" style="width:80px;"></div>
-      <div><span>💹 Martingale x</span><input type="range" id="martingaleMult" min="1.5" max="3.0" step="0.05" value="2.1" style="width:100px;"><span id="multVal">2.10</span></div>
-      <div><span>🎯 Target (× stake)</span><input type="range" id="targetMult" min="0.5" max="3.0" step="0.1" value="1.0" style="width:100px;"><span id="targetVal">1.0</span></div>
-      <div><span>🛑 Max steps</span><input type="number" id="maxSteps" value="10" min="1" max="30" style="width:60px;"></div>
-      <div><span>📈 Next Stake:</span><span id="nextStake">0.00</span></div>
-      <div><span>📊 Session P&L:</span><span id="sessionPL">0.00</span></div>
-      <div><span>🔄 Step:</span><span id="martingaleCount">1</span></div>
-      <button id="resetSessionBtn" class="btn" style="width:100%;">End Session</button>
-    </div>
     <div class="sidebar-title">📋 Markets (click name to pin)</div>
     <div id="marketList"></div>
-    <div class="history-panel"><div>📜 Trade History <span id="overallWR"></span></div><div id="historyList">No trades yet</div></div>
-    <div class="debug-panel"><div>🔍 Signal & Session Log</div><div id="debugContent">Initializing...</div></div>
+    <div class="history-panel"><div>📜 Signal History <span id="overallWR"></span></div><div id="historyList">No signals yet</div></div>
+    <div class="debug-panel"><div>🔍 Multi‑TF exhaustion check</div><div id="debugContent">Waiting for data...</div></div>
   </div>
 </div>
 <script>
   (function() {
+    const TOKEN = "PUT_TOKEN_HERE"; // ⚠️ REPLACE WITH YOUR DERIV TOKEN
     const MARKETS = [
       {sym:"R_10",name:"Volatility 10"},{sym:"R_25",name:"Volatility 25"},{sym:"R_50",name:"Volatility 50"},
       {sym:"R_75",name:"Volatility 75"},{sym:"R_100",name:"Volatility 100"},
@@ -139,212 +126,159 @@
       {sym:"JD10",name:"Jump 10"},{sym:"JD25",name:"Jump 25"},{sym:"JD50",name:"Jump 50"},{sym:"JD75",name:"Jump 75"},{sym:"JD100",name:"Jump 100"}
     ];
     
-    // ---------- Balances ----------
-    let realBalance = 0;
-    let simulatedBalance = 0;
-    let baseStake = 10;
-    let martingaleMult = 2.1;
-    let targetMult = 1.0;
-    let maxSteps = 10;
+    // Paper trading
+    let balance = 10000, dailyPL = 0, stake = 100;
+    let trades = [], winStats = new Map();
+    function updateUI() { document.getElementById('balance').innerText = balance.toFixed(0); const col = dailyPL>=0?'#4ade80':'#f87171'; document.getElementById('dailyPL').innerHTML = `<span style="color:${col}">${dailyPL>=0?'+':''}${dailyPL.toFixed(0)}</span>`; }
+    function addTrade(sym, dir, outcome, profit) {
+      trades.unshift({ sym, dir, outcome, profit, time: new Date().toLocaleTimeString() });
+      if(trades.length>50) trades.pop();
+      let st = winStats.get(sym) || {w:0,l:0};
+      outcome==='win'?st.w++:st.l++;
+      winStats.set(sym, st);
+      let totalWins = trades.filter(t=>t.outcome==='win').length;
+      let wr = trades.length ? (totalWins/trades.length*100).toFixed(0) : 0;
+      document.getElementById('overallWR').innerHTML = `(WR:${wr}%)`;
+      let html = trades.slice(0,15).map(t=>`<div class="history-entry"><span>${t.time} ${t.sym} ${t.dir}</span><span class="${t.outcome}">${t.outcome==='win'?'+'+t.profit.toFixed(0):t.profit.toFixed(0)}</span></div>`).join('');
+      document.getElementById('historyList').innerHTML = html;
+    }
+    function applyOutcome(sym, dir, win) { let pnl = win ? stake*0.85 : -stake; balance += pnl; dailyPL += pnl; updateUI(); addTrade(sym, dir, win?'win':'loss', pnl); }
+    document.getElementById('resetBal').onclick = () => { balance=10000; dailyPL=0; trades=[]; winStats.clear(); updateUI(); addTrade('','',false,0); };
+    document.getElementById('stake').onchange = (e) => { stake = parseFloat(e.target.value) || 100; };
     
-    // Per-market session
-    let sessions = new Map();
-    function getSession(sym) {
-      if(!sessions.has(sym)) sessions.set(sym, { active: false, direction: null, initialStake: 0, cumulativePL: 0, currentStake: baseStake, step: 1 });
-      return sessions.get(sym);
-    }
-    function updateSessionUI(sym) {
-      let sess = getSession(sym);
-      if(sess.active) {
-        document.getElementById('nextStake').innerText = sess.currentStake.toFixed(2);
-        document.getElementById('martingaleCount').innerText = sess.step;
-        document.getElementById('sessionPL').innerText = sess.cumulativePL.toFixed(2);
-      } else {
-        document.getElementById('nextStake').innerText = baseStake.toFixed(2);
-        document.getElementById('martingaleCount').innerText = "1";
-        document.getElementById('sessionPL').innerText = "0.00";
-      }
-    }
-    function endSession(sym) {
-      let sess = getSession(sym);
-      if(sess.active) {
-        addDebug(`🛑 Simulated session ended for ${sym}. Final P&L: ${sess.cumulativePL.toFixed(2)}`);
-        sess.active = false;
-        sess.direction = null;
-        sess.initialStake = 0;
-        sess.cumulativePL = 0;
-        sess.currentStake = baseStake;
-        sess.step = 1;
-        updateSessionUI(sym);
-      }
-    }
-    function startSession(sym, direction, firstStake) {
-      let sess = getSession(sym);
-      if(sess.active) return false;
-      if(simulatedBalance < firstStake) { addDebug(`Insufficient simulated balance (${simulatedBalance.toFixed(2)} < ${firstStake})`); return false; }
-      sess.active = true;
-      sess.direction = direction;
-      sess.initialStake = firstStake;
-      sess.cumulativePL = 0;
-      sess.currentStake = firstStake;
-      sess.step = 1;
-      updateSessionUI(sym);
-      addDebug(`🟢 New simulated session on ${sym} (${direction}). Target profit: $${(firstStake * targetMult).toFixed(2)}`);
-      return true;
-    }
-    function applySimulatedTradeOutcome(sym, win, stakeUsed) {
-      let sess = getSession(sym);
-      if(!sess.active) return false;
-      let profit = win ? stakeUsed * 0.85 : -stakeUsed;
-      simulatedBalance += profit;
-      document.getElementById('simBalance').innerText = simulatedBalance.toFixed(2);
-      sess.cumulativePL += profit;
-      addDebug(`${sym} ${win?'WIN':'LOSS'} | P/L: ${profit.toFixed(2)} | Session P&L: ${sess.cumulativePL.toFixed(2)} | Sim Balance: ${simulatedBalance.toFixed(2)}`);
-      updateSessionUI(sym);
-      let target = sess.initialStake * targetMult;
-      if(sess.cumulativePL >= target) {
-        addDebug(`🎯 Target reached! Session closed for ${sym}.`);
-        endSession(sym);
-        return true;
-      }
-      if(win) {
-        sess.currentStake = baseStake;
-        sess.step = 1;
-      } else {
-        if(sess.step < maxSteps) {
-          sess.currentStake = sess.currentStake * martingaleMult;
-          sess.step++;
-        } else {
-          addDebug(`Max Martingale steps (${maxSteps}) reached. Closing session.`);
-          endSession(sym);
-          return true;
-        }
-      }
-      updateSessionUI(sym);
-      if(sess.active) {
-        pendingSimTrades[sym] = { sym, direction: sess.direction, stake: sess.currentStake };
-        addDebug(`Queued next sim trade: ${sess.direction} stake ${sess.currentStake.toFixed(2)}`);
-      }
-      return true;
-    }
+    // Sound
+    let muted = false;
+    let sounds = { beep:"https://actions.google.com/sounds/v1/alarms/beep_short.ogg", alert:"https://actions.google.com/sounds/v1/alarms/beep_soft.ogg", ping:"https://actions.google.com/sounds/v1/alarms/ding.ogg" };
+    let audio = new Audio(sounds.beep);
+    function play() { if(!muted) audio.play().catch(e=>{}); }
+    document.getElementById('soundSelect').onchange = (e) => { audio = new Audio(sounds[e.target.value]); };
+    document.getElementById('muteBtn').onclick = () => { muted = !muted; document.getElementById('muteBtn').innerText = muted ? '🔇 Muted' : '🔊 Mute'; };
     
-    // ----- Strategy parameters (adjustable) -----
-    let shortPct = 70, thresh250 = 57, thresh500 = 55, thresh1000 = 52;
-    let sensitivity = 1.0, signalSec = 20;
+    // Adjustable thresholds
+    let shortPct = 70;
+    let thresh250 = 57;
+    let thresh500 = 55;
+    let thresh1000 = 52;
     document.getElementById('shortThresh').oninput = (e) => { shortPct = parseInt(e.target.value); document.getElementById('shortVal').innerText = shortPct+'%'; };
     document.getElementById('thresh250').oninput = (e) => { thresh250 = parseInt(e.target.value); document.getElementById('val250').innerText = thresh250+'%'; };
     document.getElementById('thresh500').oninput = (e) => { thresh500 = parseInt(e.target.value); document.getElementById('val500').innerText = thresh500+'%'; };
     document.getElementById('thresh1000').oninput = (e) => { thresh1000 = parseInt(e.target.value); document.getElementById('val1000').innerText = thresh1000+'%'; };
+    
+    let sensitivity = 1.0;
+    let signalSec = 20;
     document.getElementById('sensitivity').oninput = (e) => { sensitivity = parseFloat(e.target.value); document.getElementById('sensVal').innerText = sensitivity.toFixed(2); };
     document.getElementById('duration').oninput = (e) => { signalSec = parseInt(e.target.value); document.getElementById('durVal').innerText = signalSec; };
-    document.getElementById('baseStake').onchange = (e) => { baseStake = parseFloat(e.target.value) || 10; };
-    document.getElementById('martingaleMult').oninput = (e) => { martingaleMult = parseFloat(e.target.value); document.getElementById('multVal').innerText = martingaleMult.toFixed(2); };
-    document.getElementById('targetMult').oninput = (e) => { targetMult = parseFloat(e.target.value); document.getElementById('targetVal').innerText = targetMult.toFixed(1); };
-    document.getElementById('maxSteps').onchange = (e) => { maxSteps = parseInt(e.target.value) || 10; };
-    document.getElementById('resetSessionBtn').onclick = () => { for(let sym of MARKETS) endSession(sym.sym); addDebug("All simulated sessions ended manually."); };
     
-    // ----- Sound -----
-    let muted = false;
-    let sounds = { beep:"https://actions.google.com/sounds/v1/alarms/beep_short.ogg", alert:"https://actions.google.com/sounds/v1/alarms/beep_soft.ogg", ping:"https://actions.google.com/sounds/v1/alarms/ding.ogg" };
-    let audio = new Audio(sounds.beep);
-    function playSound() { if(!muted) audio.play().catch(e=>{}); }
-    document.getElementById('soundSelect').onchange = (e) => { audio = new Audio(sounds[e.target.value]); };
-    document.getElementById('muteBtn').onclick = () => { muted = !muted; document.getElementById('muteBtn').innerText = muted ? '🔇' : '🔊'; };
-    
-    // ----- Market data (shared, independent of account) -----
-    let store = {}, priceStore = {}, ready = {}, signalActive = {}, pinned = null;
+    // State
+    let store = {}, priceStore = {}, ready = {}, signalActive = {}, pinned = null, ws = null;
     let lastSignalTime = {}, signalStrength = {}, signalConf = {}, signalExpiry = {};
-    let lastDigit = {};
+    let pending = {}, lastDigit = {};
     let checkboxState = {};
     let debug = [];
-    let trades = [];
-    let readyCount = 0;
-    let pendingSimTrades = {};
-    let tickWs = null;
+    function addDebug(msg) { debug.unshift(msg); if(debug.length>12) debug.pop(); document.getElementById('debugContent').innerHTML = debug.map(m=>`<div>${m}</div>`).join(''); }
     
-    function addDebug(msg) { debug.unshift(msg); if(debug.length>25) debug.pop(); document.getElementById('debugContent').innerHTML = debug.map(m=>`<div>${m}</div>`).join(''); }
     function getEvenPct(arr) { if(!arr.length) return 50; return (arr.filter(d=>d%2===0).length/arr.length)*100; }
-    function isSaturated(data, tf, bias) {
+    
+    function isSaturated(data, tf, biasDirection) {
       if(!data || data.length < tf) return false;
-      let slice = data.slice(-tf);
-      let even = getEvenPct(slice);
-      let th = tf===1000 ? thresh1000 : (tf===500 ? thresh500 : thresh250);
-      if(bias === "EVEN") return even >= th;
-      else return even <= (100 - th);
+      const slice = data.slice(-tf);
+      const evenPct = getEvenPct(slice);
+      let threshold;
+      if(tf === 1000) threshold = thresh1000;
+      else if(tf === 500) threshold = thresh500;
+      else if(tf === 250) threshold = thresh250;
+      else return false;
+      if(biasDirection === "EVEN") return evenPct >= threshold;
+      else return evenPct <= (100 - threshold);
     }
     
     function checkSignal(sym) {
       if(!ready[sym]) return false;
-      let full = store[sym];
+      const full = store[sym];
       if(!full || full.length < 1000) return false;
-      let short = full.slice(-100);
-      let shortEven = getEvenPct(short);
-      let shortBias = shortEven > 50 ? "EVEN" : "ODD";
-      let extreme = (shortBias === "EVEN" && shortEven >= shortPct) || (shortBias === "ODD" && shortEven <= (100 - shortPct));
-      if(!extreme) return false;
-      let allSat = [250,500,1000].every(tf => isSaturated(full, tf, shortBias));
-      if(!allSat) return false;
-      let expectedReversal = shortBias === "EVEN" ? "ODD" : "EVEN";
-      let depth = Math.abs(shortEven-50);
-      let strength = Math.min(100, depth*1.5)/sensitivity;
-      let confidence = Math.min(100, (shortBias==="EVEN"? shortEven-(shortPct-5): (100-shortEven)-(shortPct-5))*2)/sensitivity;
-      if(strength<40 || confidence<35) return false;
-      let now = Date.now();
-      let cooldown = 5000/sensitivity;
-      if(lastSignalTime[sym] && now-lastSignalTime[sym] < cooldown) return false;
-      let sess = getSession(sym);
-      if(!sess.active) {
-        if(startSession(sym, expectedReversal, baseStake)) {
-          addDebug(`🔔 SIGNAL ${sym} ${expectedReversal} | session stake $${baseStake}`);
-          signalStrength[sym]=strength; signalConf[sym]=confidence;
-          signalExpiry[sym]=now+signalSec*1000;
-          lastSignalTime[sym]=now;
-          pendingSimTrades[sym] = { sym, direction: expectedReversal, stake: baseStake };
-          playSound();
+      
+      const shortData = full.slice(-100);
+      const shortEven = getEvenPct(shortData);
+      const shortBias = shortEven > 50 ? "EVEN" : "ODD";
+      const shortExtreme = (shortBias === "EVEN" && shortEven >= shortPct) || (shortBias === "ODD" && shortEven <= (100 - shortPct));
+      if(!shortExtreme) { addDebug(`${sym}: short not extreme (${shortEven.toFixed(1)}%)`); return false; }
+      
+      const tfs = [250, 500, 1000];
+      let allSat = true;
+      for(let tf of tfs) {
+        if(!isSaturated(full, tf, shortBias)) {
+          allSat = false;
+          addDebug(`${sym}: TF${tf} not saturated in ${shortBias}`);
+          break;
         }
+      }
+      if(!allSat) return false;
+      
+      const expectedRev = shortBias === "EVEN" ? "ODD" : "EVEN";
+      let depth = Math.abs(shortEven - 50);
+      let strength = Math.min(100, depth * 1.5);
+      let confidence = Math.min(100, (shortBias === "EVEN" ? shortEven - (shortPct-5) : (100-shortEven) - (shortPct-5)) * 2);
+      strength = strength / sensitivity;
+      confidence = confidence / sensitivity;
+      if(strength < 40) { addDebug(`${sym}: strength ${strength.toFixed(0)}`); return false; }
+      if(confidence < 35) { addDebug(`${sym}: confidence ${confidence.toFixed(0)}`); return false; }
+      
+      let now = Date.now();
+      let cooldown = 5000 / sensitivity;
+      if(lastSignalTime[sym] && (now - lastSignalTime[sym]) < cooldown) { addDebug(`${sym}: cooldown`); return false; }
+      
+      if(!signalActive[sym]) {
+        signalStrength[sym] = strength;
+        signalConf[sym] = confidence;
+        signalExpiry[sym] = now + (signalSec * 1000);
+        pending[sym] = { sym, direction: expectedRev, time: now };
+        lastSignalTime[sym] = now;
+        addDebug(`✅ SIGNAL ${sym} ${expectedRev} | short=${shortEven.toFixed(1)}% | str=${strength.toFixed(0)}`);
+        play();
       } else {
-        signalStrength[sym]=strength; signalConf[sym]=confidence;
-        signalExpiry[sym]=now+signalSec*1000;
+        signalExpiry[sym] = now + (signalSec * 1000);
       }
       return true;
     }
-    setInterval(()=>{ let n=Date.now(); for(let s in signalExpiry) if(signalExpiry[s] && n>signalExpiry[s]) { signalActive[s]=false; delete signalExpiry[s]; renderMarket(s); updateInsights(); } },1000);
     
-    function resolvePendingSimTrade(sym, digit) {
-      let trade = pendingSimTrades[sym];
-      if(!trade) return;
-      let win = (trade.direction === 'EVEN' && digit%2===0) || (trade.direction === 'ODD' && digit%2===1);
-      applySimulatedTradeOutcome(sym, win, trade.stake);
-      addTradeToHistory(sym, trade.direction, win?'win':'loss', win ? trade.stake*0.85 : -trade.stake);
-      delete pendingSimTrades[sym];
+    setInterval(() => {
+      let now = Date.now();
+      for(let sym in signalExpiry) {
+        if(signalExpiry[sym] && now > signalExpiry[sym]) {
+          signalActive[sym] = false;
+          delete signalExpiry[sym];
+          renderMarket(sym);
+          updateInsights();
+        }
+      }
+    }, 1000);
+    
+    function resolvePending(sym) {
+      let entry = pending[sym];
+      if(!entry) return;
+      let digit = lastDigit[sym];
+      if(digit === undefined) return;
+      let win = (entry.direction === 'EVEN' && digit%2===0) || (entry.direction === 'ODD' && digit%2===1);
+      applyOutcome(sym, entry.direction, win);
+      addDebug(`${sym} ${win?'WIN':'LOSS'} (digit ${digit})`);
+      delete pending[sym];
     }
     
-    function addTradeToHistory(sym, dir, outcome, profit) {
-      trades.unshift({ sym, dir, outcome, profit, time: new Date().toLocaleTimeString() });
-      if(trades.length>50) trades.pop();
-      let wins = trades.filter(t=>t.outcome==='win').length;
-      let wr = trades.length ? (wins/trades.length*100).toFixed(0) : 0;
-      document.getElementById('overallWR').innerHTML = `(WR:${wr}%)`;
-      let html = trades.slice(0,20).map(t=>`<div class="history-entry"><span>${t.time} ${t.sym} ${t.dir}</span><span class="${t.outcome}">${t.outcome==='win'?'+'+t.profit.toFixed(2):t.profit.toFixed(2)}</span></div>`).join('');
-      document.getElementById('historyList').innerHTML = html;
-    }
-    
-    // ----- UI Rendering -----
     function renderMarket(sym) {
-      let cont = document.getElementById(`mkt-${sym}`);
-      if(!cont) { cont=document.createElement('div'); cont.id=`mkt-${sym}`; cont.className='market-card'; document.getElementById('markets').appendChild(cont); }
-      if(!checkboxState[sym]) { cont.style.display='none'; return; } else cont.style.display='';
-      if(!ready[sym]) { cont.innerHTML=`<div>⌛ ${MARKETS.find(m=>m.sym===sym).name} (${store[sym]?.length||0}/1000)</div>`; return; }
+      let container = document.getElementById(`mkt-${sym}`);
+      if(!container) { container=document.createElement('div'); container.id=`mkt-${sym}`; container.className='market-card'; document.getElementById('markets').appendChild(container); }
+      if(!checkboxState[sym]) { container.style.display='none'; return; } else container.style.display='';
+      if(!ready[sym]) { let have=store[sym]?store[sym].length:0; container.innerHTML=`<div class="loading-text">⌛ ${MARKETS.find(m=>m.sym===sym).name} (${have}/1000)</div>`; return; }
       let full=store[sym], data=full.slice(-500), total=data.length;
       let counts=Array(10).fill(0); data.forEach(d=>counts[d]++);
       let even=counts[0]+counts[2]+counts[4]+counts[6]+counts[8];
       let evenPct=(even/total*100).toFixed(1);
       let isSig=signalActive[sym]||false;
       let tradeDir=isSig ? (signalStrength[sym]? (even>total/2?'EVEN':'ODD'):null):null;
-      let rem = signalExpiry[sym] ? Math.max(0, Math.ceil((signalExpiry[sym]-Date.now())/1000)) : 0;
-      let sess = getSession(sym);
-      let sessionInfo = sess.active ? ` | Session: ${sess.cumulativePL.toFixed(2)}/${(sess.initialStake*targetMult).toFixed(0)}` : '';
-      let html = `<div class="market-name">${MARKETS.find(m=>m.sym===sym).name} ${isSig && tradeDir ? `<span class="signal-badge ${tradeDir==='EVEN'?'even':'odd'}">BUY ${tradeDir}</span>` : ''}<span class="tag" style="background:#64748b">${sessionInfo}</span></div>
+      let stats=winStats.get(sym)||{w:0,l:0};
+      let wr=stats.w+stats.l ? (stats.w/(stats.w+stats.l)*100).toFixed(0) : 0;
+      let remaining = signalExpiry[sym] ? Math.max(0, Math.ceil((signalExpiry[sym]-Date.now())/1000)) : 0;
+      let html = `<div class="card-header"><div class="market-name">${MARKETS.find(m=>m.sym===sym).name} ${isSig && tradeDir ? `<span class="trade-type-badge ${tradeDir==='EVEN'?'even':'odd'}">BUY ${tradeDir}</span>` : ''}<span class="tag" style="background:${wr>50?'#16a34a':'#64748b'}">WR:${wr}%</span></div></div>
         <div class="price-large">${priceStore[sym]}</div>
         <div class="stat-line"><span>🎲 Even: ${evenPct}%</span><span>Odd: ${(100-evenPct).toFixed(1)}%</span><span>TF: 100/250/500/1000</span></div>
         <div class="digit-grid">${[0,1,2,3,4,5,6,7,8,9].map(i=>{ let perc=(counts[i]/total*100).toFixed(1); let cls=''; if(counts[i]===Math.max(...counts)) cls='most'; return `<div class="digit-cell ${cls}" data-digit="${i}"><span class="digit-number">${i}</span><span class="digit-percent">${perc}%</span></div>`; }).join('')}</div>
@@ -352,11 +286,11 @@
       if(isSig && signalStrength[sym]) {
         html += `<div class="signal-gauges"><div class="gauge"><div>Strength</div><div class="gauge-bar-bg"><div class="gauge-fill strength" style="width:${signalStrength[sym]}%"></div></div><div>${signalStrength[sym].toFixed(0)}%</div></div>
                   <div class="gauge"><div>Confidence</div><div class="gauge-bar-bg"><div class="gauge-fill conf" style="width:${signalConf[sym]}%"></div></div><div>${signalConf[sym].toFixed(0)}%</div></div>
-                  <div class="gauge"><div>Expires</div><div>${rem}s</div></div></div>`;
+                  <div class="gauge"><div>Expires</div><div>${remaining}s</div></div></div>`;
       }
-      cont.innerHTML = html;
-      cont.className = `market-card ${isSig ? 'signal-active' : ''}`;
-      setTimeout(()=>{ let last=full[full.length-1]; let t=cont.querySelector(`.digit-cell[data-digit="${last}"]`); if(t && !t.querySelector('.pointer-dot')){ let dot=document.createElement('span'); dot.className='pointer-dot '+(last%2===0?'even':'odd'); dot.textContent='●'; t.appendChild(dot); } },10);
+      container.innerHTML = html;
+      container.className = `market-card ${isSig ? 'signal-active' : ''}`;
+      setTimeout(()=>{ let last=full[full.length-1]; let t=container.querySelector(`.digit-cell[data-digit="${last}"]`); if(t && !t.querySelector('.pointer-dot')){ let dot=document.createElement('span'); dot.className='pointer-dot '+(last%2===0?'even':'odd'); dot.textContent='●'; t.appendChild(dot); } },10);
     }
     
     function updateInsights() {
@@ -370,54 +304,15 @@
     function sortCards() { let area=document.getElementById('markets'); let cards=Array.from(area.querySelectorAll('.market-card')); let order=new Map(); MARKETS.forEach((m,i)=>order.set(m.sym,i)); cards.sort((a,b)=>{ let sa=a.id.replace('mkt-',''), sb=b.id.replace('mkt-',''); if(sa===pinned) return -1; if(sb===pinned) return 1; return (order.get(sa)||999)-(order.get(sb)||999); }); cards.forEach(c=>area.appendChild(c)); }
     function pinMarket(sym){ pinned=sym; sortCards(); document.getElementById(`mkt-${sym}`)?.scrollIntoView({behavior:'smooth',block:'center'}); }
     
-    // ----- Fetch balance using token (demo/real) -----
-    async function fetchBalance(token) {
-      return new Promise((resolve) => {
-        let balWs = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
-        balWs.onopen = () => balWs.send(JSON.stringify({authorize: token}));
-        balWs.onmessage = (msg) => {
-          let data = JSON.parse(msg.data);
-          if(data.msg_type === "authorize") { if(data.error) { resolve(null); balWs.close(); return; } balWs.send(JSON.stringify({balance: 1})); }
-          if(data.msg_type === "balance") { resolve(data.balance.balance); balWs.close(); }
-        };
-        balWs.onerror = () => resolve(null);
-        setTimeout(() => { if(balWs.readyState === WebSocket.OPEN) balWs.close(); resolve(null); }, 5000);
-      });
-    }
-    
-    async function connectAccount() {
-      let token = document.getElementById('tokenInput').value.trim();
-      let accType = document.getElementById('accountType').value;
-      if(!token) { addDebug("Please enter a token"); return; }
-      addDebug(`Connecting to ${accType.toUpperCase()} account...`);
-      document.getElementById('connectionStatus').innerHTML = '<span class="status-dot live"></span> Fetching balance...';
-      let bal = await fetchBalance(token);
-      if(bal !== null) {
-        realBalance = bal;
-        simulatedBalance = bal;   // start new simulated balance equal to real
-        document.getElementById('realBalance').innerText = realBalance.toFixed(2);
-        document.getElementById('simBalance').innerText = simulatedBalance.toFixed(2);
-        addDebug(`✅ ${accType.toUpperCase()} account authorized. Balance: ${realBalance.toFixed(2)}`);
-        document.getElementById('connectionStatus').innerHTML = `<span class="status-dot live"></span> ${accType.toUpperCase()} | Balance: ${realBalance.toFixed(2)}`;
-        // Reset all sessions and pending trades when switching account
-        for(let sym of MARKETS) endSession(sym.sym);
-        pendingSimTrades = {};
-      } else {
-        addDebug(`❌ Authorization failed for ${accType.toUpperCase()} token. Check token and permissions.`);
-        document.getElementById('connectionStatus').innerHTML = '<span class="status-dot error"></span> Auth failed';
-      }
-    }
-    
-    // ----- Tick stream (always live, public) -----
-    function startTickStream() {
-      if(tickWs) tickWs.close();
-      tickWs = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
-      tickWs.onopen = () => {
-        MARKETS.forEach(m => { tickWs.send(JSON.stringify({ticks_history: m.sym, count: 2000, end: "latest", style: "ticks"})); });
-        setTimeout(() => { MARKETS.forEach(m => { tickWs.send(JSON.stringify({ticks: m.sym, subscribe: 1})); }); }, 2000);
-        addDebug("Tick stream connected (public).");
+    // WebSocket
+    function connect() {
+      ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
+      ws.onopen = () => {
+        ws.send(JSON.stringify({authorize: TOKEN}));
+        MARKETS.forEach(m => ws.send(JSON.stringify({ticks_history: m.sym, count: 2000, end: "latest", style: "ticks"})));
+        setTimeout(() => { MARKETS.forEach(m => ws.send(JSON.stringify({ticks: m.sym, subscribe: 1}))); }, 2000);
       };
-      tickWs.onmessage = (msg) => {
+      ws.onmessage = (msg) => {
         let data = JSON.parse(msg.data);
         if(data.history) {
           let sym = data.echo_req.ticks_history;
@@ -427,8 +322,6 @@
           store[sym] = store[sym].concat(digits).slice(-10000);
           priceStore[sym] = prices.length ? parseFloat(prices[prices.length-1]).toFixed(2) : '—';
           ready[sym] = store[sym].length >= 1000;
-          if(ready[sym]) readyCount++;
-          document.getElementById('dataCount').innerText = `${readyCount}/${MARKETS.length} markets ready`;
           renderMarket(sym); updateInsights(); sortCards();
         }
         if(data.tick) {
@@ -441,35 +334,24 @@
           priceStore[sym]=formatted;
           lastDigit[sym]=digit;
           ready[sym] = store[sym].length >= 1000;
-          resolvePendingSimTrade(sym, digit);
+          resolvePending(sym);
           let old = signalActive[sym]||false;
           let newSig = checkSignal(sym);
           signalActive[sym] = newSig;
-          if(!old && newSig) playSound();
+          if(!old && newSig) play();
           else if(old && !newSig) { signalStrength[sym]=0; signalConf[sym]=0; }
           renderMarket(sym); updateInsights(); sortCards();
-          if(readyCount < MARKETS.length && ready[sym]) {
-            readyCount = MARKETS.filter(m=>ready[m.sym]).length;
-            document.getElementById('dataCount').innerText = `${readyCount}/${MARKETS.length} markets ready`;
-          }
         }
-        if(data.error && data.error.code !== "APIUpgrade") addDebug(`API: ${data.error.message}`);
+        if(data.error) console.warn(data.error);
       };
-      tickWs.onclose = () => { addDebug("Tick stream closed, reconnecting..."); setTimeout(startTickStream, 3000); };
-      tickWs.onerror = () => addDebug("Tick stream error");
     }
-    
-    function resetAll() { if(tickWs) tickWs.close(); store={}; ready={}; signalActive={}; readyCount=0; sessions.clear(); pendingSimTrades={}; startTickStream(); }
-    document.getElementById('refreshBtn').onclick = resetAll;
-    document.getElementById('connectBtn').onclick = connectAccount;
+    function reset() { if(ws) ws.close(); MARKETS.forEach(m=>{ store[m.sym]=[]; ready[m.sym]=false; signalActive[m.sym]=false; }); pending={}; lastSignalTime={}; signalExpiry={}; connect(); }
+    document.getElementById('refresh').onclick = reset;
     document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
     
     // Build market list
     MARKETS.forEach(m=>{ let div=document.createElement('div'); div.className='market-list-item'; div.setAttribute('data-sym',m.sym); let cb=document.createElement('input'); cb.type='checkbox'; cb.checked=true; cb.onchange=(e)=>{ checkboxState[m.sym]=e.target.checked; let el=document.getElementById(`mkt-${m.sym}`); if(el) el.style.display=e.target.checked?'':'none'; }; checkboxState[m.sym]=true; let span=document.createElement('span'); span.textContent=m.name; span.onclick=()=>pinMarket(m.sym); div.appendChild(cb); div.appendChild(span); document.getElementById('marketList').appendChild(div); });
-    
-    // Auto‑connect on page load with the pre‑filled demo token
-    startTickStream();
-    connectAccount();
+    reset();
   })();
 </script>
 </body>
