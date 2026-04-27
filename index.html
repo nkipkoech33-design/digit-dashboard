@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Digit Analyzer – Live Demo + Reversal Trading (Token Embedded)</title>
+  <title>Digit Analyzer – Demo/Real Account Switch | Reversal Trading</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -16,13 +16,15 @@
       --highlight: #0284c7; --shadow: 0 2px 8px rgba(0,0,0,0.08); }
     body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif;
       height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+    .token-bar { background: #1e293b; padding: 0.5rem 1rem; display: flex; gap: 1rem; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
+    .token-input { background: #0f172a; border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.8rem; border-radius: 2rem; width: 300px; font-family: monospace; }
+    .btn { background: var(--accent); color: #000; border: none; padding: 0.3rem 1rem; border-radius: 2rem; font-weight: 600; cursor: pointer; font-size: 0.8rem; }
     .status-bar { background: var(--card); padding: 0.3rem 1rem; font-size: 0.8rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; flex-shrink: 0; }
     .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
     .status-dot.live { background: #22c55e; } .status-dot.error { background: #ef4444; }
     .top-bar { background: var(--card); padding: 0.6rem 1rem; border-bottom: 2px solid var(--accent);
       display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center; flex-shrink: 0; }
     .control-group { display: flex; align-items: center; gap: 0.5rem; background: var(--bg); padding: 0.3rem 0.8rem; border-radius: 2rem; font-size: 0.85rem; }
-    .btn { background: var(--accent); color: #000; border: none; padding: 0.3rem 1rem; border-radius: 2rem; font-weight: 600; cursor: pointer; font-size: 0.8rem; }
     .insights-bar { background: var(--card); padding: 0.4rem 1rem; border-bottom: 1px solid var(--border);
       display: flex; align-items: center; gap: 1rem; overflow-x: auto; flex-shrink: 0; min-height: 55px; }
     .best-badge { background: var(--accent); color: #000; padding: 0.3rem 0.8rem; border-radius: 2rem; font-weight: 700; font-size: 0.85rem; }
@@ -32,7 +34,7 @@
     .signal-badge.odd { background: #7f1d1d; color: #f87171; border: 1px solid #ef4444; }
     .main-layout { display: flex; flex: 1; overflow: hidden; }
     .markets-area { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
-    .sidebar { width: 360px; background: var(--card); border-left: 1px solid var(--border);
+    .sidebar { width: 380px; background: var(--card); border-left: 1px solid var(--border);
       overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
     .trade-panel { background: var(--bg); border-radius: 1rem; padding: 0.8rem; border: 1px solid var(--accent); }
     .trade-panel div { margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
@@ -83,6 +85,17 @@
   </style>
 </head>
 <body>
+<div class="token-bar">
+  <span>🔑 Account Type:</span>
+  <select id="accountType" class="btn" style="background:#0f172a; color:var(--text);">
+    <option value="demo">Demo</option>
+    <option value="real">Real</option>
+  </select>
+  <span>🔑 API Token:</span>
+  <input type="text" id="tokenInput" class="token-input" placeholder="Paste your token here" value="4l9ExuW8tconjJO">
+  <button id="connectBtn" class="btn">Connect & Fetch Balance</button>
+  <span id="tokenStatus" style="font-size:0.8rem;"></span>
+</div>
 <div class="status-bar"><span id="connectionStatus"><span class="status-dot live"></span> Initializing...</span><span id="dataCount">0 markets ready</span></div>
 <div class="top-bar">
   <div class="control-group"><span>📊 100t</span><input type="range" id="shortThresh" min="60" max="80" value="70" step="1"><span id="shortVal">70%</span></div>
@@ -100,7 +113,7 @@
   <div class="markets-area" id="markets"></div>
   <div class="sidebar">
     <div class="trade-panel">
-      <div><span>💰 Real Balance (API):</span><span id="realBalance" style="font-weight:bold; color:var(--good);">---</span></div>
+      <div><span>💰 Balance (API):</span><span id="realBalance" style="font-weight:bold; color:var(--good);">---</span></div>
       <div><span>🎮 Simulated Balance:</span><span id="simBalance" style="font-weight:bold; color:var(--highlight);">---</span></div>
       <div><span>💵 Base Stake ($):</span><input type="number" id="baseStake" value="10" step="1" style="width:80px;"></div>
       <div><span>💹 Martingale x</span><input type="range" id="martingaleMult" min="1.5" max="3.0" step="0.05" value="2.1" style="width:100px;"><span id="multVal">2.10</span></div>
@@ -119,10 +132,6 @@
 </div>
 <script>
   (function() {
-    // =================== EMBEDDED TOKEN ===================
-    const API_TOKEN = "4l9ExuW8tconjJO";   // <-- Your token (demo account)
-    // ======================================================
-    
     const MARKETS = [
       {sym:"R_10",name:"Volatility 10"},{sym:"R_25",name:"Volatility 25"},{sym:"R_50",name:"Volatility 50"},
       {sym:"R_75",name:"Volatility 75"},{sym:"R_100",name:"Volatility 100"},
@@ -130,7 +139,7 @@
       {sym:"JD10",name:"Jump 10"},{sym:"JD25",name:"Jump 25"},{sym:"JD50",name:"Jump 50"},{sym:"JD75",name:"Jump 75"},{sym:"JD100",name:"Jump 100"}
     ];
     
-    // ---------- Balances (real from API, simulated for strategy) ----------
+    // ---------- Balances ----------
     let realBalance = 0;
     let simulatedBalance = 0;
     let baseStake = 10;
@@ -138,7 +147,7 @@
     let targetMult = 1.0;
     let maxSteps = 10;
     
-    // Per-market session data
+    // Per-market session
     let sessions = new Map();
     function getSession(sym) {
       if(!sessions.has(sym)) sessions.set(sym, { active: false, direction: null, initialStake: 0, cumulativePL: 0, currentStake: baseStake, step: 1 });
@@ -171,7 +180,7 @@
     }
     function startSession(sym, direction, firstStake) {
       let sess = getSession(sym);
-      if(sess.active) { addDebug(`Session already active for ${sym}.`); return false; }
+      if(sess.active) return false;
       if(simulatedBalance < firstStake) { addDebug(`Insufficient simulated balance (${simulatedBalance.toFixed(2)} < ${firstStake})`); return false; }
       sess.active = true;
       sess.direction = direction;
@@ -190,11 +199,11 @@
       simulatedBalance += profit;
       document.getElementById('simBalance').innerText = simulatedBalance.toFixed(2);
       sess.cumulativePL += profit;
-      addDebug(`${sym} ${win?'WIN':'LOSS'} | Sim P/L: ${profit.toFixed(2)} | Session P&L: ${sess.cumulativePL.toFixed(2)} | Sim Balance: ${simulatedBalance.toFixed(2)}`);
+      addDebug(`${sym} ${win?'WIN':'LOSS'} | P/L: ${profit.toFixed(2)} | Session P&L: ${sess.cumulativePL.toFixed(2)} | Sim Balance: ${simulatedBalance.toFixed(2)}`);
       updateSessionUI(sym);
       let target = sess.initialStake * targetMult;
       if(sess.cumulativePL >= target) {
-        addDebug(`🎯 Target reached! Simulated session closed for ${sym}.`);
+        addDebug(`🎯 Target reached! Session closed for ${sym}.`);
         endSession(sym);
         return true;
       }
@@ -219,7 +228,7 @@
       return true;
     }
     
-    // ----- Strategy parameters -----
+    // ----- Strategy parameters (adjustable) -----
     let shortPct = 70, thresh250 = 57, thresh500 = 55, thresh1000 = 52;
     let sensitivity = 1.0, signalSec = 20;
     document.getElementById('shortThresh').oninput = (e) => { shortPct = parseInt(e.target.value); document.getElementById('shortVal').innerText = shortPct+'%'; };
@@ -242,8 +251,8 @@
     document.getElementById('soundSelect').onchange = (e) => { audio = new Audio(sounds[e.target.value]); };
     document.getElementById('muteBtn').onclick = () => { muted = !muted; document.getElementById('muteBtn').innerText = muted ? '🔇' : '🔊'; };
     
-    // ----- Market data -----
-    let store = {}, priceStore = {}, ready = {}, signalActive = {}, pinned = null, tickWs = null;
+    // ----- Market data (shared, independent of account) -----
+    let store = {}, priceStore = {}, ready = {}, signalActive = {}, pinned = null;
     let lastSignalTime = {}, signalStrength = {}, signalConf = {}, signalExpiry = {};
     let lastDigit = {};
     let checkboxState = {};
@@ -251,6 +260,7 @@
     let trades = [];
     let readyCount = 0;
     let pendingSimTrades = {};
+    let tickWs = null;
     
     function addDebug(msg) { debug.unshift(msg); if(debug.length>25) debug.pop(); document.getElementById('debugContent').innerHTML = debug.map(m=>`<div>${m}</div>`).join(''); }
     function getEvenPct(arr) { if(!arr.length) return 50; return (arr.filter(d=>d%2===0).length/arr.length)*100; }
@@ -285,7 +295,7 @@
       let sess = getSession(sym);
       if(!sess.active) {
         if(startSession(sym, expectedReversal, baseStake)) {
-          addDebug(`🔔 SIGNAL ${sym} ${expectedReversal} | start session stake $${baseStake}`);
+          addDebug(`🔔 SIGNAL ${sym} ${expectedReversal} | session stake $${baseStake}`);
           signalStrength[sym]=strength; signalConf[sym]=confidence;
           signalExpiry[sym]=now+signalSec*1000;
           lastSignalTime[sym]=now;
@@ -360,11 +370,11 @@
     function sortCards() { let area=document.getElementById('markets'); let cards=Array.from(area.querySelectorAll('.market-card')); let order=new Map(); MARKETS.forEach((m,i)=>order.set(m.sym,i)); cards.sort((a,b)=>{ let sa=a.id.replace('mkt-',''), sb=b.id.replace('mkt-',''); if(sa===pinned) return -1; if(sb===pinned) return 1; return (order.get(sa)||999)-(order.get(sb)||999); }); cards.forEach(c=>area.appendChild(c)); }
     function pinMarket(sym){ pinned=sym; sortCards(); document.getElementById(`mkt-${sym}`)?.scrollIntoView({behavior:'smooth',block:'center'}); }
     
-    // ----- Fetch real balance using token -----
-    function fetchBalance() {
+    // ----- Fetch balance using token (demo/real) -----
+    async function fetchBalance(token) {
       return new Promise((resolve) => {
         let balWs = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
-        balWs.onopen = () => balWs.send(JSON.stringify({authorize: API_TOKEN}));
+        balWs.onopen = () => balWs.send(JSON.stringify({authorize: token}));
         balWs.onmessage = (msg) => {
           let data = JSON.parse(msg.data);
           if(data.msg_type === "authorize") { if(data.error) { resolve(null); balWs.close(); return; } balWs.send(JSON.stringify({balance: 1})); }
@@ -375,29 +385,37 @@
       });
     }
     
-    async function init() {
+    async function connectAccount() {
+      let token = document.getElementById('tokenInput').value.trim();
+      let accType = document.getElementById('accountType').value;
+      if(!token) { addDebug("Please enter a token"); return; }
+      addDebug(`Connecting to ${accType.toUpperCase()} account...`);
       document.getElementById('connectionStatus').innerHTML = '<span class="status-dot live"></span> Fetching balance...';
-      let bal = await fetchBalance();
+      let bal = await fetchBalance(token);
       if(bal !== null) {
         realBalance = bal;
-        simulatedBalance = bal;
+        simulatedBalance = bal;   // start new simulated balance equal to real
         document.getElementById('realBalance').innerText = realBalance.toFixed(2);
         document.getElementById('simBalance').innerText = simulatedBalance.toFixed(2);
-        addDebug(`✅ Authorized. Real balance: ${realBalance.toFixed(2)} | Simulated balance: ${simulatedBalance.toFixed(2)}`);
-        document.getElementById('connectionStatus').innerHTML = '<span class="status-dot live"></span> Live + Balance OK';
-        startTickStream();
+        addDebug(`✅ ${accType.toUpperCase()} account authorized. Balance: ${realBalance.toFixed(2)}`);
+        document.getElementById('connectionStatus').innerHTML = `<span class="status-dot live"></span> ${accType.toUpperCase()} | Balance: ${realBalance.toFixed(2)}`;
+        // Reset all sessions and pending trades when switching account
+        for(let sym of MARKETS) endSession(sym.sym);
+        pendingSimTrades = {};
       } else {
-        addDebug("❌ Authorization failed – token invalid or network issue");
+        addDebug(`❌ Authorization failed for ${accType.toUpperCase()} token. Check token and permissions.`);
         document.getElementById('connectionStatus').innerHTML = '<span class="status-dot error"></span> Auth failed';
       }
     }
     
+    // ----- Tick stream (always live, public) -----
     function startTickStream() {
+      if(tickWs) tickWs.close();
       tickWs = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
       tickWs.onopen = () => {
         MARKETS.forEach(m => { tickWs.send(JSON.stringify({ticks_history: m.sym, count: 2000, end: "latest", style: "ticks"})); });
         setTimeout(() => { MARKETS.forEach(m => { tickWs.send(JSON.stringify({ticks: m.sym, subscribe: 1})); }); }, 2000);
-        addDebug("Tick stream connected.");
+        addDebug("Tick stream connected (public).");
       };
       tickWs.onmessage = (msg) => {
         let data = JSON.parse(msg.data);
@@ -443,12 +461,15 @@
     
     function resetAll() { if(tickWs) tickWs.close(); store={}; ready={}; signalActive={}; readyCount=0; sessions.clear(); pendingSimTrades={}; startTickStream(); }
     document.getElementById('refreshBtn').onclick = resetAll;
+    document.getElementById('connectBtn').onclick = connectAccount;
     document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
     
     // Build market list
     MARKETS.forEach(m=>{ let div=document.createElement('div'); div.className='market-list-item'; div.setAttribute('data-sym',m.sym); let cb=document.createElement('input'); cb.type='checkbox'; cb.checked=true; cb.onchange=(e)=>{ checkboxState[m.sym]=e.target.checked; let el=document.getElementById(`mkt-${m.sym}`); if(el) el.style.display=e.target.checked?'':'none'; }; checkboxState[m.sym]=true; let span=document.createElement('span'); span.textContent=m.name; span.onclick=()=>pinMarket(m.sym); div.appendChild(cb); div.appendChild(span); document.getElementById('marketList').appendChild(div); });
     
-    init();
+    // Auto‑connect on page load with the pre‑filled demo token
+    startTickStream();
+    connectAccount();
   })();
 </script>
 </body>
