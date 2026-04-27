@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Digit Analyzer – Reversal Session Trading (Fixed)</title>
+  <title>Digit Analyzer – Real Balance + Simulated Reversal Trading</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -34,7 +34,7 @@
     .signal-badge.odd { background: #7f1d1d; color: #f87171; border: 1px solid #ef4444; }
     .main-layout { display: flex; flex: 1; overflow: hidden; }
     .markets-area { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
-    .sidebar { width: 340px; background: var(--card); border-left: 1px solid var(--border);
+    .sidebar { width: 360px; background: var(--card); border-left: 1px solid var(--border);
       overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
     .trade-panel { background: var(--bg); border-radius: 1rem; padding: 0.8rem; border: 1px solid var(--accent); }
     .trade-panel div { margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
@@ -86,7 +86,7 @@
 </head>
 <body>
 <div class="token-bar">
-  <span>🔑 Deriv Demo Token:</span>
+  <span>🔑 Deriv API Token (demo or real):</span>
   <input type="text" id="tokenInput" class="token-input" placeholder="Paste your token here" value="PUT_TOKEN_HERE">
   <button id="connectBtn" class="btn">Connect & Fetch Balance</button>
   <span id="tokenStatus" style="font-size:0.8rem;"></span>
@@ -108,7 +108,8 @@
   <div class="markets-area" id="markets"></div>
   <div class="sidebar">
     <div class="trade-panel">
-      <div><span>💰 Demo Balance:</span><span id="demoBalance" style="font-weight:bold; color:var(--good);">---</span></div>
+      <div><span>💰 Real Balance (API):</span><span id="realBalance" style="font-weight:bold; color:var(--good);">---</span></div>
+      <div><span>🎮 Simulated Balance:</span><span id="simBalance" style="font-weight:bold; color:var(--highlight);">---</span></div>
       <div><span>💵 Base Stake ($):</span><input type="number" id="baseStake" value="10" step="1" style="width:80px;"></div>
       <div><span>💹 Martingale x</span><input type="range" id="martingaleMult" min="1.5" max="3.0" step="0.05" value="2.1" style="width:100px;"><span id="multVal">2.10</span></div>
       <div><span>🎯 Target (× stake)</span><input type="range" id="targetMult" min="0.5" max="3.0" step="0.1" value="1.0" style="width:100px;"><span id="targetVal">1.0</span></div>
@@ -133,21 +134,15 @@
       {sym:"JD10",name:"Jump 10"},{sym:"JD25",name:"Jump 25"},{sym:"JD50",name:"Jump 50"},{sym:"JD75",name:"Jump 75"},{sym:"JD100",name:"Jump 100"}
     ];
     
-    // ----- Demo balance & Martingale (per market session) -----
-    let demoBalance = 0;
+    // ---------- Balances (real from API, simulated for strategy) ----------
+    let realBalance = 0;
+    let simulatedBalance = 0;
     let baseStake = 10;
     let martingaleMult = 2.1;
     let targetMult = 1.0;
     let maxSteps = 10;
     
-    // UI elements
-    const balanceSpan = document.getElementById('demoBalance');
-    const nextStakeSpan = document.getElementById('nextStake');
-    const martingaleCountSpan = document.getElementById('martingaleCount');
-    const sessionPLSpan = document.getElementById('sessionPL');
-    const resetSessionBtn = document.getElementById('resetSessionBtn');
-    
-    // Per‑market session data
+    // Per-market session data (for simulated trading)
     let sessions = new Map(); // key -> { active, direction, initialStake, cumulativePL, currentStake, step }
     
     function getSession(sym) {
@@ -155,23 +150,29 @@
       return sessions.get(sym);
     }
     
+    function updateSimUI() {
+      document.getElementById('simBalance').innerText = simulatedBalance.toFixed(2);
+      let sess = getSession(""); // just for UI, we'll show latest session values
+      // Actually we need to show the session that is currently active. We'll track the last active session globally for UI.
+    }
+    
     function updateSessionUI(sym) {
       let sess = getSession(sym);
       if(sess.active) {
-        nextStakeSpan.innerText = sess.currentStake.toFixed(2);
-        martingaleCountSpan.innerText = sess.step;
-        sessionPLSpan.innerText = sess.cumulativePL.toFixed(2);
+        document.getElementById('nextStake').innerText = sess.currentStake.toFixed(2);
+        document.getElementById('martingaleCount').innerText = sess.step;
+        document.getElementById('sessionPL').innerText = sess.cumulativePL.toFixed(2);
       } else {
-        nextStakeSpan.innerText = baseStake.toFixed(2);
-        martingaleCountSpan.innerText = "1";
-        sessionPLSpan.innerText = "0.00";
+        document.getElementById('nextStake').innerText = baseStake.toFixed(2);
+        document.getElementById('martingaleCount').innerText = "1";
+        document.getElementById('sessionPL').innerText = "0.00";
       }
     }
     
     function endSession(sym) {
       let sess = getSession(sym);
       if(sess.active) {
-        addDebug(`🛑 Session ended for ${sym}. Final P&L: ${sess.cumulativePL.toFixed(2)}`);
+        addDebug(`🛑 Simulated session ended for ${sym}. Final P&L: ${sess.cumulativePL.toFixed(2)}`);
         sess.active = false;
         sess.direction = null;
         sess.initialStake = 0;
@@ -188,6 +189,10 @@
         addDebug(`Session already active for ${sym}. Cannot start new.`);
         return false;
       }
+      if(simulatedBalance < firstStake) {
+        addDebug(`Insufficient simulated balance (${simulatedBalance.toFixed(2)} < ${firstStake}) – cannot start session.`);
+        return false;
+      }
       sess.active = true;
       sess.direction = direction;
       sess.initialStake = firstStake;
@@ -195,29 +200,27 @@
       sess.currentStake = firstStake;
       sess.step = 1;
       updateSessionUI(sym);
-      addDebug(`🟢 New session on ${sym} (${direction}). Target profit: $${(firstStake * targetMult).toFixed(2)}`);
+      addDebug(`🟢 New simulated session on ${sym} (${direction}). Target profit: $${(firstStake * targetMult).toFixed(2)}`);
       return true;
     }
     
-    function applyTradeOutcome(sym, win, stakeUsed) {
+    function applySimulatedTradeOutcome(sym, win, stakeUsed) {
       let sess = getSession(sym);
       if(!sess.active) return false;
       let profit = win ? stakeUsed * 0.85 : -stakeUsed;
-      demoBalance += profit;
-      updateBalanceUI();
+      simulatedBalance += profit;
+      updateSimUI();
       sess.cumulativePL += profit;
-      addDebug(`${sym} ${win?'WIN':'LOSS'} | P/L: ${profit.toFixed(2)} | Session P&L: ${sess.cumulativePL.toFixed(2)}`);
+      addDebug(`${sym} ${win?'WIN':'LOSS'} | Sim P/L: ${profit.toFixed(2)} | Session P&L: ${sess.cumulativePL.toFixed(2)} | Sim Balance: ${simulatedBalance.toFixed(2)}`);
       updateSessionUI(sym);
       
-      // Check target reached
       let target = sess.initialStake * targetMult;
       if(sess.cumulativePL >= target) {
-        addDebug(`🎯 Target reached! Session closed for ${sym}.`);
+        addDebug(`🎯 Target reached! Simulated session closed for ${sym}.`);
         endSession(sym);
         return true;
       }
       
-      // Update Martingale
       if(win) {
         sess.currentStake = baseStake;
         sess.step = 1;
@@ -228,17 +231,15 @@
           sess.step++;
           addDebug(`Loss – Martingale step ${sess.step}, next stake ${sess.currentStake.toFixed(2)}`);
         } else {
-          addDebug(`Max Martingale steps (${maxSteps}) reached. Closing session.`);
+          addDebug(`Max Martingale steps (${maxSteps}) reached. Closing simulated session.`);
           endSession(sym);
           return true;
         }
       }
       updateSessionUI(sym);
-      // Queue next trade automatically (same direction)
       if(sess.active) {
-        // Place next trade on the next tick
-        pendingTrades[sym] = { sym, direction: sess.direction, stake: sess.currentStake };
-        addDebug(`Queued next trade: ${sess.direction} stake ${sess.currentStake.toFixed(2)}`);
+        pendingSimTrades[sym] = { sym, direction: sess.direction, stake: sess.currentStake };
+        addDebug(`Queued next sim trade: ${sess.direction} stake ${sess.currentStake.toFixed(2)}`);
       }
       return true;
     }
@@ -256,7 +257,7 @@
     document.getElementById('martingaleMult').oninput = (e) => { martingaleMult = parseFloat(e.target.value); document.getElementById('multVal').innerText = martingaleMult.toFixed(2); };
     document.getElementById('targetMult').oninput = (e) => { targetMult = parseFloat(e.target.value); document.getElementById('targetVal').innerText = targetMult.toFixed(1); };
     document.getElementById('maxSteps').onchange = (e) => { maxSteps = parseInt(e.target.value) || 10; };
-    resetSessionBtn.onclick = () => { for(let sym of MARKETS) endSession(sym.sym); addDebug("All sessions ended manually."); };
+    document.getElementById('resetSessionBtn').onclick = () => { for(let sym of MARKETS) endSession(sym.sym); addDebug("All simulated sessions ended manually."); };
     
     // ----- Sound -----
     let muted = false;
@@ -266,7 +267,7 @@
     document.getElementById('soundSelect').onchange = (e) => { audio = new Audio(sounds[e.target.value]); };
     document.getElementById('muteBtn').onclick = () => { muted = !muted; document.getElementById('muteBtn').innerText = muted ? '🔇' : '🔊'; };
     
-    // ----- Market data & signal logic (correct reversal) -----
+    // ----- Market data & signal logic (reversal) -----
     let store = {}, priceStore = {}, ready = {}, signalActive = {}, pinned = null, tickWs = null;
     let lastSignalTime = {}, signalStrength = {}, signalConf = {}, signalExpiry = {};
     let lastDigit = {};
@@ -274,10 +275,10 @@
     let debug = [];
     let trades = [];
     let readyCount = 0;
-    let pendingTrades = {}; // per market pending trade
+    let pendingSimTrades = {}; // per market pending simulated trade
     
     function addDebug(msg) { debug.unshift(msg); if(debug.length>25) debug.pop(); document.getElementById('debugContent').innerHTML = debug.map(m=>`<div>${m}</div>`).join(''); }
-    function updateBalanceUI() { balanceSpan.innerText = demoBalance.toFixed(2); }
+    function updateRealBalanceUI() { document.getElementById('realBalance').innerText = realBalance.toFixed(2); }
     
     function getEvenPct(arr) { if(!arr.length) return 50; return (arr.filter(d=>d%2===0).length/arr.length)*100; }
     function isSaturated(data, tf, bias) {
@@ -294,18 +295,15 @@
       let full = store[sym];
       if(!full || full.length < 1000) return false;
       
-      // Short window (100 ticks)
       let short = full.slice(-100);
       let shortEven = getEvenPct(short);
       let shortBias = shortEven > 50 ? "EVEN" : "ODD";
       let extreme = (shortBias === "EVEN" && shortEven >= shortPct) || (shortBias === "ODD" && shortEven <= (100 - shortPct));
       if(!extreme) return false;
       
-      // Long windows must be saturated in the SAME direction as short
       let allSat = [250,500,1000].every(tf => isSaturated(full, tf, shortBias));
       if(!allSat) return false;
       
-      // Expected reversal = opposite of short bias
       let expectedReversal = shortBias === "EVEN" ? "ODD" : "EVEN";
       let depth = Math.abs(shortEven - 50);
       let strength = Math.min(100, depth * 1.5) / sensitivity;
@@ -318,35 +316,30 @@
       
       let sess = getSession(sym);
       if(!sess.active) {
-        if(demoBalance < baseStake) { addDebug(`${sym}: insufficient balance ${demoBalance.toFixed(2)} for new session`); return false; }
         if(startSession(sym, expectedReversal, baseStake)) {
-          addDebug(`🔔 SIGNAL ${sym} ${expectedReversal} | starting session with stake $${baseStake.toFixed(2)}`);
+          addDebug(`🔔 SIGNAL ${sym} ${expectedReversal} | starting simulated session with stake $${baseStake.toFixed(2)}`);
           signalStrength[sym]=strength; signalConf[sym]=confidence;
           signalExpiry[sym]=now+signalSec*1000;
           lastSignalTime[sym]=now;
-          // Queue first trade
-          pendingTrades[sym] = { sym, direction: expectedReversal, stake: baseStake };
+          pendingSimTrades[sym] = { sym, direction: expectedReversal, stake: baseStake };
           playSound();
         }
       } else {
-        // Session already active – just refresh visual signal
         signalStrength[sym]=strength; signalConf[sym]=confidence;
         signalExpiry[sym]=now+signalSec*1000;
       }
       return true;
     }
     
-    // Expiry timer for signal visual
     setInterval(()=>{ let n=Date.now(); for(let s in signalExpiry) if(signalExpiry[s] && n>signalExpiry[s]) { signalActive[s]=false; delete signalExpiry[s]; renderMarket(s); updateInsights(); } },1000);
     
-    // Resolve pending trade when a tick arrives
-    function resolvePendingTrade(sym, digit) {
-      let trade = pendingTrades[sym];
+    function resolvePendingSimTrade(sym, digit) {
+      let trade = pendingSimTrades[sym];
       if(!trade) return;
       let win = (trade.direction === 'EVEN' && digit%2===0) || (trade.direction === 'ODD' && digit%2===1);
-      applyTradeOutcome(sym, win, trade.stake);
+      applySimulatedTradeOutcome(sym, win, trade.stake);
       addTradeToHistory(sym, trade.direction, win?'win':'loss', win ? trade.stake*0.85 : -trade.stake);
-      delete pendingTrades[sym];
+      delete pendingSimTrades[sym];
     }
     
     function addTradeToHistory(sym, dir, outcome, profit) {
@@ -359,7 +352,7 @@
       document.getElementById('historyList').innerHTML = html;
     }
     
-    // ----- UI Rendering (big cells, tick strip with E/O) -----
+    // ----- UI Rendering (big cells) -----
     function renderMarket(sym) {
       let cont = document.getElementById(`mkt-${sym}`);
       if(!cont) { cont=document.createElement('div'); cont.id=`mkt-${sym}`; cont.className='market-card'; document.getElementById('markets').appendChild(cont); }
@@ -400,7 +393,7 @@
     function sortCards() { let area=document.getElementById('markets'); let cards=Array.from(area.querySelectorAll('.market-card')); let order=new Map(); MARKETS.forEach((m,i)=>order.set(m.sym,i)); cards.sort((a,b)=>{ let sa=a.id.replace('mkt-',''), sb=b.id.replace('mkt-',''); if(sa===pinned) return -1; if(sb===pinned) return 1; return (order.get(sa)||999)-(order.get(sb)||999); }); cards.forEach(c=>area.appendChild(c)); }
     function pinMarket(sym){ pinned=sym; sortCards(); document.getElementById(`mkt-${sym}`)?.scrollIntoView({behavior:'smooth',block:'center'}); }
     
-    // ----- Balance fetch & WebSocket ticks -----
+    // ----- Fetch real balance using token -----
     async function fetchBalance(tokenVal) {
       return new Promise((resolve) => {
         let balWs = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
@@ -421,9 +414,11 @@
       document.getElementById('connectionStatus').innerHTML = '<span class="status-dot live"></span> Authorizing...';
       let bal = await fetchBalance(newToken);
       if(bal !== null) {
-        demoBalance = bal;
-        updateBalanceUI();
-        addDebug(`✅ Authorized. Demo balance: ${demoBalance.toFixed(2)}`);
+        realBalance = bal;
+        simulatedBalance = bal; // start simulated balance equal to real balance
+        updateRealBalanceUI();
+        document.getElementById('simBalance').innerText = simulatedBalance.toFixed(2);
+        addDebug(`✅ Authorized. Real balance: ${realBalance.toFixed(2)} | Simulated balance: ${simulatedBalance.toFixed(2)}`);
         document.getElementById('connectionStatus').innerHTML = '<span class="status-dot live"></span> Live + Balance OK';
         if(tickWs) tickWs.close();
         startTickStream();
@@ -464,9 +459,7 @@
           priceStore[sym]=formatted;
           lastDigit[sym]=digit;
           ready[sym] = store[sym].length >= 1000;
-          // Resolve pending trade for this market
-          resolvePendingTrade(sym, digit);
-          // Check for new signal (which may start a session)
+          resolvePendingSimTrade(sym, digit);
           let old = signalActive[sym]||false;
           let newSig = checkSignal(sym);
           signalActive[sym] = newSig;
@@ -484,7 +477,7 @@
       tickWs.onerror = () => addDebug("Tick stream error");
     }
     
-    function resetAll() { if(tickWs) tickWs.close(); store={}; ready={}; signalActive={}; readyCount=0; sessions.clear(); pendingTrades={}; startTickStream(); }
+    function resetAll() { if(tickWs) tickWs.close(); store={}; ready={}; signalActive={}; readyCount=0; sessions.clear(); pendingSimTrades={}; startTickStream(); }
     document.getElementById('refreshBtn').onclick = resetAll;
     document.getElementById('connectBtn').onclick = connectWithToken;
     document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light');
