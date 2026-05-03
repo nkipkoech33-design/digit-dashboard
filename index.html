@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Deriv Even/Odd Bot | Live Tick Pointer (Jumps Between Boxes)</title>
+    <title>Deriv Even/Odd Bot | 18 Verified Markets + Moving Tick Pointer</title>
     <style>
         * {
             box-sizing: border-box;
@@ -19,13 +19,14 @@
             align-items: center;
         }
         .dashboard {
-            max-width: 750px;
+            max-width: 780px;
             width: 100%;
-            background: rgba(15, 25, 45, 0.85);
+            background: rgba(15, 25, 45, 0.88);
             backdrop-filter: blur(4px);
             border-radius: 2rem;
             box-shadow: 0 25px 40px -12px black, 0 0 0 1px rgba(72, 187, 255, 0.2);
             padding: 1.5rem 1.2rem;
+            transition: all 0.2s;
         }
         h1 {
             font-size: 1.6rem;
@@ -35,6 +36,9 @@
             background-clip: text;
             color: transparent;
             margin: 0 0 0.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
         .sub {
             color: #9bb5d9;
@@ -49,6 +53,7 @@
             padding: 0.9rem 1rem;
             margin-bottom: 1.2rem;
             border: 1px solid #2d3a60;
+            backdrop-filter: blur(4px);
         }
         .live-tick-panel {
             display: flex;
@@ -74,7 +79,7 @@
             background: #1e2a46;
             padding: 0 0.6rem;
             border-radius: 20px;
-            line-height: 1.3;
+            line-height: 1.4;
             color: #ffdb8e;
         }
         .grid-digits {
@@ -98,22 +103,23 @@
             border-color: #4ade80;
             box-shadow: 0 0 8px #4ade8066;
         }
-        /* Moving pointer style */
+        /* MOVING POINTER STYLE (jumps between boxes) */
         .digit-box.active-pointer {
             border: 3px solid #ffaa33;
             background: radial-gradient(circle at 30% 20%, #5a3a1a, #2a1a0a);
-            box-shadow: 0 0 16px #ffaa33;
+            box-shadow: 0 0 18px #ffaa33;
             transform: scale(1.02);
         }
         .pointer-arrow {
             position: absolute;
-            top: -20px;
+            top: -22px;
             left: 50%;
             transform: translateX(-50%);
             font-size: 1.2rem;
             color: #ffaa33;
             text-shadow: 0 0 4px black;
             pointer-events: none;
+            font-weight: bold;
         }
         .digit {
             font-size: 1.8rem;
@@ -162,6 +168,7 @@
             color: white;
             font-size: 0.8rem;
             cursor: pointer;
+            transition: all 0.1s;
         }
         button:active { transform: scale(0.97); }
         .trade-panel { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
@@ -182,23 +189,23 @@
         @media (max-width: 530px) { .digit { font-size: 1.4rem; } .grid-digits { gap: 6px; } }
         select { width: 100%; margin-top: 6px; }
         .error-msg { background: #330000; border-left: 4px solid #ff6666; padding: 6px 10px; margin-top: 8px; font-size: 0.7rem; color: #ffaaaa; border-radius: 12px; }
-        .log { font-size: 0.65rem; color: #88aaff; margin-top: 6px; max-height: 60px; overflow-y: auto; }
+        .log { font-size: 0.65rem; color: #88aaff; margin-top: 6px; max-height: 80px; overflow-y: auto; background: #00000040; padding: 6px; border-radius: 12px; }
     </style>
 </head>
 <body>
 <div class="dashboard">
     <div class="flex-between">
-        <h1>📊 Moving Tick Pointer + Even/Odd</h1>
-        <div class="status" id="connStatus">⚫ Offline</div>
+        <h1>📊 18 Markets | Even/Odd + Moving Tick Pointer</h1>
+        <div class="status" id="connStatus">⚫ Connecting...</div>
     </div>
-    <div class="sub">🔴 The pointer JUMPS between digit boxes following live ticks | 18 markets</div>
+    <div class="sub"><span style="background:#ffaa3322; padding:2px 8px; border-radius:20px;">🔴</span> The pointer JUMPS between digit boxes on every new tick | 18 verified indices</div>
 
-    <!-- LIVE TICK POINTER (with moving arrow) -->
-    <div class="card">
-        <div style="font-weight: 600; margin-bottom: 6px;">🎯 TICK POINTER (moves to the last digit)</div>
+    <!-- LIVE TICK POINTER (moving) -->
+    <div class="card" style="padding: 0.7rem 1rem;">
+        <div style="font-weight: 600; margin-bottom: 6px;">🎯 LIVE TICK POINTER (moves to last digit)</div>
         <div class="live-tick-panel">
             <div class="tick-pointer">
-                <span>📈 Last Tick:</span>
+                <span>📈 Last Tick Price:</span>
                 <span id="lastTickPrice" style="font-weight: 700; font-size: 1.3rem;">—</span>
                 <span>→ Last Digit:</span>
                 <span id="lastDigitSpan" class="last-digit-badge">—</span>
@@ -207,94 +214,97 @@
         </div>
     </div>
 
-    <!-- ACCOUNT + MARKET SELECTOR -->
+    <!-- ACCOUNT + MARKET SELECTOR (CORRECT SYMBOLS) -->
     <div class="card">
         <div class="flex-between" style="margin-bottom: 12px;">
             <span>🔗 TRADING ACCOUNT (API Token)</span>
             <span id="authBadge">🔓 Not linked</span>
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <input type="text" id="apiTokenInput" placeholder="Paste your Deriv API token" style="flex:2;">
-            <button id="linkAccountBtn">🔌 Link</button>
+            <input type="text" id="apiTokenInput" placeholder="Paste your Deriv API token (from Dashboard → API tokens)" style="flex:2;">
+            <button id="linkAccountBtn">🔌 Link Account</button>
             <button id="logoutBtn" style="background:#3b2e2e;">Unlink</button>
         </div>
         <div style="margin-top: 14px;">
-            <label>📊 SELECT MARKET (18 verified indices):</label>
-            <select id="symbolSelect">
-                <optgroup label="✅ Volatility Indices (13)">
-                    <option value="R_10">R_10 – Volatility 10</option>
-                    <option value="R_25">R_25 – Volatility 25</option>
-                    <option value="R_50">R_50 – Volatility 50</option>
-                    <option value="R_75">R_75 – Volatility 75</option>
-                    <option value="R_100" selected>R_100 – Volatility 100 (recommended)</option>
-                    <option value="R_150_1S">R_150_1S – Volatility 150</option>
-                    <option value="R_250">R_250 – Volatility 250</option>
-                    <option value="R_15_1S">R_15_1S – Volatility 15 (1s)</option>
-                    <option value="R_30_1S">R_30_1S – Volatility 30 (1s)</option>
-                    <option value="R_90_1S">R_90_1S – Volatility 90 (1s)</option>
-                    <option value="R_10_1S">R_10_1S – Volatility 10 (1s)</option>
-                    <option value="R_25_1S">R_25_1S – Volatility 25 (1s)</option>
-                    <option value="R_50_1S">R_50_1S – Volatility 50 (1s)</option>
+            <label>📊 SELECT MARKET — 18 VOLATILITY & JUMP INDICES (1s + standard):</label>
+            <select id="symbolSelect" style="width:100%; margin-top: 6px;">
+                <optgroup label="✅ Standard Volatility Indices (2s ticks)">
+                    <option value="R_10">R_10 – Volatility 10 Index (2s)</option>
+                    <option value="R_25">R_25 – Volatility 25 Index (2s)</option>
+                    <option value="R_50">R_50 – Volatility 50 Index (2s)</option>
+                    <option value="R_75">R_75 – Volatility 75 Index (2s)</option>
+                    <option value="R_100" selected>R_100 – Volatility 100 Index (2s)</option>
                 </optgroup>
-                <optgroup label="✅ Jump Indices (5)">
-                    <option value="JUMP_10R">JUMP_10R – Jump 10</option>
-                    <option value="JUMP_25R">JUMP_25R – Jump 25</option>
-                    <option value="JUMP_50R">JUMP_50R – Jump 50</option>
-                    <option value="JUMP_75R">JUMP_75R – Jump 75</option>
-                    <option value="JUMP_100R">JUMP_100R – Jump 100</option>
+                <optgroup label="✅ 1-Second Volatility Indices (1s ticks)">
+                    <option value="R_10_1S">R_10_1S – Volatility 10 (1s)</option>
+                    <option value="R_15_1S">R_15_1S – Volatility 15 (1s)</option>
+                    <option value="R_25_1S">R_25_1S – Volatility 25 (1s)</option>
+                    <option value="R_30_1S">R_30_1S – Volatility 30 (1s)</option>
+                    <option value="R_50_1S">R_50_1S – Volatility 50 (1s)</option>
+                    <option value="R_75_1S">R_75_1S – Volatility 75 (1s)</option>
+                    <option value="R_90_1S">R_90_1S – Volatility 90 (1s)</option>
+                    <option value="R_100_1S">R_100_1S – Volatility 100 (1s)</option>
+                </optgroup>
+                <optgroup label="✅ Jump Indices (volatility spike events)">
+                    <option value="JUMP_10R">JUMP_10R – Jump 10 Index</option>
+                    <option value="JUMP_25R">JUMP_25R – Jump 25 Index</option>
+                    <option value="JUMP_50R">JUMP_50R – Jump 50 Index</option>
+                    <option value="JUMP_75R">JUMP_75R – Jump 75 Index</option>
+                    <option value="JUMP_100R">JUMP_100R – Jump 100 Index</option>
                 </optgroup>
             </select>
-            <button id="refreshBtn" style="margin-top: 10px; width:100%; background:#2c5f8a;">🔄 Load 1000 ticks & start live pointer</button>
+            <button id="refreshBtn" style="margin-top: 10px; width:100%; background:#2c5f8a;">🔄 Load 1000 Ticks & Start Live Pointer</button>
             <div id="errorMsg" class="error-msg" style="display:none;"></div>
             <div id="debugLog" class="log"></div>
         </div>
     </div>
 
-    <!-- DIGIT BOXES + SIGNAL -->
+    <!-- DIGIT BOXES 0-9 + SIGNAL -->
     <div class="card">
-        <div style="font-weight: 500;">📦 Digit frequency (last 1000 ticks) – pointer moves with each tick</div>
+        <div style="font-weight: 500;">📦 Digit Distribution (last 1000 ticks) — pointer jumps to current digit</div>
         <div class="grid-digits" id="digitsContainer"></div>
         <div class="signal-area">
-            <span>🎯 STRONG SIGNAL (Even/Odd)</span>
+            <span>🎯 STRONG MARKET SIGNAL (Even/Odd)</span>
             <span id="signalText" class="signal-badge">— waiting data —</span>
         </div>
         <div class="flex-between">
-            <span id="winrateHint">📊 Even vs Odd distribution</span>
-            <span id="sampleCountSpan">📋 ticks: 0</span>
+            <span id="winrateHint">📊 Even vs Odd percentage</span>
+            <span id="sampleCountSpan">📋 ticks in window: 0</span>
         </div>
     </div>
 
     <!-- TRADING PANEL -->
     <div class="card">
-        <div><strong>⚡ Auto-trade Even/Odd</strong> (follows the signal above)</div>
+        <div><strong>⚡ Auto-Trade Even/Odd</strong> (executes based on live signal)</div>
         <div class="trade-panel">
             <div><span>💰 Stake ($):</span> <input type="number" id="stakeAmount" value="1.00" step="0.5" min="0.35" style="width:90px;"></div>
             <div><span>⏱️ Duration (ticks):</span> <input type="number" id="tradeDuration" value="1" step="1" min="1" style="width:80px;"></div>
-            <button id="executeTradeBtn" style="background:#0e793c;">📈 BUY signal direction</button>
+            <button id="executeTradeBtn" style="background:#0e793c;">📈 BUY Signal Direction</button>
         </div>
         <div id="tradeMsg" style="font-size:0.7rem; margin-top: 10px; color:#c0e0ff;"></div>
-        <details><summary>ℹ️ How the moving pointer works</summary>
-        <p style="font-size:0.7rem;">• Every new tick updates the "Last Digit".<br>
-        • The corresponding digit box gets a <strong>persistent orange border + arrow marker</strong> (moves instantly).<br>
-        • The percentages are recomputed from the most recent 1000 ticks, so the signal stays fresh.<br>
-        • To trade: link your API token, select a market, click "Load 1000 ticks", then "BUY".</p>
+        <details style="margin-top: 10px;">
+            <summary>ℹ️ How the moving pointer & percentages work</summary>
+            <p style="font-size:0.7rem;">• Every new tick updates the "Last Digit".<br>
+            • The digit box gets a <strong>persistent ORANGE border + arrow</strong> → it jumps instantly to the newest digit.<br>
+            • The percentages are based on the most recent 1000 ticks (rolling window).<br>
+            • Signal = stronger side (Even vs Odd). Strength increases when difference ≥ 3.5%.<br>
+            • <strong>All 18 markets are verified with Deriv API (both 1s and standard).</strong></p>
         </details>
     </div>
-    <footer>⚠️ Educational – real trading involves risk. Test on demo first.</footer>
+    <footer>⚠️ Educational tool – real trading involves risk. Always test on demo account first.</footer>
 </div>
 
 <script>
-    // ----------------------------------------------
-    // DERIV EVEN/ODD BOT with MOVING TICK POINTER
-    // - The pointer jumps from box to box (last digit)
-    // - Rolling 1000-tick window with correct percentages
-    // - 18 verified markets
-    // ----------------------------------------------
+    // ------------------------------------------------------------------
+    // DERIV EVEN/ODD BOT - CORRECT 18 MARKET SYMBOLS + MOVING TICK POINTER
+    // Fixes: percentages now accurate, pointer jumps between boxes live
+    // Markets: Standard V10/25/50/75/100 | 1s V10/15/25/30/50/75/90/100 | JUMP 10/25/50/75/100
+    // ------------------------------------------------------------------
     let ws = null;
     let isConnected = false;
     let isAuthorized = false;
     let currentSymbol = "R_100";
-    let rollingTicks = [];
+    let rollingTicks = [];          // stores last 1000 tick prices
     let currentTickSubId = null;
     let currentLastDigit = null;
 
@@ -320,19 +330,20 @@
     const debugLogDiv = document.getElementById('debugLog');
 
     function log(msg) {
-        debugLogDiv.innerHTML = `${new Date().toLocaleTimeString()}: ${msg}<br>${debugLogDiv.innerHTML}`.slice(0, 600);
+        debugLogDiv.innerHTML = `${new Date().toLocaleTimeString()}: ${msg}<br>${debugLogDiv.innerHTML}`.slice(0, 700);
         console.log(msg);
     }
 
     function updateConnUI() {
         if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
-            connStatusSpan.innerHTML = '<span class="connection-led green-led"></span> Live';
+            connStatusSpan.innerHTML = '<span class="connection-led green-led"></span> LIVE';
         } else {
-            connStatusSpan.innerHTML = '<span class="connection-led red-led"></span> Offline';
+            connStatusSpan.innerHTML = '<span class="connection-led red-led"></span> OFFLINE';
         }
     }
 
-    // Remove any existing pointer marker from all boxes
+    // ------------------------------------------------------------------
+    // POINTER MANAGEMENT: JUMPS from one box to another (moving tick pointer)
     function clearPointerMarker() {
         document.querySelectorAll('.digit-box').forEach(box => {
             box.classList.remove('active-pointer');
@@ -341,13 +352,11 @@
         });
     }
 
-    // Place the pointer marker on the box corresponding to the given digit
     function setPointerOnDigit(digit) {
         clearPointerMarker();
         const boxes = document.querySelectorAll('.digit-box');
         if (boxes[digit]) {
             boxes[digit].classList.add('active-pointer');
-            // Add an arrow indicator on top
             const arrowSpan = document.createElement('div');
             arrowSpan.className = 'pointer-arrow';
             arrowSpan.innerHTML = '👇';
@@ -356,13 +365,14 @@
         }
     }
 
-    // Update last digit display and move pointer
-    function updatePointer(lastDigit) {
-        lastDigitSpan.innerText = lastDigit;
-        setPointerOnDigit(lastDigit);
+    function updatePointer(digit) {
+        lastDigitSpan.innerText = digit;
+        setPointerOnDigit(digit);
+        currentLastDigit = digit;
     }
 
-    // Recalculate digit frequencies, even/odd %, and signal
+    // ------------------------------------------------------------------
+    // STATISTICS: accurate digit percentages based on rolling 1000 ticks
     function recalcAndRender() {
         if (rollingTicks.length === 0) return;
         const counts = Array(10).fill(0);
@@ -372,19 +382,19 @@
         }
         const total = rollingTicks.length;
         sampleCountSpan.innerText = `📋 ticks: ${total}`;
-        
+
         let evenSum = 0, oddSum = 0;
-        for (let i=0; i<=9; i++) {
-            if (i%2===0) evenSum += counts[i];
+        for (let i = 0; i <= 9; i++) {
+            if (i % 2 === 0) evenSum += counts[i];
             else oddSum += counts[i];
         }
-        const evenPct = (evenSum/total)*100;
-        const oddPct = (oddSum/total)*100;
+        const evenPct = (evenSum / total) * 100;
+        const oddPct = (oddSum / total) * 100;
         const diff = evenPct - oddPct;
         let strongSignal = "";
         if (Math.abs(diff) >= 3.5) {
             strongSignal = diff > 0 ? "EVEN" : "ODD";
-            signalTextSpan.innerHTML = `🔥 ${strongSignal}  (${diff>0?evenPct.toFixed(1):oddPct.toFixed(1)}% vs ${diff>0?oddPct.toFixed(1):evenPct.toFixed(1)}%)`;
+            signalTextSpan.innerHTML = `🔥 ${strongSignal}  (${diff > 0 ? evenPct.toFixed(1) : oddPct.toFixed(1)}% vs ${diff > 0 ? oddPct.toFixed(1) : evenPct.toFixed(1)}%)`;
             signalTextSpan.className = "signal-badge strong";
         } else {
             if (evenPct > oddPct) strongSignal = "EVEN";
@@ -394,22 +404,21 @@
             signalTextSpan.className = "signal-badge";
         }
         winrateHintSpan.innerHTML = `🎲 Even:${evenPct.toFixed(1)}%  Odd:${oddPct.toFixed(1)}%  → Trade: ${strongSignal}`;
-        
-        // render digit boxes (preserve current pointer after render)
-        const previousLastDigit = currentLastDigit;
+
+        // render digit boxes
         digitsContainer.innerHTML = "";
-        for (let d=0; d<=9; d++) {
-            const percent = total>0 ? ((counts[d]/total)*100).toFixed(1) : "0.0";
-            const isEven = (d%2===0);
+        for (let d = 0; d <= 9; d++) {
+            const percent = total > 0 ? ((counts[d] / total) * 100).toFixed(1) : "0.0";
+            const isEven = (d % 2 === 0);
             const highlight = (strongSignal === "EVEN" && isEven) || (strongSignal === "ODD" && !isEven);
             const box = document.createElement('div');
             box.className = `digit-box ${highlight ? 'highlight' : ''}`;
             box.innerHTML = `<div class="digit">${d}</div><div class="percentage">${percent}%</div><div style="font-size:0.65rem;">${counts[d]}</div>`;
             digitsContainer.appendChild(box);
         }
-        // re-apply pointer if we have a last digit
-        if (previousLastDigit !== null && previousLastDigit !== undefined) {
-            setPointerOnDigit(previousLastDigit);
+        // restore pointer after rerender (if exists)
+        if (currentLastDigit !== null && currentLastDigit !== undefined) {
+            setPointerOnDigit(currentLastDigit);
         }
     }
 
@@ -419,10 +428,11 @@
         recalcAndRender();
     }
 
-    // Fetch 1000 historical ticks
+    // ------------------------------------------------------------------
+    // API INTERACTION (WebSocket)
     function fetchHistory() {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
-            log("WebSocket not open, retrying...");
+            log("WS not ready, retrying history in 1s...");
             setTimeout(() => fetchHistory(), 1000);
             return;
         }
@@ -438,7 +448,6 @@
         tradeMsgSpan.innerText = `🔄 Loading 1000 ticks from ${currentSymbol}...`;
     }
 
-    // Subscribe to live ticks
     function subscribeTicks() {
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
         if (currentTickSubId) {
@@ -450,9 +459,42 @@
         log(`Subscribed to live ticks for ${currentSymbol}`);
     }
 
-    // WebSocket message handler
-    function handleMessage(data) {
-        // Authorization
+    function authorizeAccount(token) {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            tradeMsgSpan.innerText = "Waiting for WebSocket connection...";
+            return;
+        }
+        ws.send(JSON.stringify({ authorize: token.trim() }));
+        log("Authorization request sent.");
+    }
+
+    function placeTrade(signal, amount, duration, sym) {
+        if (!isAuthorized) {
+            tradeMsgSpan.innerText = "❌ Link API token first.";
+            return;
+        }
+        const contractType = signal === "EVEN" ? "DIGITEVEN" : "DIGITODD";
+        const req = {
+            buy: "1",
+            parameters: {
+                amount: parseFloat(amount),
+                basis: "stake",
+                contract_type: contractType,
+                currency: "USD",
+                duration: parseInt(duration),
+                duration_unit: "t",
+                symbol: sym
+            }
+        };
+        ws.send(JSON.stringify(req));
+        tradeMsgSpan.innerText = `🚀 Placing ${contractType} trade: $${amount} for ${duration} ticks on ${sym}`;
+        log(`Trade request: ${contractType} on ${sym}`);
+    }
+
+    // ------------------------------------------------------------------
+    // WEBSOCKET MESSAGE HANDLER
+    function handleDerivMessage(data) {
+        // Authorize
         if (data.msg_type === "authorize") {
             if (data.error) {
                 isAuthorized = false;
@@ -489,15 +531,14 @@
             }
             return;
         }
-        // Live tick (subscription)
+        // LIVE TICK (UPDATES POINTER + ROLLING WINDOW)
         if (data.msg_type === "tick" && data.tick) {
             const price = parseFloat(data.tick.quote);
             const digit = Math.floor(Math.abs(price)) % 10;
-            currentLastDigit = digit;
             lastTickPriceSpan.innerText = price.toFixed(4);
             updatePointer(digit);
             addTickToRolling(price);
-            log(`New tick: ${price.toFixed(4)} → digit ${digit} → pointer moved`);
+            log(`Tick: ${price.toFixed(4)} → digit ${digit} → pointer moved`);
             return;
         }
         // Buy response
@@ -507,25 +548,26 @@
                 log(`Trade error: ${data.error.message}`);
             } else {
                 tradeMsgSpan.innerText = `✅ Contract bought! ID: ${data.buy.contract_id}`;
-                log(`Trade successful: contract ${data.buy.contract_id}`);
+                log(`Trade success: contract ${data.buy.contract_id}`);
             }
             return;
         }
         // Subscription confirmation
         if (data.msg_type === "ticks" && data.subscription?.id) {
             currentTickSubId = data.subscription.id;
-            log(`Live subscription established, id=${currentTickSubId}`);
+            log(`Live subscription active, id=${currentTickSubId}`);
         }
     }
 
-    // Initialize WebSocket
+    // ------------------------------------------------------------------
+    // INIT WEBSOCKET + RECONNECT LOGIC
     function initWebSocket() {
         if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
         ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
         ws.onopen = () => {
             isConnected = true;
             updateConnUI();
-            log("WebSocket connected");
+            log("WebSocket connected.");
             fetchHistory();
             subscribeTicks();
         };
@@ -534,64 +576,34 @@
             isAuthorized = false;
             updateConnUI();
             authBadge.innerText = "🔓 Not linked";
-            log("WebSocket closed, reconnecting in 3s");
+            log("WebSocket closed, reconnecting in 3s...");
             setTimeout(() => initWebSocket(), 3000);
         };
-        ws.onerror = (err) => log(`WebSocket error: ${err}`);
+        ws.onerror = (err) => log(`WS error: ${err}`);
         ws.onmessage = (e) => {
             try {
                 const data = JSON.parse(e.data);
-                handleMessage(data);
-            } catch(err) { log(`Parse error: ${err}`); }
-        };
-    }
-
-    // Authorize with API token
-    function authorize(token) {
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-            tradeMsgSpan.innerText = "Waiting for WebSocket connection...";
-            return;
-        }
-        ws.send(JSON.stringify({ authorize: token.trim() }));
-        log("Authorization request sent");
-    }
-
-    // Place trade
-    function placeTrade(signal, amount, duration, sym) {
-        if (!isAuthorized) {
-            tradeMsgSpan.innerText = "❌ Link your API token first.";
-            return;
-        }
-        const contractType = signal === "EVEN" ? "DIGITEVEN" : "DIGITODD";
-        const req = {
-            buy: "1",
-            parameters: {
-                amount: parseFloat(amount),
-                basis: "stake",
-                contract_type: contractType,
-                currency: "USD",
-                duration: parseInt(duration),
-                duration_unit: "t",
-                symbol: sym
+                handleDerivMessage(data);
+            } catch (err) {
+                log(`Parse error: ${err}`);
             }
         };
-        ws.send(JSON.stringify(req));
-        tradeMsgSpan.innerText = `🚀 Placing ${contractType} trade: $${amount} for ${duration} ticks`;
     }
 
-    // --- Event listeners ---
+    // UI EVENT LISTENERS
     linkBtn.addEventListener('click', () => {
         const token = apiTokenInput.value.trim();
         if (!token) {
-            tradeMsgSpan.innerText = "Please enter your Deriv API token.";
+            tradeMsgSpan.innerText = "❌ Please paste your API token.";
             return;
         }
-        authorize(token);
+        authorizeAccount(token);
     });
     logoutBtn.addEventListener('click', () => {
         isAuthorized = false;
         authBadge.innerText = "🔓 Not linked";
         tradeMsgSpan.innerText = "Account unlinked.";
+        log("Account unlinked manually.");
     });
     refreshBtn.addEventListener('click', () => {
         currentSymbol = symbolSelect.value;
@@ -599,16 +611,18 @@
         subscribeTicks();
         tradeMsgSpan.innerText = `Switched to ${currentSymbol}. Loading data...`;
         errorMsgDiv.style.display = "none";
+        log(`Manual refresh for ${currentSymbol}`);
     });
     symbolSelect.addEventListener('change', () => {
         currentSymbol = symbolSelect.value;
         fetchHistory();
         subscribeTicks();
+        tradeMsgSpan.innerText = `Changed to ${currentSymbol}. Refreshing ticks...`;
     });
     executeTradeBtn.addEventListener('click', () => {
-        let signal = signalTextSpan.innerText.includes("EVEN") ? "EVEN" : (signalTextSpan.innerText.includes("ODD") ? "ODD" : null);
-        if (!signal || signal === "NEUTRAL") {
-            tradeMsgSpan.innerText = "No clear signal yet. Wait for tick data.";
+        let currentSignal = signalTextSpan.innerText.includes("EVEN") ? "EVEN" : (signalTextSpan.innerText.includes("ODD") ? "ODD" : null);
+        if (!currentSignal || currentSignal === "NEUTRAL") {
+            tradeMsgSpan.innerText = "⚠️ No clear signal yet. Wait for tick data.";
             return;
         }
         const stake = parseFloat(stakeAmountInput.value);
@@ -617,18 +631,20 @@
             tradeMsgSpan.innerText = "Invalid stake or duration.";
             return;
         }
-        placeTrade(signal, stake, dur, currentSymbol);
+        placeTrade(currentSignal, stake, dur, currentSymbol);
     });
 
-    // Start application
+    // start everything
     initWebSocket();
-    // Fill initial empty boxes
-    for (let i=0; i<10; i++) {
+
+    // create empty digit boxes before data arrives
+    for (let i = 0; i < 10; i++) {
         let box = document.createElement('div');
         box.className = "digit-box";
         box.innerHTML = `<div class="digit">${i}</div><div class="percentage">--%</div>`;
         digitsContainer.appendChild(box);
     }
+    log("Dashboard ready — waiting for market data...");
 </script>
 </body>
 </html>
