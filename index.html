@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Deriv 18 Markets | Even/Odd Signal Bot + Live Tick Pointer</title>
+    <title>Deriv Even/Odd Bot | Live Tick Pointer (Jumps Between Boxes)</title>
     <style>
         * {
             box-sizing: border-box;
-            font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, 'Roboto', sans-serif;
+            font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
         }
         body {
             background: linear-gradient(145deg, #0a0f1c 0%, #0f172a 100%);
@@ -26,7 +26,6 @@
             border-radius: 2rem;
             box-shadow: 0 25px 40px -12px black, 0 0 0 1px rgba(72, 187, 255, 0.2);
             padding: 1.5rem 1.2rem;
-            transition: all 0.2s;
         }
         h1 {
             font-size: 1.6rem;
@@ -36,9 +35,6 @@
             background-clip: text;
             color: transparent;
             margin: 0 0 0.2rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
         }
         .sub {
             color: #9bb5d9;
@@ -53,7 +49,6 @@
             padding: 0.9rem 1rem;
             margin-bottom: 1.2rem;
             border: 1px solid #2d3a60;
-            backdrop-filter: blur(4px);
         }
         .live-tick-panel {
             display: flex;
@@ -87,25 +82,38 @@
             grid-template-columns: repeat(5, 1fr);
             gap: 10px;
             margin: 15px 0 8px;
+            position: relative;
         }
         .digit-box {
             background: #0a0f1f;
             border-radius: 1.2rem;
             text-align: center;
             padding: 8px 4px;
-            transition: all 0.1s;
-            border: 1px solid #2a3a5e;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: all 0.15s ease;
+            border: 2px solid #2a3a5e;
+            position: relative;
         }
         .digit-box.highlight {
             background: radial-gradient(circle at 30% 20%, #1f5e3a, #0b2b1c);
             border-color: #4ade80;
             box-shadow: 0 0 8px #4ade8066;
         }
-        .digit-box.live-pointer {
-            background: radial-gradient(circle at 30% 20%, #ffb347, #a35100);
-            border-color: #ffbb77;
-            box-shadow: 0 0 12px #ffaa33;
+        /* Moving pointer style */
+        .digit-box.active-pointer {
+            border: 3px solid #ffaa33;
+            background: radial-gradient(circle at 30% 20%, #5a3a1a, #2a1a0a);
+            box-shadow: 0 0 16px #ffaa33;
+            transform: scale(1.02);
+        }
+        .pointer-arrow {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.2rem;
+            color: #ffaa33;
+            text-shadow: 0 0 4px black;
+            pointer-events: none;
         }
         .digit {
             font-size: 1.8rem;
@@ -154,10 +162,8 @@
             color: white;
             font-size: 0.8rem;
             cursor: pointer;
-            transition: 0.1s;
         }
         button:active { transform: scale(0.97); }
-        button.secondary { background: #334155; }
         .trade-panel { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
         input, select {
             background: #010a1a;
@@ -174,33 +180,34 @@
         .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
         footer { font-size: 0.65rem; text-align: center; color: #5f7fae; margin-top: 14px; }
         @media (max-width: 530px) { .digit { font-size: 1.4rem; } .grid-digits { gap: 6px; } }
-        select { max-width: 100%; width: 100%; margin-top: 6px; }
-        .error-msg { color: #ffaa88; background: #2c0f0f; padding: 4px 8px; border-radius: 12px; font-size: 0.7rem; margin-top: 6px; }
+        select { width: 100%; margin-top: 6px; }
+        .error-msg { background: #330000; border-left: 4px solid #ff6666; padding: 6px 10px; margin-top: 8px; font-size: 0.7rem; color: #ffaaaa; border-radius: 12px; }
+        .log { font-size: 0.65rem; color: #88aaff; margin-top: 6px; max-height: 60px; overflow-y: auto; }
     </style>
 </head>
 <body>
 <div class="dashboard">
     <div class="flex-between">
-        <h1>📊 18 Markets | Even/Odd Trader</h1>
+        <h1>📊 Moving Tick Pointer + Even/Odd</h1>
         <div class="status" id="connStatus">⚫ Offline</div>
     </div>
-    <div class="sub">🔴 Live tick pointer | 1000-tick digit distribution | Volatility & Jump indices (18 verified symbols)</div>
+    <div class="sub">🔴 The pointer JUMPS between digit boxes following live ticks | 18 markets</div>
 
-    <!-- LIVE TICK POINTER -->
-    <div class="card" style="padding: 0.7rem 1rem;">
-        <div style="font-weight: 600; margin-bottom: 6px;">🎯 LIVE TICK POINTER (Deriv style)</div>
+    <!-- LIVE TICK POINTER (with moving arrow) -->
+    <div class="card">
+        <div style="font-weight: 600; margin-bottom: 6px;">🎯 TICK POINTER (moves to the last digit)</div>
         <div class="live-tick-panel">
             <div class="tick-pointer">
                 <span>📈 Last Tick:</span>
                 <span id="lastTickPrice" style="font-weight: 700; font-size: 1.3rem;">—</span>
-                <span>→ Digit:</span>
+                <span>→ Last Digit:</span>
                 <span id="lastDigitSpan" class="last-digit-badge">—</span>
             </div>
-            <div style="font-size: 0.65rem; background:#0f212f; padding: 2px 12px; border-radius: 20px;">⚡ Box flashes on each tick</div>
+            <div style="font-size: 0.65rem;">👇 The box below gets a marker 👇</div>
         </div>
     </div>
 
-    <!-- ACCOUNT + FULL MARKET LIST (18 verified) -->
+    <!-- ACCOUNT + MARKET SELECTOR -->
     <div class="card">
         <div class="flex-between" style="margin-bottom: 12px;">
             <span>🔗 TRADING ACCOUNT (API Token)</span>
@@ -208,86 +215,90 @@
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
             <input type="text" id="apiTokenInput" placeholder="Paste your Deriv API token" style="flex:2;">
-            <button id="linkAccountBtn">🔌 Link & Authorize</button>
+            <button id="linkAccountBtn">🔌 Link</button>
             <button id="logoutBtn" style="background:#3b2e2e;">Unlink</button>
         </div>
         <div style="margin-top: 14px;">
-            <label>📊 ALL 18 SYNTHETIC MARKETS (verified working):</label>
-            <select id="symbolSelect" style="width:100%; margin-top: 6px;">
-                <!-- Volatility indices (13 confirmed) -->
-                <optgroup label="Volatility Indices">
-                    <option value="R_10">R_10 - Volatility 10 Index</option>
-                    <option value="R_25">R_25 - Volatility 25 Index</option>
-                    <option value="R_50">R_50 - Volatility 50 Index</option>
-                    <option value="R_75">R_75 - Volatility 75 Index</option>
-                    <option value="R_100" selected>R_100 - Volatility 100 Index</option>
-                    <option value="R_150_1S">R_150_1S - Volatility 150 Index</option>
-                    <option value="R_250">R_250 - Volatility 250 Index</option>
-                    <option value="R_15_1S">R_15_1S - Volatility 15 (1s)</option>
-                    <option value="R_30_1S">R_30_1S - Volatility 30 (1s)</option>
-                    <option value="R_90_1S">R_90_1S - Volatility 90 (1s)</option>
-                    <option value="R_10_1S">R_10_1S - Volatility 10 (1s)</option>
-                    <option value="R_25_1S">R_25_1S - Volatility 25 (1s)</option>
-                    <option value="R_50_1S">R_50_1S - Volatility 50 (1s)</option>
+            <label>📊 SELECT MARKET (18 verified indices):</label>
+            <select id="symbolSelect">
+                <optgroup label="✅ Volatility Indices (13)">
+                    <option value="R_10">R_10 – Volatility 10</option>
+                    <option value="R_25">R_25 – Volatility 25</option>
+                    <option value="R_50">R_50 – Volatility 50</option>
+                    <option value="R_75">R_75 – Volatility 75</option>
+                    <option value="R_100" selected>R_100 – Volatility 100 (recommended)</option>
+                    <option value="R_150_1S">R_150_1S – Volatility 150</option>
+                    <option value="R_250">R_250 – Volatility 250</option>
+                    <option value="R_15_1S">R_15_1S – Volatility 15 (1s)</option>
+                    <option value="R_30_1S">R_30_1S – Volatility 30 (1s)</option>
+                    <option value="R_90_1S">R_90_1S – Volatility 90 (1s)</option>
+                    <option value="R_10_1S">R_10_1S – Volatility 10 (1s)</option>
+                    <option value="R_25_1S">R_25_1S – Volatility 25 (1s)</option>
+                    <option value="R_50_1S">R_50_1S – Volatility 50 (1s)</option>
                 </optgroup>
-                <optgroup label="Jump Indices">
-                    <option value="JUMP_10R">JUMP_10R - Jump 10 Index</option>
-                    <option value="JUMP_25R">JUMP_25R - Jump 25 Index</option>
-                    <option value="JUMP_50R">JUMP_50R - Jump 50 Index</option>
-                    <option value="JUMP_75R">JUMP_75R - Jump 75 Index</option>
-                    <option value="JUMP_100R">JUMP_100R - Jump 100 Index</option>
+                <optgroup label="✅ Jump Indices (5)">
+                    <option value="JUMP_10R">JUMP_10R – Jump 10</option>
+                    <option value="JUMP_25R">JUMP_25R – Jump 25</option>
+                    <option value="JUMP_50R">JUMP_50R – Jump 50</option>
+                    <option value="JUMP_75R">JUMP_75R – Jump 75</option>
+                    <option value="JUMP_100R">JUMP_100R – Jump 100</option>
                 </optgroup>
             </select>
-            <button id="refreshHistoryBtn" style="margin-top: 10px; width:100%; background:#2c5f8a;">🔄 Refresh 1000 ticks & update signal</button>
-            <div id="apiErrorMsg" class="error-msg" style="display:none;"></div>
+            <button id="refreshBtn" style="margin-top: 10px; width:100%; background:#2c5f8a;">🔄 Load 1000 ticks & start live pointer</button>
+            <div id="errorMsg" class="error-msg" style="display:none;"></div>
+            <div id="debugLog" class="log"></div>
         </div>
     </div>
 
-    <!-- DIGIT BOXES 0-9 -->
+    <!-- DIGIT BOXES + SIGNAL -->
     <div class="card">
-        <div style="font-weight: 500;">📦 Digit frequency (last 1000 ticks) & strong market</div>
+        <div style="font-weight: 500;">📦 Digit frequency (last 1000 ticks) – pointer moves with each tick</div>
         <div class="grid-digits" id="digitsContainer"></div>
         <div class="signal-area">
             <span>🎯 STRONG SIGNAL (Even/Odd)</span>
             <span id="signalText" class="signal-badge">— waiting data —</span>
         </div>
-        <div class="flex-between" style="margin-top: 6px;">
-            <span id="winrateHint" style="font-family: monospace;">📊 Even vs Odd distribution</span>
+        <div class="flex-between">
+            <span id="winrateHint">📊 Even vs Odd distribution</span>
             <span id="sampleCountSpan">📋 ticks: 0</span>
         </div>
     </div>
 
     <!-- TRADING PANEL -->
     <div class="card">
-        <div><strong>⚡ Auto-trade Even/Odd</strong> (uses strongest detected signal)</div>
+        <div><strong>⚡ Auto-trade Even/Odd</strong> (follows the signal above)</div>
         <div class="trade-panel">
             <div><span>💰 Stake ($):</span> <input type="number" id="stakeAmount" value="1.00" step="0.5" min="0.35" style="width:90px;"></div>
             <div><span>⏱️ Duration (ticks):</span> <input type="number" id="tradeDuration" value="1" step="1" min="1" style="width:80px;"></div>
             <button id="executeTradeBtn" style="background:#0e793c;">📈 BUY signal direction</button>
         </div>
         <div id="tradeMsg" style="font-size:0.7rem; margin-top: 10px; color:#c0e0ff;"></div>
-        <details style="margin-top: 10px;">
-            <summary>🔧 How to get API token & fix authorization</summary>
-            <p style="font-size:0.7rem;">1. Deriv Dashboard → API tokens → Create token with "Trade" & "Read".<br>
-            2. Paste token, click "Link & Authorize". You'll see account ID e.g. ✅ CR5820373.<br>
-            3. If symbol fails, try R_100 first – it's guaranteed to work.<br>
-            4. Live tick pointer updates automatically when market is streaming.</p>
+        <details><summary>ℹ️ How the moving pointer works</summary>
+        <p style="font-size:0.7rem;">• Every new tick updates the "Last Digit".<br>
+        • The corresponding digit box gets a <strong>persistent orange border + arrow marker</strong> (moves instantly).<br>
+        • The percentages are recomputed from the most recent 1000 ticks, so the signal stays fresh.<br>
+        • To trade: link your API token, select a market, click "Load 1000 ticks", then "BUY".</p>
         </details>
     </div>
-    <footer>⚠️ Trading involves risk. Test with demo token first. All 18 volatility & jump indices supported.</footer>
+    <footer>⚠️ Educational – real trading involves risk. Test on demo first.</footer>
 </div>
 
 <script>
-    // ---------- FIXED: VERIFIED SYMBOLS, ROBUST HISTORY & LIVE TICKS ----------
+    // ----------------------------------------------
+    // DERIV EVEN/ODD BOT with MOVING TICK POINTER
+    // - The pointer jumps from box to box (last digit)
+    // - Rolling 1000-tick window with correct percentages
+    // - 18 verified markets
+    // ----------------------------------------------
     let ws = null;
     let isConnected = false;
     let isAuthorized = false;
     let currentSymbol = "R_100";
-    let rollingTicks = [];          // max 1000
+    let rollingTicks = [];
     let currentTickSubId = null;
-    let pointerTimeout = null;
+    let currentLastDigit = null;
 
-    // DOM refs
+    // DOM elements
     const connStatusSpan = document.getElementById('connStatus');
     const authBadge = document.getElementById('authBadge');
     const digitsContainer = document.getElementById('digitsContainer');
@@ -299,13 +310,19 @@
     const apiTokenInput = document.getElementById('apiTokenInput');
     const linkBtn = document.getElementById('linkAccountBtn');
     const logoutBtn = document.getElementById('logoutBtn');
-    const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
     const symbolSelect = document.getElementById('symbolSelect');
     const executeTradeBtn = document.getElementById('executeTradeBtn');
     const stakeAmountInput = document.getElementById('stakeAmount');
     const tradeDurationInput = document.getElementById('tradeDuration');
     const tradeMsgSpan = document.getElementById('tradeMsg');
-    const apiErrorMsg = document.getElementById('apiErrorMsg');
+    const errorMsgDiv = document.getElementById('errorMsg');
+    const debugLogDiv = document.getElementById('debugLog');
+
+    function log(msg) {
+        debugLogDiv.innerHTML = `${new Date().toLocaleTimeString()}: ${msg}<br>${debugLogDiv.innerHTML}`.slice(0, 600);
+        console.log(msg);
+    }
 
     function updateConnUI() {
         if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
@@ -315,63 +332,56 @@
         }
     }
 
-    function flashDigitBox(digit) {
+    // Remove any existing pointer marker from all boxes
+    function clearPointerMarker() {
+        document.querySelectorAll('.digit-box').forEach(box => {
+            box.classList.remove('active-pointer');
+            const existingArrow = box.querySelector('.pointer-arrow');
+            if (existingArrow) existingArrow.remove();
+        });
+    }
+
+    // Place the pointer marker on the box corresponding to the given digit
+    function setPointerOnDigit(digit) {
+        clearPointerMarker();
         const boxes = document.querySelectorAll('.digit-box');
         if (boxes[digit]) {
-            boxes[digit].classList.add('live-pointer');
-            if (pointerTimeout) clearTimeout(pointerTimeout);
-            pointerTimeout = setTimeout(() => {
-                boxes[digit]?.classList.remove('live-pointer');
-            }, 350);
+            boxes[digit].classList.add('active-pointer');
+            // Add an arrow indicator on top
+            const arrowSpan = document.createElement('div');
+            arrowSpan.className = 'pointer-arrow';
+            arrowSpan.innerHTML = '👇';
+            boxes[digit].style.position = 'relative';
+            boxes[digit].appendChild(arrowSpan);
         }
     }
 
-    function renderDigitBoxes(counts, total) {
-        digitsContainer.innerHTML = "";
-        let strongSignal = getStrongSignalFromCounts(counts, total);
-        for (let d = 0; d <= 9; d++) {
-            const percent = total > 0 ? ((counts[d] / total) * 100).toFixed(1) : "0.0";
-            const isEven = (d % 2 === 0);
-            const signalHighlight = (strongSignal === "EVEN" && isEven) || (strongSignal === "ODD" && !isEven);
-            const box = document.createElement('div');
-            box.className = `digit-box ${signalHighlight ? 'highlight' : ''}`;
-            box.innerHTML = `<div class="digit">${d}</div><div class="percentage">${percent}%</div><div style="font-size:0.65rem;">${counts[d]}</div>`;
-            digitsContainer.appendChild(box);
-        }
+    // Update last digit display and move pointer
+    function updatePointer(lastDigit) {
+        lastDigitSpan.innerText = lastDigit;
+        setPointerOnDigit(lastDigit);
     }
 
-    function getStrongSignalFromCounts(counts, total) {
-        if (total === 0) return "NEUTRAL";
-        let evenSum = 0, oddSum = 0;
-        for (let i = 0; i <= 9; i++) {
-            if (i % 2 === 0) evenSum += counts[i];
-            else oddSum += counts[i];
-        }
-        const evenPct = (evenSum / total) * 100;
-        const oddPct = (oddSum / total) * 100;
-        const diff = evenPct - oddPct;
-        if (Math.abs(diff) >= 3.5) return diff > 0 ? "EVEN" : "ODD";
-        else return evenPct > oddPct ? "EVEN" : (oddPct > evenPct ? "ODD" : "NEUTRAL");
-    }
-
-    function updateSignalAndUI() {
+    // Recalculate digit frequencies, even/odd %, and signal
+    function recalcAndRender() {
         if (rollingTicks.length === 0) return;
         const counts = Array(10).fill(0);
         for (let price of rollingTicks) {
-            let lastDigit = Math.floor(Math.abs(price)) % 10;
-            counts[lastDigit]++;
+            let digit = Math.floor(Math.abs(price)) % 10;
+            counts[digit]++;
         }
         const total = rollingTicks.length;
         sampleCountSpan.innerText = `📋 ticks: ${total}`;
+        
         let evenSum = 0, oddSum = 0;
-        for (let i = 0; i <= 9; i++) {
-            if (i % 2 === 0) evenSum += counts[i];
+        for (let i=0; i<=9; i++) {
+            if (i%2===0) evenSum += counts[i];
             else oddSum += counts[i];
         }
-        const evenPct = (evenSum / total) * 100;
-        const oddPct = (oddSum / total) * 100;
+        const evenPct = (evenSum/total)*100;
+        const oddPct = (oddSum/total)*100;
         const diff = evenPct - oddPct;
-        let strongSignal;
+        let strongSignal = "";
         if (Math.abs(diff) >= 3.5) {
             strongSignal = diff > 0 ? "EVEN" : "ODD";
             signalTextSpan.innerHTML = `🔥 ${strongSignal}  (${diff>0?evenPct.toFixed(1):oddPct.toFixed(1)}% vs ${diff>0?oddPct.toFixed(1):evenPct.toFixed(1)}%)`;
@@ -384,19 +394,36 @@
             signalTextSpan.className = "signal-badge";
         }
         winrateHintSpan.innerHTML = `🎲 Even:${evenPct.toFixed(1)}%  Odd:${oddPct.toFixed(1)}%  → Trade: ${strongSignal}`;
-        renderDigitBoxes(counts, total);
+        
+        // render digit boxes (preserve current pointer after render)
+        const previousLastDigit = currentLastDigit;
+        digitsContainer.innerHTML = "";
+        for (let d=0; d<=9; d++) {
+            const percent = total>0 ? ((counts[d]/total)*100).toFixed(1) : "0.0";
+            const isEven = (d%2===0);
+            const highlight = (strongSignal === "EVEN" && isEven) || (strongSignal === "ODD" && !isEven);
+            const box = document.createElement('div');
+            box.className = `digit-box ${highlight ? 'highlight' : ''}`;
+            box.innerHTML = `<div class="digit">${d}</div><div class="percentage">${percent}%</div><div style="font-size:0.65rem;">${counts[d]}</div>`;
+            digitsContainer.appendChild(box);
+        }
+        // re-apply pointer if we have a last digit
+        if (previousLastDigit !== null && previousLastDigit !== undefined) {
+            setPointerOnDigit(previousLastDigit);
+        }
     }
 
     function addTickToRolling(price) {
         rollingTicks.push(price);
         if (rollingTicks.length > 1000) rollingTicks.shift();
-        updateSignalAndUI();
+        recalcAndRender();
     }
 
-    function fetchTicksHistory() {
+    // Fetch 1000 historical ticks
+    function fetchHistory() {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
-            tradeMsgSpan.innerText = "WebSocket not connected, reconnecting...";
-            setTimeout(() => fetchTicksHistory(), 1000);
+            log("WebSocket not open, retrying...");
+            setTimeout(() => fetchHistory(), 1000);
             return;
         }
         const req = {
@@ -407,10 +434,12 @@
             style: "ticks"
         };
         ws.send(JSON.stringify(req));
+        log(`Requesting 1000 ticks for ${currentSymbol}`);
         tradeMsgSpan.innerText = `🔄 Loading 1000 ticks from ${currentSymbol}...`;
     }
 
-    function subscribeLiveTicks() {
+    // Subscribe to live ticks
+    function subscribeTicks() {
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
         if (currentTickSubId) {
             ws.send(JSON.stringify({ forget: currentTickSubId }));
@@ -418,110 +447,123 @@
         }
         const sub = { ticks: currentSymbol, subscribe: 1 };
         ws.send(JSON.stringify(sub));
+        log(`Subscribed to live ticks for ${currentSymbol}`);
     }
 
-    function initWebSocket() {
-        if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
-        ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
-        ws.onopen = () => {
-            isConnected = true;
-            updateConnUI();
-            tradeMsgSpan.innerText = "✅ WebSocket connected. Fetching initial data...";
-            fetchTicksHistory();
-            subscribeLiveTicks();
-        };
-        ws.onclose = () => {
-            isConnected = false;
-            isAuthorized = false;
-            updateConnUI();
-            authBadge.innerText = "🔓 Not linked";
-            tradeMsgSpan.innerText = "Connection lost, reconnecting in 4s...";
-            setTimeout(() => initWebSocket(), 4000);
-        };
-        ws.onerror = (err) => console.error("WS error", err);
-        ws.onmessage = (e) => {
-            try {
-                const data = JSON.parse(e.data);
-                handleDerivMessage(data);
-            } catch(err) { console.warn(err); }
-        };
-    }
-
-    function handleDerivMessage(data) {
+    // WebSocket message handler
+    function handleMessage(data) {
         // Authorization
         if (data.msg_type === "authorize") {
             if (data.error) {
                 isAuthorized = false;
                 authBadge.innerText = "❌ Auth failed";
                 tradeMsgSpan.innerText = `Auth error: ${data.error.message}`;
-                apiErrorMsg.style.display = "block";
-                apiErrorMsg.innerText = `Auth error: ${data.error.message}. Check token permissions.`;
+                errorMsgDiv.style.display = "block";
+                errorMsgDiv.innerText = `Authorization error: ${data.error.message}. Check token permissions.`;
+                log(`Auth error: ${data.error.message}`);
             } else {
                 isAuthorized = true;
                 authBadge.innerText = `✅ ${data.authorize.loginid} (${data.authorize.currency})`;
-                tradeMsgSpan.innerText = `Linked to ${data.authorize.loginid}. Ready to trade.`;
-                apiErrorMsg.style.display = "none";
+                tradeMsgSpan.innerText = `✅ Account linked: ${data.authorize.loginid}`;
+                errorMsgDiv.style.display = "none";
+                log(`Authorized as ${data.authorize.loginid}`);
             }
             return;
         }
-        // History ticks
+        // Historical ticks response
         if (data.msg_type === "ticks_history") {
             if (data.error) {
-                tradeMsgSpan.innerText = `History error: ${data.error.message}. Trying fallback symbol R_100?`;
-                apiErrorMsg.style.display = "block";
-                apiErrorMsg.innerText = `Symbol ${currentSymbol} error: ${data.error.message}. Try selecting R_100.`;
+                tradeMsgSpan.innerText = `History error: ${data.error.message}`;
+                errorMsgDiv.style.display = "block";
+                errorMsgDiv.innerText = `Symbol ${currentSymbol} error: ${data.error.message}. Try R_100.`;
+                log(`History error: ${data.error.message}`);
                 return;
             }
             if (data.history && data.history.prices) {
                 let prices = data.history.prices.slice(-1000);
                 rollingTicks = prices;
-                updateSignalAndUI();
-                tradeMsgSpan.innerText = `✅ Loaded ${rollingTicks.length} historical ticks. Live pointer active.`;
-                apiErrorMsg.style.display = "none";
+                recalcAndRender();
+                tradeMsgSpan.innerText = `✅ Loaded ${rollingTicks.length} ticks. Live pointer active.`;
+                errorMsgDiv.style.display = "none";
+                log(`Loaded ${rollingTicks.length} historical ticks`);
             }
             return;
         }
-        // Live tick
+        // Live tick (subscription)
         if (data.msg_type === "tick" && data.tick) {
             const price = parseFloat(data.tick.quote);
             const digit = Math.floor(Math.abs(price)) % 10;
+            currentLastDigit = digit;
             lastTickPriceSpan.innerText = price.toFixed(4);
-            lastDigitSpan.innerText = digit;
-            flashDigitBox(digit);
+            updatePointer(digit);
             addTickToRolling(price);
+            log(`New tick: ${price.toFixed(4)} → digit ${digit} → pointer moved`);
             return;
         }
         // Buy response
         if (data.msg_type === "buy") {
             if (data.error) {
                 tradeMsgSpan.innerText = `❌ Trade failed: ${data.error.message}`;
+                log(`Trade error: ${data.error.message}`);
             } else {
-                tradeMsgSpan.innerText = `✅ Contract purchased! ID: ${data.buy.contract_id} | ${data.buy.longcode?.slice(0,80)}`;
+                tradeMsgSpan.innerText = `✅ Contract bought! ID: ${data.buy.contract_id}`;
+                log(`Trade successful: contract ${data.buy.contract_id}`);
             }
             return;
         }
         // Subscription confirmation
         if (data.msg_type === "ticks" && data.subscription?.id) {
             currentTickSubId = data.subscription.id;
+            log(`Live subscription established, id=${currentTickSubId}`);
         }
     }
 
-    function authorizeWithToken(token) {
+    // Initialize WebSocket
+    function initWebSocket() {
+        if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+        ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
+        ws.onopen = () => {
+            isConnected = true;
+            updateConnUI();
+            log("WebSocket connected");
+            fetchHistory();
+            subscribeTicks();
+        };
+        ws.onclose = () => {
+            isConnected = false;
+            isAuthorized = false;
+            updateConnUI();
+            authBadge.innerText = "🔓 Not linked";
+            log("WebSocket closed, reconnecting in 3s");
+            setTimeout(() => initWebSocket(), 3000);
+        };
+        ws.onerror = (err) => log(`WebSocket error: ${err}`);
+        ws.onmessage = (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                handleMessage(data);
+            } catch(err) { log(`Parse error: ${err}`); }
+        };
+    }
+
+    // Authorize with API token
+    function authorize(token) {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
-            tradeMsgSpan.innerText = "WebSocket not ready. Wait for connection.";
+            tradeMsgSpan.innerText = "Waiting for WebSocket connection...";
             return;
         }
         ws.send(JSON.stringify({ authorize: token.trim() }));
-        tradeMsgSpan.innerText = "Sending authorization request...";
+        log("Authorization request sent");
     }
 
-    function placeOrder(signalDir, amount, duration, sym) {
+    // Place trade
+    function placeTrade(signal, amount, duration, sym) {
         if (!isAuthorized) {
-            tradeMsgSpan.innerText = "❌ Account not authorized. Link API token first.";
+            tradeMsgSpan.innerText = "❌ Link your API token first.";
             return;
         }
-        const contractType = signalDir === "EVEN" ? "DIGITEVEN" : "DIGITODD";
-        const buyReq = {
+        const contractType = signal === "EVEN" ? "DIGITEVEN" : "DIGITODD";
+        const req = {
             buy: "1",
             parameters: {
                 amount: parseFloat(amount),
@@ -533,62 +575,60 @@
                 symbol: sym
             }
         };
-        ws.send(JSON.stringify(buyReq));
-        tradeMsgSpan.innerText = `🚀 Placing ${contractType} trade: $${amount} for ${duration} ticks on ${sym}`;
+        ws.send(JSON.stringify(req));
+        tradeMsgSpan.innerText = `🚀 Placing ${contractType} trade: $${amount} for ${duration} ticks`;
     }
 
-    // Event listeners
+    // --- Event listeners ---
     linkBtn.addEventListener('click', () => {
         const token = apiTokenInput.value.trim();
         if (!token) {
-            tradeMsgSpan.innerText = "Please enter a valid Deriv API token.";
+            tradeMsgSpan.innerText = "Please enter your Deriv API token.";
             return;
         }
-        authorizeWithToken(token);
+        authorize(token);
     });
     logoutBtn.addEventListener('click', () => {
         isAuthorized = false;
         authBadge.innerText = "🔓 Not linked";
-        tradeMsgSpan.innerText = "Account unlinked locally.";
+        tradeMsgSpan.innerText = "Account unlinked.";
     });
-    refreshHistoryBtn.addEventListener('click', () => {
-        fetchTicksHistory();
+    refreshBtn.addEventListener('click', () => {
+        currentSymbol = symbolSelect.value;
+        fetchHistory();
+        subscribeTicks();
+        tradeMsgSpan.innerText = `Switched to ${currentSymbol}. Loading data...`;
+        errorMsgDiv.style.display = "none";
     });
     symbolSelect.addEventListener('change', () => {
         currentSymbol = symbolSelect.value;
-        fetchTicksHistory();
-        subscribeLiveTicks();
-        tradeMsgSpan.innerText = `Switched to ${currentSymbol}. Loading data...`;
-        apiErrorMsg.style.display = "none";
+        fetchHistory();
+        subscribeTicks();
     });
     executeTradeBtn.addEventListener('click', () => {
-        if (!isAuthorized) {
-            tradeMsgSpan.innerText = "Please link your Deriv API token first to trade.";
-            return;
-        }
-        // get current signal from UI
-        let strongSignal = signalTextSpan.innerText.includes("EVEN") ? "EVEN" : (signalTextSpan.innerText.includes("ODD") ? "ODD" : null);
-        if (!strongSignal || strongSignal === "NEUTRAL") {
-            tradeMsgSpan.innerText = "No strong signal yet. Wait for tick data or refresh history.";
+        let signal = signalTextSpan.innerText.includes("EVEN") ? "EVEN" : (signalTextSpan.innerText.includes("ODD") ? "ODD" : null);
+        if (!signal || signal === "NEUTRAL") {
+            tradeMsgSpan.innerText = "No clear signal yet. Wait for tick data.";
             return;
         }
         const stake = parseFloat(stakeAmountInput.value);
-        const duration = parseInt(tradeDurationInput.value);
-        if (isNaN(stake) || stake <= 0 || isNaN(duration) || duration < 1) {
+        const dur = parseInt(tradeDurationInput.value);
+        if (isNaN(stake) || stake <= 0 || isNaN(dur) || dur < 1) {
             tradeMsgSpan.innerText = "Invalid stake or duration.";
             return;
         }
-        placeOrder(strongSignal, stake, duration, currentSymbol);
+        placeTrade(signal, stake, dur, currentSymbol);
     });
 
-    // Initialize empty boxes and start
-    for (let i = 0; i < 10; i++) {
+    // Start application
+    initWebSocket();
+    // Fill initial empty boxes
+    for (let i=0; i<10; i++) {
         let box = document.createElement('div');
         box.className = "digit-box";
         box.innerHTML = `<div class="digit">${i}</div><div class="percentage">--%</div>`;
         digitsContainer.appendChild(box);
     }
-    initWebSocket();
 </script>
 </body>
 </html>
