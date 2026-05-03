@@ -1,1 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Deriv Even/Odd Signal Bot | Live Tick Pointer & Digit Analysis</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+        }
+        body {
+            background: linear-gradient(145deg, #0b1120 0%, #111827 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 24px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .dashboard {
+            max-width: 700px;
+            width: 100%;
+            background: rgba(18, 25, 45, 0.75);
+            backdrop-filter: blur(2px);
+            border-radius: 2rem;
+            box-shadow: 0 25px 45px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(72, 187, 255, 0.15);
+            padding: 1.5rem 1.2rem;
+            transition: all 0.2s;
+        }
+        h1 {
+            font-size: 1.7rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #c0e0ff, #6ea8fe);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin: 0 0 0.25rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .sub {
+            color: #8ba3c7;
+            font-size: 0.8rem;
+            margin-bottom: 1.5rem;
+            border-left: 3px solid #2d6a4f;
+            padding-left: 10px;
+        }
+        .card {
+            background: #0f172ad9;
+            border-radius: 1.5rem;
+            padding: 1rem 1.2rem;
+            margin-bottom: 1.4rem;
+            border: 1px solid #2d3a5e;
+            backdrop-filter: blur(4px);
+        }
+        .live-tick-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #030b17;
+            border-radius: 80px;
+            padding: 0.5rem 1.2rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .tick-pointer {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            background: #00000055;
+            padding: 0.2rem 1rem;
+            border-radius: 60px;
+        }
+        .last-digit-badge {
+            font-size: 2rem;
+            font-weight: 800;
+            background: #1e2a46;
+            padding: 0 0.5rem;
+            border-radius: 20px;
+            line-height: 1.4;
+            color: #ffd966;
+        }
+        .arrow-pulse {
+            animation: pulse 0.6s ease-out;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); background: #ffaa33; color: black; }
+            100% { transform: scale(1); background: #1e2a46; color: #ffd966; }
+        }
+        .grid-digits {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin: 20px 0 10px;
+        }
+        .digit-box {
+            background: #0a0f1f;
+            border-radius: 1.2rem;
+            text-align: center;
+            padding: 12px 6px;
+            transition: all 0.1s ease;
+            border: 1px solid #2a3a60;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        .digit-box.highlight {
+            background: radial-gradient(circle at 30% 20%, #1f5e3a, #0b2b1c);
+            border-color: #4ade80;
+            box-shadow: 0 0 8px #4ade8066;
+        }
+        .digit-box.live-pointer {
+            background: radial-gradient(circle at 30% 20%, #ffb347, #a35100);
+            border-color: #ffbb77;
+            box-shadow: 0 0 12px #ffaa33;
+            transition: 0.05s linear;
+        }
+        .digit {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #f0f3fa;
+            letter-spacing: 1px;
+        }
+        .percentage {
+            font-size: 1rem;
+            font-weight: 600;
+            background: #00000066;
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 40px;
+            margin-top: 8px;
+            color: #cbd5ff;
+        }
+        .signal-area {
+            background: #071126;
+            border-radius: 1.2rem;
+            padding: 0.7rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: 15px 0 8px;
+        }
+        .signal-badge {
+            font-size: 1.2rem;
+            font-weight: 800;
+            padding: 0.4rem 1.1rem;
+            border-radius: 60px;
+            background: #1f2937;
+            color: #bbf0ff;
+        }
+        .strong {
+            background: #0e4d2e;
+            color: #caffb9;
+            box-shadow: 0 0 6px #3ae374;
+        }
+        button {
+            background: #2266c5;
+            border: none;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 40px;
+            color: white;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        button:active { transform: scale(0.97); }
+        .trade-panel { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+        input, select {
+            background: #010a1a;
+            border: 1px solid #2d4970;
+            padding: 8px 12px;
+            border-radius: 28px;
+            color: white;
+            font-size: 0.8rem;
+        }
+        .status { font-size: 0.7rem; background: #00000070; padding: 4px 10px; border-radius: 24px; }
+        .connection-led { width: 10px; height: 10px; border-radius: 10px; display: inline-block; margin-right: 6px; }
+        .green-led { background: #2ecc71; box-shadow: 0 0 4px #2ecc71; }
+        .red-led { background: #e74c3c; }
+        footer { font-size: 0.7rem; text-align: center; color: #5f7fae; margin-top: 16px; }
+        @media (max-width: 530px) { .digit { font-size: 1.5rem; } .grid-digits { gap: 8px; } }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="flex-between" style="display: flex; justify-content: space-between;">
+        <h1>📡 TickPointer + Signal AI</h1>
+        <div class="status" id="connStatus">⚫ Disconnected</div>
+    </div>
+    <div class="sub">🔴 Live tick pointer (Deriv style) | 1000-tick digit distribution | Even/Odd trading</div>
 
+    <!-- LIVE TICK POINTER (like Deriv) -->
+    <div class="card" style="padding: 0.8rem 1rem;">
+        <div style="font-weight: 600; margin-bottom: 6px;">🎯 LIVE TICK POINTER</div>
+        <div class="live-tick-panel">
+            <div class="tick-pointer">
+                <span>📈 Last Tick:</span>
+                <span id="lastTickPrice" style="font-weight: 700; font-size: 1.3rem;">—</span>
+                <span>→ Digit:</span>
+                <span id="lastDigitSpan" class="last-digit-badge">—</span>
+            </div>
+            <div style="font-size: 0.7rem; background:#0f212f; padding: 2px 12px; border-radius: 20px;">
+                ⚡ Pointer moves with each tick
+            </div>
+        </div>
+        <div style="font-size: 0.7rem; color:#aaccff;">↓ Latest tick automatically highlights the digit box below ↓</div>
+    </div>
+
+    <!-- Account + symbol -->
+    <div class="card">
+        <div class="flex-between" style="margin-bottom: 12px;">
+            <span>🔗 TRADING ACCOUNT</span>
+            <span id="authBadge">🔓 Not linked</span>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <input type="text" id="apiTokenInput" placeholder="Deriv API token from dashboard" style="flex:2;">
+            <button id="linkAccountBtn">🔌 Link</button>
+            <button id="logoutBtn" style="background:#3b2e2e;">Unlink</button>
+        </div>
+        <div style="margin-top: 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <label>📟 Symbol:</label>
+            <select id="symbolSelect">
+                <option value="R_100">R_100 (Random 100)</option>
+                <option value="R_75">R_75</option>
+                <option value="R_50">R_50</option>
+                <option value="1HZ1000V">Volatility 1000 (1s)</option>
+            </select>
+            <button id="refreshHistoryBtn">🔄 Refresh 1000 ticks</button>
+        </div>
+    </div>
+
+    <!-- DIGIT BOXES (0-9 with percentages) & tick pointer highlight -->
+    <div class="card">
+        <div style="font-weight: 500;">📦 Digit frequency (last 1000 ticks)</div>
+        <div class="grid-digits" id="digitsContainer"></div>
+        <div class="signal-area" id="signalArea">
+            <span>🎯 STRONG MARKET SIGNAL</span>
+            <span id="signalText" class="signal-badge">— awaiting data —</span>
+        </div>
+        <div class="flex-between" style="margin-top: 5px;">
+            <span id="winrateHint" style="font-family: monospace;">📊 Even vs Odd</span>
+            <span id="sampleCountSpan">📋 ticks loaded: 0</span>
+        </div>
+    </div>
+
+    <!-- TRADING PANEL -->
+    <div class="card">
+        <div><strong>⚡ Auto-trade (Even/Odd)</strong> based on strong signal</div>
+        <div class="trade-panel">
+            <div><span>💰 Stake ($):</span> <input type="number" id="stakeAmount" value="1.00" step="0.5" min="0.35" style="width:90px;"></div>
+            <div><span>⏱️ Duration (ticks):</span> <input type="number" id="tradeDuration" value="1" step="1" min="1" style="width:80px;"></div>
+            <button id="executeTradeBtn" class="success" style="background:#0e793c;">📈 BUY signal</button>
+        </div>
+        <div id="tradeMsg" style="font-size:0.7rem; margin-top: 8px; color:#c0e0ff;"></div>
+        <details style="margin-top: 8px;"><summary>⚙️ How tick pointer works</summary>
+        <p style="font-size:0.7rem;">WebSocket subscribes to live `ticks` for chosen symbol. Each new tick updates the pointer (last price & digit) and temporarily highlights the corresponding digit box (golden pulse). The 1000-tick history runs separately to compute signal strength. You can trade using the strong direction.</p>
+        </details>
+    </div>
+    <footer>⚠️ Educational tool. Real trading involves risk. Use demo API token first.</footer>
+</div>
+
+<script>
+    // ---------- GLOBALS ----------
+    let ws = null;
+    let isConnected = false;
+    let isAuthorized = false;
+    let currentApiToken = "";
+    let symbol = "R_100";
+    let lastTicksArray = [];         // stores last 1000 prices for analysis
+    let digitCounts = Array(10).fill(0);
+    let strongSignal = null;          // "EVEN" or "ODD"
+    let activeTickSubscription = null; // store subscription id to unsubscribe later
+    let lastHighlightTimeout = null;
+
+    // DOM elements
+    const digitsContainer = document.getElementById('digitsContainer');
+    const signalTextSpan = document.getElementById('signalText');
+    const connStatusSpan = document.getElementById('connStatus');
+    const authBadge = document.getElementById('authBadge');
+    const sampleCountSpan = document.getElementById('sampleCountSpan');
+    const winrateHintSpan = document.getElementById('winrateHint');
+    const lastTickPriceSpan = document.getElementById('lastTickPrice');
+    const lastDigitSpan = document.getElementById('lastDigitSpan');
+    const apiTokenInput = document.getElementById('apiTokenInput');
+    const linkBtn = document.getElementById('linkAccountBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
+    const symbolSelect = document.getElementById('symbolSelect');
+    const executeTradeBtn = document.getElementById('executeTradeBtn');
+    const stakeAmountInput = document.getElementById('stakeAmount');
+    const tradeDurationInput = document.getElementById('tradeDuration');
+    const tradeMsgSpan = document.getElementById('tradeMsg');
+
+    // Helper UI updates
+    function updateConnectionUI() {
+        if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
+            connStatusSpan.innerHTML = '<span class="connection-led green-led"></span> Live';
+        } else {
+            connStatusSpan.innerHTML = '<span class="connection-led red-led"></span> Offline';
+        }
+    }
+
+    // Highlight a digit box temporarily as "live pointer"
+    function highlightDigitBox(digit) {
+        // remove previous pointer class from all boxes
+        document.querySelectorAll('.digit-box').forEach(box => {
+            box.classList.remove('live-pointer');
+        });
+        const boxes = document.querySelectorAll('.digit-box');
+        if (boxes[digit]) {
+            boxes[digit].classList.add('live-pointer');
+            if (lastHighlightTimeout) clearTimeout(lastHighlightTimeout);
+            lastHighlightTimeout = setTimeout(() => {
+                boxes[digit]?.classList.remove('live-pointer');
+            }, 400);
+        }
+    }
+
+    // Process a new live tick (update pointer and optionally shift into the analysis array)
+    function handleLiveTick(tickObj) {
+        if (!tickObj?.tick) return;
+        const price = parseFloat(tickObj.tick.quote);
+        const lastDigit = Math.floor(Math.abs(price)) % 10;
+        lastTickPriceSpan.innerText = price.toFixed(2);
+        lastDigitSpan.innerText = lastDigit;
+        // animate the digit box (tick pointer)
+        highlightDigitBox(lastDigit);
+        // (Optional) we could also add this tick to historical ring buffer, but we refresh 1000-tick analysis periodically.
+        // We'll also update the stats if we want instant small shift, but to keep consistency, we refresh analysis manually or auto every 60s.
+        // But we can also maintain rolling window: add new tick, remove oldest, recompute stats for fresh signal. Highly requested!
+        // Let's implement rolling 1000-tick window with live ticks to keep signal fresh.
+        updateRollingWindow(price);
+    }
+
+    // Rolling window of 1000 ticks (synchronized with live feed)
+    function updateRollingWindow(newPrice) {
+        lastTicksArray.push(newPrice);
+        if (lastTicksArray.length > 1000) {
+            lastTicksArray.shift();
+        }
+        // recompute digit frequency and signal from current rolling array
+        recomputeFromTicksArray();
+    }
+
+    function recomputeFromTicksArray() {
+        if (lastTicksArray.length === 0) return;
+        const newCounts = Array(10).fill(0);
+        for (let p of lastTicksArray) {
+            let digit = Math.floor(Math.abs(p)) % 10;
+            newCounts[digit]++;
+        }
+        digitCounts = newCounts;
+        const total = lastTicksArray.length;
+        sampleCountSpan.innerText = `📋 ticks loaded: ${total}`;
+        // even/odd analysis
+        let evenSum = 0, oddSum = 0;
+        for (let i=0;i<=9;i++) {
+            if (i%2===0) evenSum += digitCounts[i];
+            else oddSum += digitCounts[i];
+        }
+        const evenPct = (evenSum/total)*100;
+        const oddPct = (oddSum/total)*100;
+        const diff = evenPct - oddPct;
+        if (Math.abs(diff) >= 3.5) {
+            strongSignal = diff > 0 ? "EVEN" : "ODD";
+            signalTextSpan.innerHTML = `🔥 ${strongSignal}  (${diff>0?evenPct.toFixed(1):oddPct.toFixed(1)}% vs ${diff>0?oddPct.toFixed(1):evenPct.toFixed(1)}%)`;
+            signalTextSpan.className = "signal-badge strong";
+        } else {
+            if (evenPct > oddPct) strongSignal = "EVEN";
+            else if (oddPct > evenPct) strongSignal = "ODD";
+            else strongSignal = "NEUTRAL";
+            signalTextSpan.innerHTML = `📊 ${strongSignal}  (${evenPct.toFixed(1)}% even | ${oddPct.toFixed(1)}% odd)`;
+            signalTextSpan.className = "signal-badge";
+        }
+        winrateHintSpan.innerHTML = `🎲 Even:${evenPct.toFixed(1)}%  Odd:${oddPct.toFixed(1)}%  |  Trade: ${strongSignal}`;
+        // render digit boxes with percentages
+        renderDigitBoxes(digitCounts, total);
+    }
+
+    function renderDigitBoxes(counts, total) {
+        digitsContainer.innerHTML = "";
+        for (let d=0; d<=9; d++) {
+            const percent = total>0 ? ((counts[d]/total)*100).toFixed(1) : "0.0";
+            const isEven = (d%2===0);
+            const signalHighlight = (strongSignal === "EVEN" && isEven) || (strongSignal === "ODD" && !isEven);
+            const box = document.createElement('div');
+            box.className = `digit-box ${signalHighlight ? 'highlight' : ''}`;
+            box.innerHTML = `<div class="digit">${d}</div><div class="percentage">${percent}%</div><div style="font-size:0.65rem;">${counts[d]}</div>`;
+            digitsContainer.appendChild(box);
+        }
+    }
+
+    // Fetch 1000 ticks history to populate initial rolling window
+    function fetchInitialHistory() {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            tradeMsgSpan.innerText = "⏳ Connecting WebSocket...";
+            return;
+        }
+        const req = {
+            ticks_history: symbol,
+            adjust_start_time: 1,
+            count: 1000,
+            end: "latest",
+            style: "ticks"
+        };
+        ws.send(JSON.stringify(req));
+        tradeMsgSpan.innerText = `🔄 Fetching 1000 ticks for ${symbol} ...`;
+    }
+
+    // Subscribe to real-time ticks (for pointer & rolling update)
+    let currentSubscriptionId = null;
+    function subscribeTicks() {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        if (currentSubscriptionId) {
+            // unsubscribe previous
+            const forget = { forget: currentSubscriptionId };
+            ws.send(JSON.stringify(forget));
+        }
+        const subReq = {
+            ticks: symbol,
+            subscribe: 1
+        };
+        ws.send(JSON.stringify(subReq));
+    }
+
+    // WebSocket connection + handlers
+    function initWebSocket() {
+        if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+        ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
+        ws.onopen = () => {
+            isConnected = true;
+            updateConnectionUI();
+            fetchInitialHistory();
+            subscribeTicks();
+        };
+        ws.onclose = () => {
+            isConnected = false;
+            isAuthorized = false;
+            updateConnectionUI();
+            authBadge.innerText = "🔓 Not linked";
+            setTimeout(() => initWebSocket(), 4000);
+        };
+        ws.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            if (data.error && data.error.code === "APIError") console.warn(data.error);
+            // handle authorize
+            if (data.msg_type === "authorize") {
+                if (data.error) {
+                    isAuthorized = false;
+                    authBadge.innerText = "❌ Auth failed";
+                    tradeMsgSpan.innerText = `Auth error: ${data.error.message}`;
+                } else {
+                    isAuthorized = true;
+                    authBadge.innerText = `✅ ${data.authorize.loginid}`;
+                    tradeMsgSpan.innerText = "Account ready for trading!";
+                }
+            }
+            // ticks_history response
+            else if (data.msg_type === "ticks_history") {
+                if (data.history && data.history.prices) {
+                    const prices = data.history.prices;
+                    lastTicksArray = prices.slice(-1000);
+                    recomputeFromTicksArray();
+                    tradeMsgSpan.innerText = `✅ Loaded ${lastTicksArray.length} historical ticks. Live pointer active.`;
+                } else if (data.error) {
+                    tradeMsgSpan.innerText = `History error: ${data.error.message}`;
+                }
+            }
+            // live tick subscription
+            else if (data.msg_type === "tick") {
+                if (data.tick) {
+                    handleLiveTick(data);
+                }
+            }
+            else if (data.msg_type === "buy") {
+                if (data.error) tradeMsgSpan.innerText = `❌ Trade failed: ${data.error.message}`;
+                else tradeMsgSpan.innerText = `✅ Contract bought! ID: ${data.buy.contract_id}`;
+            }
+            // subscription acknowledgement
+            else if (data.msg_type === "ticks") {
+                if (data.subscription?.id) {
+                    currentSubscriptionId = data.subscription.id;
+                }
+            }
+        };
+    }
+
+    // auth & trading
+    function authorizeAccount(token) {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            tradeMsgSpan.innerText = "WebSocket not ready, try again.";
+            return;
+        }
+        ws.send(JSON.stringify({ authorize: token }));
+        currentApiToken = token;
+    }
+
+    function placeTrade(signalDirection, amount, duration, sym) {
+        if (!isAuthorized) {
+            tradeMsgSpan.innerText = "⚠️ Account not linked. Provide valid API token.";
+            return;
+        }
+        let contract = signalDirection === "EVEN" ? "DIGITEVEN" : "DIGITODD";
+        const buyReq = {
+            buy: "1",
+            parameters: {
+                amount: parseFloat(amount),
+                basis: "stake",
+                contract_type: contract,
+                currency: "USD",
+                duration: parseInt(duration),
+                duration_unit: "t",
+                symbol: sym
+            }
+        };
+        ws.send(JSON.stringify(buyReq));
+        tradeMsgSpan.innerText = `🚀 Placing ${contract} trade: $${amount} / ${duration} ticks`;
+    }
+
+    function tradeWithSignal() {
+        if (!strongSignal || strongSignal === "NEUTRAL") {
+            tradeMsgSpan.innerText = "⚠️ No strong signal yet. Wait for data or refresh ticks.";
+            return;
+        }
+        const stake = parseFloat(stakeAmountInput.value);
+        if (isNaN(stake) || stake <= 0) return;
+        const dur = parseInt(tradeDurationInput.value);
+        placeTrade(strongSignal, stake, dur, symbol);
+    }
+
+    // Event listeners
+    linkBtn.addEventListener('click', () => {
+        const token = apiTokenInput.value.trim();
+        if (!token) { tradeMsgSpan.innerText = "Enter API token."; return; }
+        authorizeAccount(token);
+    });
+    logoutBtn.addEventListener('click', () => {
+        isAuthorized = false;
+        authBadge.innerText = "🔓 Not linked";
+        tradeMsgSpan.innerText = "Account unlinked locally.";
+    });
+    refreshHistoryBtn.addEventListener('click', () => {
+        fetchInitialHistory();
+    });
+    symbolSelect.addEventListener('change', () => {
+        symbol = symbolSelect.value;
+        fetchInitialHistory();
+        subscribeTicks();    // re-subscribe with new symbol
+    });
+    executeTradeBtn.addEventListener('click', () => {
+        if (!isAuthorized) { tradeMsgSpan.innerText = "Link account first."; return; }
+        tradeWithSignal();
+    });
+
+    // start connection
+    initWebSocket();
+    // initial placeholder boxes
+    for(let i=0;i<10;i++) {
+        let box = document.createElement('div');
+        box.className = "digit-box";
+        box.innerHTML = `<div class="digit">${i}</div><div class="percentage">--%</div>`;
+        digitsContainer.appendChild(box);
+    }
+</script>
+</body>
+</html>
