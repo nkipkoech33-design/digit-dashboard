@@ -1,650 +1,622 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Deriv Even/Odd Bot | 18 Verified Markets + Moving Tick Pointer</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
-        }
-        body {
-            background: linear-gradient(145deg, #0a0f1c 0%, #0f172a 100%);
-            min-height: 100vh;
-            margin: 0;
-            padding: 24px 16px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .dashboard {
-            max-width: 780px;
-            width: 100%;
-            background: rgba(15, 25, 45, 0.88);
-            backdrop-filter: blur(4px);
-            border-radius: 2rem;
-            box-shadow: 0 25px 40px -12px black, 0 0 0 1px rgba(72, 187, 255, 0.2);
-            padding: 1.5rem 1.2rem;
-            transition: all 0.2s;
-        }
-        h1 {
-            font-size: 1.6rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #c0e0ff, #7aaefc);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            margin: 0 0 0.2rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .sub {
-            color: #9bb5d9;
-            font-size: 0.75rem;
-            margin-bottom: 1.2rem;
-            border-left: 3px solid #2e7d64;
-            padding-left: 10px;
-        }
-        .card {
-            background: #0f172ae0;
-            border-radius: 1.5rem;
-            padding: 0.9rem 1rem;
-            margin-bottom: 1.2rem;
-            border: 1px solid #2d3a60;
-            backdrop-filter: blur(4px);
-        }
-        .live-tick-panel {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #010a1a;
-            border-radius: 60px;
-            padding: 0.4rem 1rem;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .tick-pointer {
-            display: flex;
-            align-items: baseline;
-            gap: 12px;
-            background: #00000066;
-            padding: 0.2rem 1rem;
-            border-radius: 60px;
-        }
-        .last-digit-badge {
-            font-size: 1.8rem;
-            font-weight: 800;
-            background: #1e2a46;
-            padding: 0 0.6rem;
-            border-radius: 20px;
-            line-height: 1.4;
-            color: #ffdb8e;
-        }
-        .grid-digits {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            margin: 15px 0 8px;
-            position: relative;
-        }
-        .digit-box {
-            background: #0a0f1f;
-            border-radius: 1.2rem;
-            text-align: center;
-            padding: 8px 4px;
-            transition: all 0.15s ease;
-            border: 2px solid #2a3a5e;
-            position: relative;
-        }
-        .digit-box.highlight {
-            background: radial-gradient(circle at 30% 20%, #1f5e3a, #0b2b1c);
-            border-color: #4ade80;
-            box-shadow: 0 0 8px #4ade8066;
-        }
-        /* MOVING POINTER STYLE (jumps between boxes) */
-        .digit-box.active-pointer {
-            border: 3px solid #ffaa33;
-            background: radial-gradient(circle at 30% 20%, #5a3a1a, #2a1a0a);
-            box-shadow: 0 0 18px #ffaa33;
-            transform: scale(1.02);
-        }
-        .pointer-arrow {
-            position: absolute;
-            top: -22px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 1.2rem;
-            color: #ffaa33;
-            text-shadow: 0 0 4px black;
-            pointer-events: none;
-            font-weight: bold;
-        }
-        .digit {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: #f0f3fa;
-        }
-        .percentage {
-            font-size: 0.85rem;
-            font-weight: 600;
-            background: #00000099;
-            display: inline-block;
-            padding: 0.2rem 0.5rem;
-            border-radius: 40px;
-            margin-top: 6px;
-            color: #cbd5ff;
-        }
-        .signal-area {
-            background: #071126;
-            border-radius: 1.2rem;
-            padding: 0.6rem 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            margin: 12px 0 6px;
-        }
-        .signal-badge {
-            font-size: 1.1rem;
-            font-weight: 800;
-            padding: 0.3rem 1rem;
-            border-radius: 60px;
-            background: #1f2937;
-            color: #bbf0ff;
-        }
-        .strong {
-            background: #0e4d2e;
-            color: #caffb9;
-            box-shadow: 0 0 6px #3ae374;
-        }
-        button {
-            background: #2266c5;
-            border: none;
-            font-weight: 600;
-            padding: 8px 14px;
-            border-radius: 40px;
-            color: white;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.1s;
-        }
-        button:active { transform: scale(0.97); }
-        .trade-panel { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
-        input, select {
-            background: #010a1a;
-            border: 1px solid #2d4970;
-            padding: 8px 10px;
-            border-radius: 28px;
-            color: white;
-            font-size: 0.8rem;
-        }
-        .status { font-size: 0.7rem; background: #00000070; padding: 4px 10px; border-radius: 24px; }
-        .connection-led { width: 10px; height: 10px; border-radius: 10px; display: inline-block; margin-right: 6px; }
-        .green-led { background: #2ecc71; box-shadow: 0 0 4px #2ecc71; }
-        .red-led { background: #e74c3c; }
-        .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-        footer { font-size: 0.65rem; text-align: center; color: #5f7fae; margin-top: 14px; }
-        @media (max-width: 530px) { .digit { font-size: 1.4rem; } .grid-digits { gap: 6px; } }
-        select { width: 100%; margin-top: 6px; }
-        .error-msg { background: #330000; border-left: 4px solid #ff6666; padding: 6px 10px; margin-top: 8px; font-size: 0.7rem; color: #ffaaaa; border-radius: 12px; }
-        .log { font-size: 0.65rem; color: #88aaff; margin-top: 6px; max-height: 80px; overflow-y: auto; background: #00000040; padding: 6px; border-radius: 12px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>Deriv Tick Analyzer – Exact Decimals per Market</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  background: #0b1120;
+  color: #e2e8f0;
+  margin: 0;
+  padding: 1rem;
+}
+.container { max-width: 1600px; margin: 0 auto; }
+h1 {
+  font-size: 1.7rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #c084fc, #60a5fa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.status-bar {
+  background: #1e293b;
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  display: inline-block;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+}
+.sub {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-bottom: 1.5rem;
+  border-left: 3px solid #3b82f6;
+  padding-left: 0.75rem;
+}
+.controls {
+  background: #1e293b;
+  padding: 1rem 1.2rem;
+  border-radius: 1.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+.input-group {
+  flex: 2;
+  min-width: 220px;
+}
+.input-group label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 0.25rem;
+}
+.token-input {
+  width: 100%;
+  background: #0f172a;
+  border: 1px solid #334155;
+  padding: 0.7rem 1rem;
+  border-radius: 2rem;
+  color: white;
+  font-size: 0.9rem;
+}
+.token-input:focus { outline: none; border-color: #3b82f6; }
+.connect-btn {
+  background: #3b82f6;
+  border: none;
+  padding: 0.7rem 1.8rem;
+  border-radius: 2rem;
+  font-weight: bold;
+  color: white;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.connect-btn:hover { background: #2563eb; transform: scale(0.98); }
+.market-grid { display: flex; flex-direction: column; gap: 1.5rem; }
+.market-card {
+  background: #111827;
+  border-radius: 1.25rem;
+  border: 1px solid #2d3a4e;
+  overflow: hidden;
+}
+.market-header {
+  background: #1e293b;
+  padding: 0.9rem 1.2rem;
+  border-bottom: 1px solid #334155;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+.market-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+.live-price {
+  font-family: 'Courier New', monospace;
+  background: #0f172a;
+  padding: 0.2rem 0.7rem;
+  border-radius: 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #facc15;
+}
+.digits-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  padding: 1.2rem;
+  background: #0f172a;
+}
+.digit-cell {
+  background: #1e293b;
+  border-radius: 0.9rem;
+  padding: 0.7rem 0.2rem;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+  position: relative;
+  border: 1px solid #2d3a4e;
+}
+.digit-cell span.digit { font-size: 1.5rem; font-weight: 800; display: block; }
+.digit-cell .percent { font-size: 0.7rem; font-weight: normal; color: #cbd5e1; margin-top: 4px; }
+.pointer-marker {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 3px;
+  background: #facc15;
+  border-radius: 4px;
+}
+.most { background: #15803d; border-color: #22c55e; }
+.second { background: #1e40af; border-color: #3b82f6; }
+.least { background: #b91c1c; border-color: #ef4444; }
+.secondleast { background: #c2410c; border-color: #f97316; }
+.info-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 1.2rem;
+  background: #0f172a;
+  border-top: 1px solid #1e293b;
+  border-bottom: 1px solid #1e293b;
+  font-size: 0.85rem;
+}
+.parity-stats { background: #0a0f1c; padding: 0.3rem 0.7rem; border-radius: 2rem; font-family: monospace; }
+.last50-badge { font-family: monospace; font-size: 0.8rem; letter-spacing: 2px; word-break: break-all; }
+.signal-area { padding: 0.8rem 1.2rem; text-align: center; background: #0f172a; }
+.signal-flash {
+  background: #2e1e3e;
+  color: #facc15;
+  padding: 6px 12px;
+  border-radius: 2rem;
+  display: inline-block;
+  animation: pulse 0.8s infinite;
+  font-size: 0.9rem;
+}
+@keyframes pulse {
+  0% { opacity: 0.7; transform: scale(1);}
+  50% { opacity: 1; transform: scale(1.02); background: #5e35b1; color: white; }
+  100% { opacity: 0.7; transform: scale(1);}
+}
+.no-signal { color: #475569; font-size: 0.75rem; }
+footer { margin-top: 2rem; font-size: 0.7rem; text-align: center; color: #475569; }
+</style>
 </head>
 <body>
-<div class="dashboard">
-    <div class="flex-between">
-        <h1>📊 18 Markets | Even/Odd + Moving Tick Pointer</h1>
-        <div class="status" id="connStatus">⚫ Connecting...</div>
-    </div>
-    <div class="sub"><span style="background:#ffaa3322; padding:2px 8px; border-radius:20px;">🔴</span> The pointer JUMPS between digit boxes on every new tick | 18 verified indices</div>
+<div class="container">
+  <h1>📊 DERIV TICK ANALYZER</h1>
+  <div class="status-bar" id="connectionStatus">⚫ Disconnected</div>
+  <div class="sub">✅ Exact decimal places per market (2, 3, or 4 decimals) | Digit 0 always included | Live 1s & Jump indices</div>
 
-    <!-- LIVE TICK POINTER (moving) -->
-    <div class="card" style="padding: 0.7rem 1rem;">
-        <div style="font-weight: 600; margin-bottom: 6px;">🎯 LIVE TICK POINTER (moves to last digit)</div>
-        <div class="live-tick-panel">
-            <div class="tick-pointer">
-                <span>📈 Last Tick Price:</span>
-                <span id="lastTickPrice" style="font-weight: 700; font-size: 1.3rem;">—</span>
-                <span>→ Last Digit:</span>
-                <span id="lastDigitSpan" class="last-digit-badge">—</span>
-            </div>
-            <div style="font-size: 0.65rem;">👇 The box below gets a marker 👇</div>
-        </div>
+  <div class="controls">
+    <div class="input-group">
+      <label>🔑 API TOKEN</label>
+      <input type="password" id="token" class="token-input" placeholder="Enter your Deriv API token">
     </div>
+    <button onclick="connectWebSocket()" class="connect-btn">🚀 CONNECT & STREAM</button>
+  </div>
 
-    <!-- ACCOUNT + MARKET SELECTOR (CORRECT SYMBOLS) -->
-    <div class="card">
-        <div class="flex-between" style="margin-bottom: 12px;">
-            <span>🔗 TRADING ACCOUNT (API Token)</span>
-            <span id="authBadge">🔓 Not linked</span>
-        </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <input type="text" id="apiTokenInput" placeholder="Paste your Deriv API token (from Dashboard → API tokens)" style="flex:2;">
-            <button id="linkAccountBtn">🔌 Link Account</button>
-            <button id="logoutBtn" style="background:#3b2e2e;">Unlink</button>
-        </div>
-        <div style="margin-top: 14px;">
-            <label>📊 SELECT MARKET — 18 VOLATILITY & JUMP INDICES (1s + standard):</label>
-            <select id="symbolSelect" style="width:100%; margin-top: 6px;">
-                <optgroup label="✅ Standard Volatility Indices (2s ticks)">
-                    <option value="R_10">R_10 – Volatility 10 Index (2s)</option>
-                    <option value="R_25">R_25 – Volatility 25 Index (2s)</option>
-                    <option value="R_50">R_50 – Volatility 50 Index (2s)</option>
-                    <option value="R_75">R_75 – Volatility 75 Index (2s)</option>
-                    <option value="R_100" selected>R_100 – Volatility 100 Index (2s)</option>
-                </optgroup>
-                <optgroup label="✅ 1-Second Volatility Indices (1s ticks)">
-                    <option value="R_10_1S">R_10_1S – Volatility 10 (1s)</option>
-                    <option value="R_15_1S">R_15_1S – Volatility 15 (1s)</option>
-                    <option value="R_25_1S">R_25_1S – Volatility 25 (1s)</option>
-                    <option value="R_30_1S">R_30_1S – Volatility 30 (1s)</option>
-                    <option value="R_50_1S">R_50_1S – Volatility 50 (1s)</option>
-                    <option value="R_75_1S">R_75_1S – Volatility 75 (1s)</option>
-                    <option value="R_90_1S">R_90_1S – Volatility 90 (1s)</option>
-                    <option value="R_100_1S">R_100_1S – Volatility 100 (1s)</option>
-                </optgroup>
-                <optgroup label="✅ Jump Indices (volatility spike events)">
-                    <option value="JUMP_10R">JUMP_10R – Jump 10 Index</option>
-                    <option value="JUMP_25R">JUMP_25R – Jump 25 Index</option>
-                    <option value="JUMP_50R">JUMP_50R – Jump 50 Index</option>
-                    <option value="JUMP_75R">JUMP_75R – Jump 75 Index</option>
-                    <option value="JUMP_100R">JUMP_100R – Jump 100 Index</option>
-                </optgroup>
-            </select>
-            <button id="refreshBtn" style="margin-top: 10px; width:100%; background:#2c5f8a;">🔄 Load 1000 Ticks & Start Live Pointer</button>
-            <div id="errorMsg" class="error-msg" style="display:none;"></div>
-            <div id="debugLog" class="log"></div>
-        </div>
-    </div>
-
-    <!-- DIGIT BOXES 0-9 + SIGNAL -->
-    <div class="card">
-        <div style="font-weight: 500;">📦 Digit Distribution (last 1000 ticks) — pointer jumps to current digit</div>
-        <div class="grid-digits" id="digitsContainer"></div>
-        <div class="signal-area">
-            <span>🎯 STRONG MARKET SIGNAL (Even/Odd)</span>
-            <span id="signalText" class="signal-badge">— waiting data —</span>
-        </div>
-        <div class="flex-between">
-            <span id="winrateHint">📊 Even vs Odd percentage</span>
-            <span id="sampleCountSpan">📋 ticks in window: 0</span>
-        </div>
-    </div>
-
-    <!-- TRADING PANEL -->
-    <div class="card">
-        <div><strong>⚡ Auto-Trade Even/Odd</strong> (executes based on live signal)</div>
-        <div class="trade-panel">
-            <div><span>💰 Stake ($):</span> <input type="number" id="stakeAmount" value="1.00" step="0.5" min="0.35" style="width:90px;"></div>
-            <div><span>⏱️ Duration (ticks):</span> <input type="number" id="tradeDuration" value="1" step="1" min="1" style="width:80px;"></div>
-            <button id="executeTradeBtn" style="background:#0e793c;">📈 BUY Signal Direction</button>
-        </div>
-        <div id="tradeMsg" style="font-size:0.7rem; margin-top: 10px; color:#c0e0ff;"></div>
-        <details style="margin-top: 10px;">
-            <summary>ℹ️ How the moving pointer & percentages work</summary>
-            <p style="font-size:0.7rem;">• Every new tick updates the "Last Digit".<br>
-            • The digit box gets a <strong>persistent ORANGE border + arrow</strong> → it jumps instantly to the newest digit.<br>
-            • The percentages are based on the most recent 1000 ticks (rolling window).<br>
-            • Signal = stronger side (Even vs Odd). Strength increases when difference ≥ 3.5%.<br>
-            • <strong>All 18 markets are verified with Deriv API (both 1s and standard).</strong></p>
-        </details>
-    </div>
-    <footer>⚠️ Educational tool – real trading involves risk. Always test on demo account first.</footer>
+  <div id="marketsContainer" class="market-grid"></div>
+  <footer>📌 Decimals per market from Deriv reference: Vol 10/25/50/75/100 (1s) = 2 or 3 decimals; Vol 10/25 = 3, Vol 50/75 = 4, Vol 100 = 2 decimals; Jump indices = 2 decimals. Live prices use quote_display, history uses fixed decimals.</footer>
 </div>
 
 <script>
-    // ------------------------------------------------------------------
-    // DERIV EVEN/ODD BOT - CORRECT 18 MARKET SYMBOLS + MOVING TICK POINTER
-    // Fixes: percentages now accurate, pointer jumps between boxes live
-    // Markets: Standard V10/25/50/75/100 | 1s V10/15/25/30/50/75/90/100 | JUMP 10/25/50/75/100
-    // ------------------------------------------------------------------
-    let ws = null;
-    let isConnected = false;
-    let isAuthorized = false;
-    let currentSymbol = "R_100";
-    let rollingTicks = [];          // stores last 1000 tick prices
-    let currentTickSubId = null;
-    let currentLastDigit = null;
+  // Exact decimal places for each market (based on user's reference image)
+  const DECIMAL_MAP = {
+    "R_10_1s": 2,    // 9960.08
+    "R_15_1s": 3,    // 13077.482
+    "R_25_1s": 2,    // 784715.82
+    "R_30_1s": 3,    // 6890.600
+    "R_50_1s": 2,    // 322977.69
+    "R_75_1s": 2,    // 3600.62
+    "R_90_1s": 3,    // 8626.964
+    "R_100_1s": 2,   // 1393.95
+    "R_10": 3,       // 5008.309
+    "R_25": 3,       // 3000.679
+    "R_50": 4,       // 91.4587
+    "R_75": 4,       // 36847.5611
+    "R_100": 2,      // 551.06
+    "JD10": 2,       // 94969.86
+    "JD25": 2,       // 125933.25
+    "JD50": 2,       // 36686.78
+    "JD75": 2,       // 13730.24
+    "JD100": 2       // 422.36
+  };
 
-    // DOM elements
-    const connStatusSpan = document.getElementById('connStatus');
-    const authBadge = document.getElementById('authBadge');
-    const digitsContainer = document.getElementById('digitsContainer');
-    const signalTextSpan = document.getElementById('signalText');
-    const sampleCountSpan = document.getElementById('sampleCountSpan');
-    const winrateHintSpan = document.getElementById('winrateHint');
-    const lastTickPriceSpan = document.getElementById('lastTickPrice');
-    const lastDigitSpan = document.getElementById('lastDigitSpan');
-    const apiTokenInput = document.getElementById('apiTokenInput');
-    const linkBtn = document.getElementById('linkAccountBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const refreshBtn = document.getElementById('refreshBtn');
-    const symbolSelect = document.getElementById('symbolSelect');
-    const executeTradeBtn = document.getElementById('executeTradeBtn');
-    const stakeAmountInput = document.getElementById('stakeAmount');
-    const tradeDurationInput = document.getElementById('tradeDuration');
-    const tradeMsgSpan = document.getElementById('tradeMsg');
-    const errorMsgDiv = document.getElementById('errorMsg');
-    const debugLogDiv = document.getElementById('debugLog');
+  const MARKET_NAMES = {
+    "R_10_1s": "Volatility 10 (1s)",
+    "R_15_1s": "Volatility 15 (1s)",
+    "R_25_1s": "Volatility 25 (1s)",
+    "R_30_1s": "Volatility 30 (1s)",
+    "R_50_1s": "Volatility 50 (1s)",
+    "R_75_1s": "Volatility 75 (1s)",
+    "R_90_1s": "Volatility 90 (1s)",
+    "R_100_1s": "Volatility 100 (1s)",
+    "R_10": "Volatility 10",
+    "R_25": "Volatility 25",
+    "R_50": "Volatility 50",
+    "R_75": "Volatility 75",
+    "R_100": "Volatility 100",
+    "JD10": "Jump 10",
+    "JD25": "Jump 25",
+    "JD50": "Jump 50",
+    "JD75": "Jump 75",
+    "JD100": "Jump 100"
+  };
 
-    function log(msg) {
-        debugLogDiv.innerHTML = `${new Date().toLocaleTimeString()}: ${msg}<br>${debugLogDiv.innerHTML}`.slice(0, 700);
-        console.log(msg);
+  let marketData = {};
+  let ws = null;
+  let activeSubscriptions = new Set();
+  let subscriptionRetryTimeouts = {};
+
+  // Extract last digit from formatted price string (decimal dot removed)
+  function lastDigitFromFormatted(formattedPriceStr) {
+    let digitsOnly = formattedPriceStr.replace(/\./g, '');
+    if (digitsOnly.length === 0) return 0;
+    let lastChar = digitsOnly.charAt(digitsOnly.length - 1);
+    let digit = parseInt(lastChar, 10);
+    return isNaN(digit) ? 0 : digit;
+  }
+
+  // Format a numeric price for history using the correct decimals for the symbol
+  function formatHistoryPrice(symbol, priceNum) {
+    const decimals = DECIMAL_MAP[symbol] ?? 2;
+    return priceNum.toFixed(decimals);
+  }
+
+  // Process a tick (history or live)
+  function processTick(symbol, priceNumeric, quoteDisplay = null) {
+    if (!marketData[symbol]) {
+      marketData[symbol] = {
+        digitsArray: [],
+        digitCounts: new Array(10).fill(0),
+        last50Array: [],
+        lastDigit: null,
+        lastPriceDisplay: "—"
+      };
+    }
+    const data = marketData[symbol];
+
+    // Determine exact display string
+    let displayPriceStr;
+    if (quoteDisplay !== undefined && quoteDisplay !== null) {
+      // Live tick: use Deriv's own formatted string (already has correct decimals)
+      displayPriceStr = String(quoteDisplay);
+    } else {
+      // History tick: format with our decimal map
+      displayPriceStr = formatHistoryPrice(symbol, priceNumeric);
+    }
+    data.lastPriceDisplay = displayPriceStr;
+
+    const digit = lastDigitFromFormatted(displayPriceStr);
+    data.lastDigit = digit;
+
+    // Rolling 1000 digits
+    data.digitsArray.push(digit);
+    data.digitCounts[digit]++;
+    if (data.digitsArray.length > 1000) {
+      const removed = data.digitsArray.shift();
+      data.digitCounts[removed]--;
     }
 
-    function updateConnUI() {
-        if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
-            connStatusSpan.innerHTML = '<span class="connection-led green-led"></span> LIVE';
-        } else {
-            connStatusSpan.innerHTML = '<span class="connection-led red-led"></span> OFFLINE';
+    // Last 50 for parity
+    data.last50Array.push(digit);
+    if (data.last50Array.length > 50) data.last50Array.shift();
+  }
+
+  // Render a market card
+  function renderMarket(symbol) {
+    const data = marketData[symbol];
+    if (!data || data.digitsArray.length === 0) return;
+
+    const total = data.digitCounts.reduce((a, b) => a + b, 0);
+    if (total === 0) return;
+
+    const percentages = data.digitCounts.map(cnt => ((cnt / total) * 100).toFixed(2));
+
+    // Ranking
+    const indexed = data.digitCounts.map((cnt, idx) => ({ idx, cnt }));
+    const sorted = [...indexed].sort((a, b) => b.cnt - a.cnt);
+    const most = sorted[0].idx;
+    const second = sorted[1].idx;
+    const least = sorted[9].idx;
+    const secondLeast = sorted[8].idx;
+
+    // Update digit cells
+    for (let d = 0; d < 10; d++) {
+      const cell = document.getElementById(`digitCell_${symbol}_${d}`);
+      if (!cell) continue;
+      cell.className = 'digit-cell';
+      if (d === most) cell.classList.add('most');
+      else if (d === second) cell.classList.add('second');
+      else if (d === least) cell.classList.add('least');
+      else if (d === secondLeast) cell.classList.add('secondleast');
+
+      const percentSpan = cell.querySelector('.percent');
+      if (percentSpan) percentSpan.innerText = `${percentages[d]}%`;
+
+      const existingPointer = cell.querySelector('.pointer-marker');
+      if (d === data.lastDigit) {
+        if (!existingPointer) {
+          const pointer = document.createElement('div');
+          pointer.className = 'pointer-marker';
+          cell.appendChild(pointer);
         }
+      } else {
+        if (existingPointer) existingPointer.remove();
+      }
     }
 
-    // ------------------------------------------------------------------
-    // POINTER MANAGEMENT: JUMPS from one box to another (moving tick pointer)
-    function clearPointerMarker() {
-        document.querySelectorAll('.digit-box').forEach(box => {
-            box.classList.remove('active-pointer');
-            const existingArrow = box.querySelector('.pointer-arrow');
-            if (existingArrow) existingArrow.remove();
-        });
+    // Update live price display
+    const priceSpan = document.getElementById(`livePrice_${symbol}`);
+    if (priceSpan) priceSpan.innerText = data.lastPriceDisplay;
+
+    // Parity & last 50
+    const last50 = data.last50Array;
+    if (last50.length > 0) {
+      const evenCount = last50.filter(d => d % 2 === 0).length;
+      const oddCount = last50.length - evenCount;
+      const evenPercent = ((evenCount / last50.length) * 100).toFixed(1);
+      const oddPercent = ((oddCount / last50.length) * 100).toFixed(1);
+      const paritySpan = document.getElementById(`parityStats_${symbol}`);
+      if (paritySpan) paritySpan.innerHTML = `🎲 Even: ${evenPercent}% | Odd: ${oddPercent}%`;
+
+      const seqHtml = last50.map(d => d % 2 === 0 ? '<span style="color:#4ade80;">E</span>' : '<span style="color:#f87171;">O</span>').join('');
+      const seqSpan = document.getElementById(`last50Seq_${symbol}`);
+      if (seqSpan) seqSpan.innerHTML = `📜 Last 50: ${seqHtml}`;
+
+      const diff = Math.abs(evenCount - oddCount);
+      const signalDiv = document.getElementById(`signalArea_${symbol}`);
+      if (diff <= 2 && last50.length >= 20) {
+        const predicted = evenCount > oddCount ? "ODD 🔴" : "EVEN 🟢";
+        signalDiv.innerHTML = `<div class="signal-flash">🎯 SIGNAL: ${predicted} (parity gap ≤2)</div>`;
+        if (signalDiv.getAttribute('data-last-signal') !== predicted) {
+          gentleBeep();
+          signalDiv.setAttribute('data-last-signal', predicted);
+        }
+      } else {
+        signalDiv.innerHTML = `<span class="no-signal">⚡ no signal (gap >2 or <20 ticks)</span>`;
+        signalDiv.setAttribute('data-last-signal', '');
+      }
+    } else {
+      const seqSpan = document.getElementById(`last50Seq_${symbol}`);
+      if (seqSpan) seqSpan.innerHTML = `📜 Last 50: collecting ticks...`;
     }
+  }
 
-    function setPointerOnDigit(digit) {
-        clearPointerMarker();
-        const boxes = document.querySelectorAll('.digit-box');
-        if (boxes[digit]) {
-            boxes[digit].classList.add('active-pointer');
-            const arrowSpan = document.createElement('div');
-            arrowSpan.className = 'pointer-arrow';
-            arrowSpan.innerHTML = '👇';
-            boxes[digit].style.position = 'relative';
-            boxes[digit].appendChild(arrowSpan);
-        }
-    }
+  let audioCtx = null;
+  function gentleBeep() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.value = 880;
+      gain.gain.value = 0.2;
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.2);
+      osc.stop(audioCtx.currentTime + 0.2);
+    } catch(e) { /* silent */ }
+  }
 
-    function updatePointer(digit) {
-        lastDigitSpan.innerText = digit;
-        setPointerOnDigit(digit);
-        currentLastDigit = digit;
-    }
+  // Create UI card
+  function createMarketUI(symbol, displayName) {
+    const container = document.getElementById('marketsContainer');
+    if (document.getElementById(`market_${symbol}`)) return;
+    const marketDiv = document.createElement('div');
+    marketDiv.className = 'market-card';
+    marketDiv.id = `market_${symbol}`;
+    marketDiv.innerHTML = `
+      <div class="market-header">
+        <div class="market-title">
+          <span>📈 ${displayName}</span>
+          <span class="live-price" id="livePrice_${symbol}">—</span>
+        </div>
+        <span style="font-size:0.7rem; background:#0b1120; padding:2px 8px; border-radius:20px;">⚡ real-time</span>
+      </div>
+      <div class="digits-grid" id="digitsGrid_${symbol}"></div>
+      <div class="info-row">
+        <div class="parity-stats" id="parityStats_${symbol}">Even: --% | Odd: --%</div>
+        <div class="last50-badge" id="last50Seq_${symbol}">Last 50: —</div>
+      </div>
+      <div class="signal-area" id="signalArea_${symbol}">
+        <span class="no-signal">⏳ waiting for data...</span>
+      </div>
+    `;
+    container.appendChild(marketDiv);
 
-    // ------------------------------------------------------------------
-    // STATISTICS: accurate digit percentages based on rolling 1000 ticks
-    function recalcAndRender() {
-        if (rollingTicks.length === 0) return;
-        const counts = Array(10).fill(0);
-        for (let price of rollingTicks) {
-            let digit = Math.floor(Math.abs(price)) % 10;
-            counts[digit]++;
-        }
-        const total = rollingTicks.length;
-        sampleCountSpan.innerText = `📋 ticks: ${total}`;
-
-        let evenSum = 0, oddSum = 0;
-        for (let i = 0; i <= 9; i++) {
-            if (i % 2 === 0) evenSum += counts[i];
-            else oddSum += counts[i];
-        }
-        const evenPct = (evenSum / total) * 100;
-        const oddPct = (oddSum / total) * 100;
-        const diff = evenPct - oddPct;
-        let strongSignal = "";
-        if (Math.abs(diff) >= 3.5) {
-            strongSignal = diff > 0 ? "EVEN" : "ODD";
-            signalTextSpan.innerHTML = `🔥 ${strongSignal}  (${diff > 0 ? evenPct.toFixed(1) : oddPct.toFixed(1)}% vs ${diff > 0 ? oddPct.toFixed(1) : evenPct.toFixed(1)}%)`;
-            signalTextSpan.className = "signal-badge strong";
-        } else {
-            if (evenPct > oddPct) strongSignal = "EVEN";
-            else if (oddPct > evenPct) strongSignal = "ODD";
-            else strongSignal = "NEUTRAL";
-            signalTextSpan.innerHTML = `📊 ${strongSignal}  (${evenPct.toFixed(1)}% even | ${oddPct.toFixed(1)}% odd)`;
-            signalTextSpan.className = "signal-badge";
-        }
-        winrateHintSpan.innerHTML = `🎲 Even:${evenPct.toFixed(1)}%  Odd:${oddPct.toFixed(1)}%  → Trade: ${strongSignal}`;
-
-        // render digit boxes
-        digitsContainer.innerHTML = "";
-        for (let d = 0; d <= 9; d++) {
-            const percent = total > 0 ? ((counts[d] / total) * 100).toFixed(1) : "0.0";
-            const isEven = (d % 2 === 0);
-            const highlight = (strongSignal === "EVEN" && isEven) || (strongSignal === "ODD" && !isEven);
-            const box = document.createElement('div');
-            box.className = `digit-box ${highlight ? 'highlight' : ''}`;
-            box.innerHTML = `<div class="digit">${d}</div><div class="percentage">${percent}%</div><div style="font-size:0.65rem;">${counts[d]}</div>`;
-            digitsContainer.appendChild(box);
-        }
-        // restore pointer after rerender (if exists)
-        if (currentLastDigit !== null && currentLastDigit !== undefined) {
-            setPointerOnDigit(currentLastDigit);
-        }
-    }
-
-    function addTickToRolling(price) {
-        rollingTicks.push(price);
-        if (rollingTicks.length > 1000) rollingTicks.shift();
-        recalcAndRender();
-    }
-
-    // ------------------------------------------------------------------
-    // API INTERACTION (WebSocket)
-    function fetchHistory() {
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-            log("WS not ready, retrying history in 1s...");
-            setTimeout(() => fetchHistory(), 1000);
-            return;
-        }
-        const req = {
-            ticks_history: currentSymbol,
-            adjust_start_time: 1,
-            count: 1000,
-            end: "latest",
-            style: "ticks"
-        };
-        ws.send(JSON.stringify(req));
-        log(`Requesting 1000 ticks for ${currentSymbol}`);
-        tradeMsgSpan.innerText = `🔄 Loading 1000 ticks from ${currentSymbol}...`;
-    }
-
-    function subscribeTicks() {
-        if (!ws || ws.readyState !== WebSocket.OPEN) return;
-        if (currentTickSubId) {
-            ws.send(JSON.stringify({ forget: currentTickSubId }));
-            currentTickSubId = null;
-        }
-        const sub = { ticks: currentSymbol, subscribe: 1 };
-        ws.send(JSON.stringify(sub));
-        log(`Subscribed to live ticks for ${currentSymbol}`);
-    }
-
-    function authorizeAccount(token) {
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-            tradeMsgSpan.innerText = "Waiting for WebSocket connection...";
-            return;
-        }
-        ws.send(JSON.stringify({ authorize: token.trim() }));
-        log("Authorization request sent.");
-    }
-
-    function placeTrade(signal, amount, duration, sym) {
-        if (!isAuthorized) {
-            tradeMsgSpan.innerText = "❌ Link API token first.";
-            return;
-        }
-        const contractType = signal === "EVEN" ? "DIGITEVEN" : "DIGITODD";
-        const req = {
-            buy: "1",
-            parameters: {
-                amount: parseFloat(amount),
-                basis: "stake",
-                contract_type: contractType,
-                currency: "USD",
-                duration: parseInt(duration),
-                duration_unit: "t",
-                symbol: sym
-            }
-        };
-        ws.send(JSON.stringify(req));
-        tradeMsgSpan.innerText = `🚀 Placing ${contractType} trade: $${amount} for ${duration} ticks on ${sym}`;
-        log(`Trade request: ${contractType} on ${sym}`);
-    }
-
-    // ------------------------------------------------------------------
-    // WEBSOCKET MESSAGE HANDLER
-    function handleDerivMessage(data) {
-        // Authorize
-        if (data.msg_type === "authorize") {
-            if (data.error) {
-                isAuthorized = false;
-                authBadge.innerText = "❌ Auth failed";
-                tradeMsgSpan.innerText = `Auth error: ${data.error.message}`;
-                errorMsgDiv.style.display = "block";
-                errorMsgDiv.innerText = `Authorization error: ${data.error.message}. Check token permissions.`;
-                log(`Auth error: ${data.error.message}`);
-            } else {
-                isAuthorized = true;
-                authBadge.innerText = `✅ ${data.authorize.loginid} (${data.authorize.currency})`;
-                tradeMsgSpan.innerText = `✅ Account linked: ${data.authorize.loginid}`;
-                errorMsgDiv.style.display = "none";
-                log(`Authorized as ${data.authorize.loginid}`);
-            }
-            return;
-        }
-        // Historical ticks response
-        if (data.msg_type === "ticks_history") {
-            if (data.error) {
-                tradeMsgSpan.innerText = `History error: ${data.error.message}`;
-                errorMsgDiv.style.display = "block";
-                errorMsgDiv.innerText = `Symbol ${currentSymbol} error: ${data.error.message}. Try R_100.`;
-                log(`History error: ${data.error.message}`);
-                return;
-            }
-            if (data.history && data.history.prices) {
-                let prices = data.history.prices.slice(-1000);
-                rollingTicks = prices;
-                recalcAndRender();
-                tradeMsgSpan.innerText = `✅ Loaded ${rollingTicks.length} ticks. Live pointer active.`;
-                errorMsgDiv.style.display = "none";
-                log(`Loaded ${rollingTicks.length} historical ticks`);
-            }
-            return;
-        }
-        // LIVE TICK (UPDATES POINTER + ROLLING WINDOW)
-        if (data.msg_type === "tick" && data.tick) {
-            const price = parseFloat(data.tick.quote);
-            const digit = Math.floor(Math.abs(price)) % 10;
-            lastTickPriceSpan.innerText = price.toFixed(4);
-            updatePointer(digit);
-            addTickToRolling(price);
-            log(`Tick: ${price.toFixed(4)} → digit ${digit} → pointer moved`);
-            return;
-        }
-        // Buy response
-        if (data.msg_type === "buy") {
-            if (data.error) {
-                tradeMsgSpan.innerText = `❌ Trade failed: ${data.error.message}`;
-                log(`Trade error: ${data.error.message}`);
-            } else {
-                tradeMsgSpan.innerText = `✅ Contract bought! ID: ${data.buy.contract_id}`;
-                log(`Trade success: contract ${data.buy.contract_id}`);
-            }
-            return;
-        }
-        // Subscription confirmation
-        if (data.msg_type === "ticks" && data.subscription?.id) {
-            currentTickSubId = data.subscription.id;
-            log(`Live subscription active, id=${currentTickSubId}`);
-        }
-    }
-
-    // ------------------------------------------------------------------
-    // INIT WEBSOCKET + RECONNECT LOGIC
-    function initWebSocket() {
-        if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
-        ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
-        ws.onopen = () => {
-            isConnected = true;
-            updateConnUI();
-            log("WebSocket connected.");
-            fetchHistory();
-            subscribeTicks();
-        };
-        ws.onclose = () => {
-            isConnected = false;
-            isAuthorized = false;
-            updateConnUI();
-            authBadge.innerText = "🔓 Not linked";
-            log("WebSocket closed, reconnecting in 3s...");
-            setTimeout(() => initWebSocket(), 3000);
-        };
-        ws.onerror = (err) => log(`WS error: ${err}`);
-        ws.onmessage = (e) => {
-            try {
-                const data = JSON.parse(e.data);
-                handleDerivMessage(data);
-            } catch (err) {
-                log(`Parse error: ${err}`);
-            }
-        };
-    }
-
-    // UI EVENT LISTENERS
-    linkBtn.addEventListener('click', () => {
-        const token = apiTokenInput.value.trim();
-        if (!token) {
-            tradeMsgSpan.innerText = "❌ Please paste your API token.";
-            return;
-        }
-        authorizeAccount(token);
-    });
-    logoutBtn.addEventListener('click', () => {
-        isAuthorized = false;
-        authBadge.innerText = "🔓 Not linked";
-        tradeMsgSpan.innerText = "Account unlinked.";
-        log("Account unlinked manually.");
-    });
-    refreshBtn.addEventListener('click', () => {
-        currentSymbol = symbolSelect.value;
-        fetchHistory();
-        subscribeTicks();
-        tradeMsgSpan.innerText = `Switched to ${currentSymbol}. Loading data...`;
-        errorMsgDiv.style.display = "none";
-        log(`Manual refresh for ${currentSymbol}`);
-    });
-    symbolSelect.addEventListener('change', () => {
-        currentSymbol = symbolSelect.value;
-        fetchHistory();
-        subscribeTicks();
-        tradeMsgSpan.innerText = `Changed to ${currentSymbol}. Refreshing ticks...`;
-    });
-    executeTradeBtn.addEventListener('click', () => {
-        let currentSignal = signalTextSpan.innerText.includes("EVEN") ? "EVEN" : (signalTextSpan.innerText.includes("ODD") ? "ODD" : null);
-        if (!currentSignal || currentSignal === "NEUTRAL") {
-            tradeMsgSpan.innerText = "⚠️ No clear signal yet. Wait for tick data.";
-            return;
-        }
-        const stake = parseFloat(stakeAmountInput.value);
-        const dur = parseInt(tradeDurationInput.value);
-        if (isNaN(stake) || stake <= 0 || isNaN(dur) || dur < 1) {
-            tradeMsgSpan.innerText = "Invalid stake or duration.";
-            return;
-        }
-        placeTrade(currentSignal, stake, dur, currentSymbol);
-    });
-
-    // start everything
-    initWebSocket();
-
-    // create empty digit boxes before data arrives
+    const grid = document.getElementById(`digitsGrid_${symbol}`);
+    grid.innerHTML = '';
     for (let i = 0; i < 10; i++) {
-        let box = document.createElement('div');
-        box.className = "digit-box";
-        box.innerHTML = `<div class="digit">${i}</div><div class="percentage">--%</div>`;
-        digitsContainer.appendChild(box);
+      const cell = document.createElement('div');
+      cell.className = 'digit-cell';
+      cell.id = `digitCell_${symbol}_${i}`;
+      cell.innerHTML = `<span class="digit">${i}</span><div class="percent">0.00%</div>`;
+      grid.appendChild(cell);
     }
-    log("Dashboard ready — waiting for market data...");
+  }
+
+  // Subscribe to a single market
+  function subscribeToMarket(symbol) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+    if (activeSubscriptions.has(symbol)) return true;
+    
+    ws.send(JSON.stringify({
+      ticks_history: symbol,
+      count: 1000,
+      end: "latest",
+      style: "ticks"
+    }));
+    ws.send(JSON.stringify({
+      ticks: symbol,
+      subscribe: 1
+    }));
+    console.log(`Subscription request sent for ${symbol}`);
+    return true;
+  }
+
+  function scheduleRetry(symbol) {
+    if (subscriptionRetryTimeouts[symbol]) clearTimeout(subscriptionRetryTimeouts[symbol]);
+    subscriptionRetryTimeouts[symbol] = setTimeout(() => {
+      if (ws && ws.readyState === WebSocket.OPEN && !activeSubscriptions.has(symbol)) {
+        console.log(`Retrying subscription for ${symbol}`);
+        subscribeToMarket(symbol);
+        scheduleRetry(symbol);
+      }
+    }, 8000);
+  }
+
+  // WebSocket message handler
+  function handleMessage(msg) {
+    if (!msg) return;
+
+    // History response
+    if (msg.msg_type === 'history') {
+      const symbol = msg.echo_req?.ticks_history;
+      if (symbol && MARKET_NAMES[symbol] && msg.history?.prices) {
+        const prices = msg.history.prices;
+        console.log(`History for ${symbol}: ${prices.length} ticks`);
+        if (prices.length > 0) {
+          prices.forEach(priceNum => processTick(symbol, priceNum, null));
+          renderMarket(symbol);
+          if (!activeSubscriptions.has(symbol)) {
+            activeSubscriptions.add(symbol);
+            if (subscriptionRetryTimeouts[symbol]) clearTimeout(subscriptionRetryTimeouts[symbol]);
+          }
+        }
+      }
+      return;
+    }
+
+    // Live tick
+    if (msg.msg_type === 'tick' && msg.tick) {
+      const symbol = msg.tick.symbol;
+      if (MARKET_NAMES[symbol]) {
+        if (!activeSubscriptions.has(symbol)) {
+          activeSubscriptions.add(symbol);
+          if (subscriptionRetryTimeouts[symbol]) clearTimeout(subscriptionRetryTimeouts[symbol]);
+          console.log(`✅ Live ticks flowing for ${symbol}`);
+        }
+        processTick(symbol, msg.tick.quote, msg.tick.quote_display);
+        renderMarket(symbol);
+      }
+      return;
+    }
+
+    // Subscription confirmation
+    if (msg.msg_type === 'subscription') {
+      const symbol = msg.subscription?.id;
+      if (symbol && MARKET_NAMES[symbol]) {
+        console.log(`Subscription confirmed for ${symbol}`);
+        if (!activeSubscriptions.has(symbol)) {
+          activeSubscriptions.add(symbol);
+          if (subscriptionRetryTimeouts[symbol]) clearTimeout(subscriptionRetryTimeouts[symbol]);
+        }
+      }
+      return;
+    }
+
+    // Authorization response
+    if (msg.msg_type === 'authorize') {
+      if (msg.error) {
+        console.error('Auth error:', msg.error);
+        document.getElementById('connectionStatus').innerHTML = '❌ Authorization failed – invalid token';
+        document.getElementById('connectionStatus').style.color = '#f87171';
+        if (ws) ws.close();
+      } else {
+        console.log('Authorized successfully');
+        document.getElementById('connectionStatus').innerHTML = '✅ Connected – subscribing to markets...';
+        document.getElementById('connectionStatus').style.color = '#4ade80';
+        document.getElementById('marketsContainer').innerHTML = '';
+        marketData = {};
+        activeSubscriptions.clear();
+        // Create UI for all markets
+        Object.keys(MARKET_NAMES).forEach(sym => createMarketUI(sym, MARKET_NAMES[sym]));
+        // Subscribe sequentially
+        const symbols = Object.keys(MARKET_NAMES);
+        let idx = 0;
+        function subscribeNext() {
+          if (idx >= symbols.length) {
+            document.getElementById('connectionStatus').innerHTML = '✅ Connected & streaming';
+            return;
+          }
+          const sym = symbols[idx];
+          subscribeToMarket(sym);
+          scheduleRetry(sym);
+          idx++;
+          setTimeout(subscribeNext, 150);
+        }
+        subscribeNext();
+      }
+      return;
+    }
+
+    if (msg.error) {
+      console.warn('API error:', msg.error);
+      if (msg.error.code === 'AuthorizationRequired') {
+        document.getElementById('connectionStatus').innerHTML = '❌ Token required or invalid';
+        document.getElementById('connectionStatus').style.color = '#f87171';
+      }
+    }
+  }
+
+  let pingInterval = null;
+  function startPing() {
+    if (pingInterval) clearInterval(pingInterval);
+    pingInterval = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ ping: 1 }));
+      }
+    }, 25000);
+  }
+
+  function connectWebSocket() {
+    const token = document.getElementById('token').value.trim();
+    if (!token) {
+      alert('Please enter a valid Deriv API token.');
+      return;
+    }
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+      ws.close();
+    }
+    document.getElementById('connectionStatus').innerHTML = '⏳ Connecting...';
+    document.getElementById('connectionStatus').style.color = '#94a3b8';
+    ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089');
+    ws.onopen = () => {
+      console.log('WebSocket open, authorizing...');
+      ws.send(JSON.stringify({ authorize: token }));
+      startPing();
+    };
+    ws.onmessage = (event) => {
+      try {
+        const resp = JSON.parse(event.data);
+        handleMessage(resp);
+      } catch (err) {
+        console.warn('Parse error', err);
+      }
+    };
+    ws.onerror = (err) => {
+      console.error('WebSocket error', err);
+      document.getElementById('connectionStatus').innerHTML = '⚠️ Connection error';
+      document.getElementById('connectionStatus').style.color = '#f87171';
+    };
+    ws.onclose = () => {
+      console.log('WebSocket closed');
+      if (pingInterval) clearInterval(pingInterval);
+      if (document.getElementById('connectionStatus').innerHTML !== '❌ Authorization failed – invalid token') {
+        document.getElementById('connectionStatus').innerHTML = '⚫ Disconnected';
+        document.getElementById('connectionStatus').style.color = '#94a3b8';
+      }
+      for (let sym in subscriptionRetryTimeouts) clearTimeout(subscriptionRetryTimeouts[sym]);
+      subscriptionRetryTimeouts = {};
+    };
+  }
+
+  // Periodic re-render
+  setInterval(() => {
+    for (let sym in marketData) {
+      if (marketData[sym].digitsArray.length > 0) renderMarket(sym);
+    }
+  }, 600);
+
+  window.connectWebSocket = connectWebSocket;
 </script>
 </body>
 </html>
