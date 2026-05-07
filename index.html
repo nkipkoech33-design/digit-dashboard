@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Deriv Pro Analyzer – Signal Strength & Market Highlighting</title>
+<title>Deriv Pro Analyzer – Fixed Order Markets List</title>
 <style>
+  /* ===== BASE STYLES ===== */
   :root {
     --bg-body: #0b1120;
     --bg-card: #111827;
@@ -117,29 +118,48 @@
   .setting-input { width: 80px; display: inline-block; margin: 0 0.3rem; text-align: center; }
   .connect-btn { background: var(--btn-bg); border: none; padding: 0.6rem 1.5rem; border-radius: 2rem; font-weight: bold; color: white; cursor: pointer; }
   .connect-btn:hover { background: var(--btn-hover); }
-  /* Strong markets panel */
-  .strong-markets-panel {
+  /* All markets list panel - fixed order */
+  .all-markets-panel {
     background: var(--bg-header);
     border-radius: 1rem;
     padding: 0.5rem 1rem;
     margin-bottom: 1rem;
     border-left: 4px solid #facc15;
+    max-height: 200px;
+    overflow-y: auto;
   }
-  .strong-markets-panel h3 {
+  .all-markets-panel h3 {
     font-size: 0.9rem;
     margin: 0 0 0.3rem 0;
   }
-  .strong-list {
+  .markets-list {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
     font-size: 0.7rem;
   }
-  .strong-item {
+  .market-list-item {
     background: var(--bg-panel);
     padding: 0.2rem 0.5rem;
     border-radius: 1rem;
     font-weight: bold;
+    cursor: pointer;
+    transition: 0.1s;
+  }
+  .market-list-item:hover { background: var(--btn-bg); }
+  /* Blinking animation for active signals */
+  @keyframes blinkYellow {
+    0% { background: var(--bg-panel); color: var(--text-primary); }
+    50% { background: #facc15; color: #0f172a; }
+    100% { background: var(--bg-panel); color: var(--text-primary); }
+  }
+  .market-list-item.blink {
+    animation: blinkYellow 1s infinite;
+  }
+  /* Highlight when scrolled to */
+  .highlight-market {
+    box-shadow: 0 0 0 3px #facc15, 0 0 0 6px rgba(250, 204, 21, 0.3);
+    transition: box-shadow 0.3s;
   }
   .market-grid { display: flex; flex-direction: column; gap: 1.5rem; }
   .market-card {
@@ -148,16 +168,9 @@
     border: 2px solid var(--border-color);
     overflow: hidden;
     transition: border 0.1s;
+    cursor: pointer;
   }
-  /* Signal highlighting */
-  .market-card.signal-active-green {
-    border-color: #4ade80;
-    box-shadow: var(--signal-glow-green);
-  }
-  .market-card.signal-active-red {
-    border-color: #f87171;
-    box-shadow: var(--signal-glow-red);
-  }
+  .market-card:hover { filter: brightness(1.05); }
   .market-header {
     background: var(--bg-header);
     padding: 0.7rem 1.2rem;
@@ -320,6 +333,37 @@
   .reset-btn { background: #475569; border: none; border-radius: 1rem; padding: 0.2rem 0.6rem; color: white; cursor: pointer; font-size: 0.65rem; }
   footer { margin-top: 2rem; font-size: 0.7rem; text-align: center; color: var(--text-secondary); }
   .hidden { display: none; }
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.8);
+    justify-content: center;
+    align-items: center;
+  }
+  .modal-content {
+    background: var(--bg-card);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    width: 90%;
+    max-width: 500px;
+    border: 1px solid var(--border-color);
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .modal-content h2 { margin-top: 0; }
+  .close-modal {
+    float: right;
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--text-secondary);
+  }
+  .close-modal:hover { color: var(--text-primary); }
   @media (max-width: 700px) {
     .digits-grid { grid-template-columns: repeat(5, 1fr); gap: 4px; }
     .digit-cell span.digit { font-size: 1rem; }
@@ -332,7 +376,7 @@
 <body>
 <div class="container">
   <div class="top-bar">
-    <h1>⚡ DERIV PRO ANALYZER – SIGNAL STRENGTH & HIGHLIGHTING</h1>
+    <h1>⚡ DERIV PRO ANALYZER – FIXED ORDER MARKETS</h1>
     <div style="display: flex; gap: 0.5rem;">
       <div class="global-trade-selector">
         <button class="global-trade-btn" data-type="evenodd">🎲 Even/Odd</button>
@@ -343,62 +387,42 @@
     </div>
   </div>
   <div class="status-bar" id="connectionStatus">⚫ Disconnected</div>
-  <div class="sub">🎯 Signal Score (0‑100) – only markets with score ≥ threshold get a glowing border. Strong Markets panel at top.</div>
+  <div class="sub">🔔 All markets listed in original order. Active signals blink in place. Click any name to scroll to the card.</div>
 
   <div class="controls">
-    <div class="input-group">
-      <label>🔑 API TOKEN (real or demo)</label>
-      <input type="password" id="token" class="token-input" placeholder="Enter your Deriv API token">
-    </div>
-    <div class="input-group">
-      <label>⚙️ Even/Odd Gap ≤</label>
-      <input type="number" id="gapThreshold" class="setting-input" value="2" min="1" max="5" step="1">
-    </div>
-    <div class="input-group">
-      <label>⏱️ Even/Odd Duration (min)</label>
-      <input type="number" id="signalDuration" class="setting-input" value="5" min="1" max="15" step="1">
-    </div>
-    <div class="input-group">
-      <label>📊 Over/Under Gap ≤</label>
-      <input type="number" id="ouGapThreshold" class="setting-input" value="2" min="1" max="5" step="1">
-    </div>
-    <div class="input-group">
-      <label>⏱️ Over/Under Duration (min)</label>
-      <input type="number" id="ouDuration" class="setting-input" value="5" min="1" max="15" step="1">
-    </div>
-    <div class="input-group">
-      <label>🎯 Min Pattern Prob (%)</label>
-      <input type="number" id="minPatternProb" class="setting-input" value="35" min="15" max="50" step="1">
-    </div>
-    <div class="input-group">
-      <label>📊 Min Occurrences</label>
-      <input type="number" id="minOccurrences" class="setting-input" value="80" min="20" max="200" step="10">
-    </div>
-    <div class="input-group">
-      <label>🔊 Sound</label>
-      <select id="soundEnabled" class="setting-input" style="width:70px">
-        <option value="true">ON</option>
-        <option value="false">OFF</option>
-      </select>
-    </div>
-    <div class="input-group">
-      <label>🎯 Signal Threshold</label>
-      <input type="number" id="signalThreshold" class="setting-input" value="60" min="30" max="90" step="5">
-    </div>
+    <div class="input-group"><label>🔑 API TOKEN</label><input type="password" id="token" class="token-input" placeholder="Enter your Deriv API token"></div>
+    <div class="input-group"><label>⚙️ Even/Odd Gap ≤</label><input type="number" id="gapThreshold" class="setting-input" value="2"></div>
+    <div class="input-group"><label>⏱️ Even/Odd (min)</label><input type="number" id="signalDuration" class="setting-input" value="5"></div>
+    <div class="input-group"><label>📊 Over/Under Gap ≤</label><input type="number" id="ouGapThreshold" class="setting-input" value="2"></div>
+    <div class="input-group"><label>⏱️ Over/Under (min)</label><input type="number" id="ouDuration" class="setting-input" value="5"></div>
+    <div class="input-group"><label>🎯 Min Pattern Prob %</label><input type="number" id="minPatternProb" class="setting-input" value="35"></div>
+    <div class="input-group"><label>📊 Min Occurrences</label><input type="number" id="minOccurrences" class="setting-input" value="80"></div>
+    <div class="input-group"><label>🔊 Sound</label><select id="soundEnabled" class="setting-input" style="width:70px"><option value="true">ON</option><option value="false">OFF</option></select></div>
+    <div class="input-group"><label>🎯 Signal Threshold</label><input type="number" id="signalThreshold" class="setting-input" value="60"></div>
     <button onclick="connectWebSocket()" class="connect-btn">🚀 CONNECT</button>
   </div>
 
-  <div id="strongMarketsPanel" class="strong-markets-panel hidden">
-    <h3>🔥 STRONG MARKETS (Signal Score ≥ Threshold)</h3>
-    <div id="strongList" class="strong-list"></div>
+  <!-- All markets list panel - fixed order -->
+  <div id="allMarketsPanel" class="all-markets-panel">
+    <h3>📋 ALL MARKETS (click name to jump)</h3>
+    <div id="marketsListContainer" class="markets-list"></div>
   </div>
 
   <div id="marketsContainer" class="market-grid"></div>
-  <footer>✅ Markets with active signal glow green/red. Strong Markets panel shows top signals. Adjust threshold to filter weaker signals.</footer>
+  <footer>✅ Signals lock for 60 seconds. Blinking names = active signal. Click name to scroll to market card.</footer>
+</div>
+
+<!-- Modal for market details -->
+<div id="marketModal" class="modal">
+  <div class="modal-content">
+    <span class="close-modal">&times;</span>
+    <h2 id="modalTitle"></h2>
+    <div id="modalBody"></div>
+  </div>
 </div>
 
 <script>
-  // Market configuration (correct symbols)
+  // Market configuration (correct symbols) - order is as defined
   const DECIMAL_MAP = {
     "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,
     "1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,
@@ -411,7 +435,8 @@
     "R_10":"Vol 10","R_25":"Vol 25","R_50":"Vol 50","R_75":"Vol 75","R_100":"Vol 100",
     "JD10":"Jump 10","JD25":"Jump 25","JD50":"Jump 50","JD75":"Jump 75","JD100":"Jump 100"
   };
-  const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
+  const ALL_SYMBOLS = Object.keys(MARKET_NAMES); // preserves insertion order
+  const SIGNAL_LOCK_DURATION = 60000; // 60 seconds
 
   let marketData = {};
   let evenOddSignalExpiry = {};
@@ -425,6 +450,7 @@
   let successStats = {};
   let consecutiveLosses = {};
   let globalTradeType = 'overunder';
+  let lockedStrongMarkets = new Map(); // symbol -> expiry timestamp
 
   function getSettings() {
     return {
@@ -445,31 +471,25 @@
     if(digits.length===0) return 0;
     return parseInt(digits.charAt(digits.length-1),10)||0;
   }
-
   function formatHistoryPrice(symbol, priceNum) {
     let dec = DECIMAL_MAP[symbol] ?? 2;
     return priceNum.toFixed(dec);
   }
-
   function updateDigitRuler(symbol, lastDigit) {
     const rulerDiv = document.getElementById(`ruler_${symbol}`);
     if (!rulerDiv) return;
     const marker = rulerDiv.querySelector('.ruler-marker');
-    if (marker) {
-      const percent = (lastDigit / 9) * 100;
-      marker.style.left = `${percent}%`;
-    }
+    if (marker) marker.style.left = `${(lastDigit/9)*100}%`;
   }
 
-  // Improved pattern scan (lookahead 1-4, last 200 ticks)
+  // Pattern scan (lookahead 1-4, last 200 ticks)
   function scanBestPattern(symbol) {
     let data = marketData[symbol];
     if(!data || data.digitsArray.length < 100) return null;
     let arr = data.digitsArray;
     let settings = getSettings();
     let startIdx = Math.max(0, arr.length - 200);
-    let bestProb = 0;
-    let bestEntry = null, bestLookahead = null, bestOutcome = null, bestTotal = 0;
+    let bestProb = 0, bestEntry = null, bestLookahead = null, bestOutcome = null, bestTotal = 0;
     const lookaheads = [1,2,3,4];
     for(let entry=0; entry<=9; entry++) {
       for(let look of lookaheads) {
@@ -478,10 +498,7 @@
         for(let i=startIdx; i<arr.length - look; i++) {
           if(arr[i] === entry) {
             let outcome = arr[i+look];
-            if(outcome !== undefined) {
-              counts[outcome]++;
-              total++;
-            }
+            if(outcome !== undefined) { counts[outcome]++; total++; }
           }
         }
         if(total >= settings.minOccurrences) {
@@ -489,106 +506,67 @@
           let outcome = counts.indexOf(maxCnt);
           let prob = (maxCnt / total) * 100;
           if(prob > bestProb && prob >= settings.minPatternProb) {
-            bestProb = prob;
-            bestEntry = entry;
-            bestLookahead = look;
-            bestOutcome = outcome;
-            bestTotal = total;
+            bestProb = prob; bestEntry = entry; bestLookahead = look; bestOutcome = outcome; bestTotal = total;
           }
         }
       }
     }
-    if(bestEntry !== null) {
-      return { entryDigit: bestEntry, lookahead: bestLookahead, outcomeDigit: bestOutcome, probability: bestProb.toFixed(1), occurrences: bestTotal };
-    }
+    if(bestEntry !== null) return { entryDigit: bestEntry, lookahead: bestLookahead, outcomeDigit: bestOutcome, probability: bestProb.toFixed(1), occurrences: bestTotal };
     return null;
   }
-
   function updateAutoPattern(symbol) {
     let pattern = scanBestPattern(symbol);
     let panel = document.getElementById(`autoPattern_${symbol}`);
-    if(!pattern) {
-      if(panel) panel.innerHTML = `🤖 No pattern meets thresholds (need 100+ ticks).`;
-      return;
-    }
+    if(!pattern) { if(panel) panel.innerHTML = `🤖 No pattern meets thresholds (need 100+ ticks).`; return; }
     bestPattern[symbol] = pattern;
-    if(panel) {
-      panel.innerHTML = `🤖 BEST PATTERN (lookahead ${pattern.lookahead} ticks): Entry <strong>${pattern.entryDigit}</strong> → after <strong>${pattern.lookahead}</strong> tick(s) → digit <strong style="color:#facc15;">${pattern.outcomeDigit}</strong> (${pattern.probability}% prob, ${pattern.occurrences} occ)`;
-    }
+    if(panel) panel.innerHTML = `🤖 BEST PATTERN (lookahead ${pattern.lookahead} ticks): Entry ${pattern.entryDigit} → after ${pattern.lookahead} ticks → ${pattern.outcomeDigit} (${pattern.probability}%)`;
     updateStatsDisplay(symbol);
   }
-
   function updateStatsDisplay(symbol) {
-    let stats = successStats[symbol] || { hits: 0, total: 0 };
-    let rate = stats.total === 0 ? 0 : ((stats.hits / stats.total) * 100).toFixed(1);
+    let stats = successStats[symbol] || { hits:0, total:0 };
+    let rate = stats.total===0 ? 0 : ((stats.hits/stats.total)*100).toFixed(1);
     let statsDiv = document.getElementById(`successStats_${symbol}`);
-    if(statsDiv) {
-      statsDiv.innerHTML = `
-        <span>📊 Pattern Success: ${stats.hits}/${stats.total} (${rate}%)</span>
-        <button class="reset-btn" onclick="window.resetStats('${symbol}')">Reset Stats</button>
-      `;
-    }
+    if(statsDiv) statsDiv.innerHTML = `<span>📊 Pattern Success: ${stats.hits}/${stats.total} (${rate}%)</span><button class="reset-btn" onclick="window.resetStats('${symbol}')">Reset Stats</button>`;
   }
-
   function resetStats(symbol) {
-    successStats[symbol] = { hits: 0, total: 0 };
+    successStats[symbol] = { hits:0, total:0 };
     consecutiveLosses[symbol] = 0;
     updateStatsDisplay(symbol);
   }
-
   function checkEntrySignal(symbol, newDigit) {
     let pattern = bestPattern[symbol];
     if(!pattern) return;
     let losses = consecutiveLosses[symbol] || 0;
     if(!pendingEntry[symbol] && newDigit === pattern.entryDigit && losses >= 2) {
-      pendingEntry[symbol] = {
-        entryDigit: pattern.entryDigit,
-        lookahead: pattern.lookahead,
-        outcomeDigit: pattern.outcomeDigit,
-        remainingTicks: pattern.lookahead
-      };
+      pendingEntry[symbol] = { entryDigit: pattern.entryDigit, lookahead: pattern.lookahead, outcomeDigit: pattern.outcomeDigit, remainingTicks: pattern.lookahead };
       let signalDiv = document.getElementById(`entrySignal_${symbol}`);
-      if(signalDiv) {
-        signalDiv.innerHTML = `🔔 ENTRY TRIGGERED! Digit ${pattern.entryDigit} appeared. Expect digit ${pattern.outcomeDigit} in ${pattern.lookahead} ticks...`;
-        signalDiv.style.background = "#1e3a1e";
-        if(getSettings().soundEnabled) gentleBeep();
-      }
+      if(signalDiv) { signalDiv.innerHTML = `🔔 ENTRY TRIGGERED! Digit ${pattern.entryDigit} appeared. Expect digit ${pattern.outcomeDigit} in ${pattern.lookahead} ticks...`; signalDiv.style.background = "#1e3a1e"; if(getSettings().soundEnabled) gentleBeep(); }
     }
     if(pendingEntry[symbol]) {
       pendingEntry[symbol].remainingTicks--;
       let pending = pendingEntry[symbol];
       if(pending.remainingTicks === 0) {
         let actualDigit = newDigit;
-        if(!successStats[symbol]) successStats[symbol] = { hits: 0, total: 0 };
+        if(!successStats[symbol]) successStats[symbol] = { hits:0, total:0 };
         successStats[symbol].total++;
         if(actualDigit === pending.outcomeDigit) {
           successStats[symbol].hits++;
           consecutiveLosses[symbol] = 0;
           let outcomeDiv = document.getElementById(`entrySignal_${symbol}`);
-          if(outcomeDiv) {
-            outcomeDiv.innerHTML = `✅ SIGNAL HIT! Entry ${pending.entryDigit} → after ${pending.lookahead} ticks → ${pending.outcomeDigit} (CORRECT)`;
-            outcomeDiv.style.background = "#0a2f1a";
-            if(getSettings().soundEnabled) gentleBeep();
-          }
+          if(outcomeDiv) { outcomeDiv.innerHTML = `✅ SIGNAL HIT! Entry ${pending.entryDigit} → after ${pending.lookahead} ticks → ${pending.outcomeDigit} (CORRECT)`; outcomeDiv.style.background = "#0a2f1a"; if(getSettings().soundEnabled) gentleBeep(); }
         } else {
           consecutiveLosses[symbol] = (consecutiveLosses[symbol] || 0) + 1;
           let outcomeDiv = document.getElementById(`entrySignal_${symbol}`);
-          if(outcomeDiv) {
-            outcomeDiv.innerHTML = `❌ SIGNAL MISS: Entry ${pending.entryDigit} → expected ${pending.outcomeDigit} but got ${actualDigit}`;
-            outcomeDiv.style.background = "#2d0a0a";
-          }
+          if(outcomeDiv) { outcomeDiv.innerHTML = `❌ SIGNAL MISS: Entry ${pending.entryDigit} → expected ${pending.outcomeDigit} but got ${actualDigit}`; outcomeDiv.style.background = "#2d0a0a"; }
         }
         updateStatsDisplay(symbol);
-        setTimeout(() => {
-          let div = document.getElementById(`entrySignal_${symbol}`);
-          if(div && div.innerHTML !== '') div.innerHTML = '';
-        }, 4000);
+        setTimeout(() => { let div = document.getElementById(`entrySignal_${symbol}`); if(div) div.innerHTML = ''; }, 4000);
         delete pendingEntry[symbol];
       }
     }
   }
 
-  // Compute signal score for a market (0-100)
+  // Compute signal score (0-100)
   function computeSignalScore(symbol, last50) {
     if (!last50 || last50.length < 20) return 0;
     const settings = getSettings();
@@ -598,228 +576,114 @@
     const underCnt = last50.length - overCnt;
     const eoGap = Math.abs(evenCnt - oddCnt);
     const ouGap = Math.abs(overCnt - underCnt);
-    let eoScore = 0, ouScore = 0, patternScore = 0;
-    // Even/Odd score
-    if (eoGap <= settings.gapThreshold) {
-      eoScore = Math.min(50, Math.floor(50 * (1 - (eoGap-1)/(settings.gapThreshold+1))));
-    }
-    // Over/Under score
-    if (ouGap <= settings.ouGapThreshold) {
-      ouScore = Math.min(50, Math.floor(50 * (1 - (ouGap-1)/(settings.ouGapThreshold+1))));
-    }
-    // Pattern probability score
+    let eoScore = (eoGap <= settings.gapThreshold) ? Math.min(50, Math.floor(50*(1-(eoGap-1)/(settings.gapThreshold+1)))) : 0;
+    let ouScore = (ouGap <= settings.ouGapThreshold) ? Math.min(50, Math.floor(50*(1-(ouGap-1)/(settings.ouGapThreshold+1)))) : 0;
+    let patternScore = 0;
     let pattern = bestPattern[symbol];
-    if (pattern && pattern.probability) {
-      let prob = parseFloat(pattern.probability);
-      patternScore = Math.min(40, Math.floor(prob * 0.8));
-    }
-    let total = eoScore + ouScore + patternScore;
-    // Bonus for recent trend in strength indicator (already captured by gaps)
-    return Math.min(100, total);
+    if (pattern && pattern.probability) patternScore = Math.min(40, Math.floor(parseFloat(pattern.probability)*0.8));
+    return Math.min(100, eoScore+ouScore+patternScore);
   }
 
   function processTick(symbol, priceNumeric, quoteDisplay=null) {
-    if(!marketData[symbol]) {
-      marketData[symbol] = {
-        digitsArray:[], digitCounts:new Array(10).fill(0),
-        last50Array:[], lastDigit:null, lastPriceDisplay:"—"
-      };
-    }
+    if(!marketData[symbol]) marketData[symbol] = { digitsArray:[], digitCounts:new Array(10).fill(0), last50Array:[], lastDigit:null, lastPriceDisplay:"—" };
     let data = marketData[symbol];
     let displayStr = (quoteDisplay !== null) ? String(quoteDisplay) : formatHistoryPrice(symbol, priceNumeric);
     data.lastPriceDisplay = displayStr;
     let digit = lastDigitFromFormatted(displayStr);
     data.lastDigit = digit;
-
     data.digitsArray.push(digit);
     data.digitCounts[digit]++;
-    if(data.digitsArray.length>1000) {
-      let removed = data.digitsArray.shift();
-      data.digitCounts[removed]--;
-    }
+    if(data.digitsArray.length>1000) { let removed = data.digitsArray.shift(); data.digitCounts[removed]--; }
     data.last50Array.push(digit);
     if(data.last50Array.length>50) data.last50Array.shift();
-
     checkEntrySignal(symbol, digit);
     updateDigitRuler(symbol, digit);
     renderMarket(symbol);
   }
 
   function updateEvenOddSignal(symbol, last50, now, settings) {
-    let evenCnt = last50.filter(d=>d%2===0).length;
-    let oddCnt = last50.length-evenCnt;
-    let gap = Math.abs(evenCnt - oddCnt);
+    let evenCnt = last50.filter(d=>d%2===0).length, oddCnt = last50.length-evenCnt, gap = Math.abs(evenCnt-oddCnt);
     let isActive = (evenOddSignalExpiry[symbol] && now < evenOddSignalExpiry[symbol]);
     let signalDiv = document.getElementById(`evenOddSignal_${symbol}`);
     if(!signalDiv) return;
-    let strength = 0;
-    if(last50.length >= settings.minTicks && gap <= settings.gapThreshold) {
-      strength = Math.min(100, Math.floor(100 * (1 - (gap-1)/(settings.gapThreshold+1)) + (last50.length/100)*20));
-    }
+    let strength = (last50.length >= settings.minTicks && gap <= settings.gapThreshold) ? Math.min(100, Math.floor(100*(1-(gap-1)/(settings.gapThreshold+1)) + (last50.length/100)*20)) : 0;
     if(!isActive && last50.length >= settings.minTicks && gap <= settings.gapThreshold) {
       let predicted = evenCnt > oddCnt ? "ODD 🔴" : "EVEN 🟢";
-      evenOddSignalExpiry[symbol] = now + settings.durationMin * 60 * 1000;
+      evenOddSignalExpiry[symbol] = now + settings.durationMin*60000;
       activeEvenOddSignal[symbol] = predicted;
       signalDiv.innerHTML = `<div class="signal-flash signal-strong">🎲 ${predicted} SIGNAL (${settings.durationMin}min) <div class="strength-meter"><div class="strength-fill" style="width:${strength}%"></div></div></div>`;
       if(settings.soundEnabled) gentleBeep();
     } else if(isActive) {
       let remaining = Math.max(0, Math.floor((evenOddSignalExpiry[symbol]-now)/1000));
-      let mins = Math.floor(remaining/60);
-      let secs = remaining%60;
+      let mins = Math.floor(remaining/60), secs = remaining%60;
       signalDiv.innerHTML = `<div class="signal-flash signal-strong">🎲 ACTIVE: ${activeEvenOddSignal[symbol]} (${mins}:${secs<10?'0'+secs:secs}) <div class="strength-meter"><div class="strength-fill" style="width:${strength}%"></div></div></div>`;
     } else {
       signalDiv.innerHTML = `<span class="no-signal">⚡ no even/odd signal (gap ${gap} > ${settings.gapThreshold} or ticks ${last50.length}/${settings.minTicks})</span>`;
     }
   }
-
   function updateOverUnderSignal(symbol, last50, now, settings) {
-    let overCnt = last50.filter(d=>d>=5).length;
-    let underCnt = last50.length - overCnt;
-    let gap = Math.abs(overCnt - underCnt);
+    let overCnt = last50.filter(d=>d>=5).length, underCnt = last50.length-overCnt, gap = Math.abs(overCnt-underCnt);
     let isActive = (ouSignalExpiry[symbol] && now < ouSignalExpiry[symbol]);
     let signalDiv = document.getElementById(`overUnderSignal_${symbol}`);
     if(!signalDiv) return;
-    let strength = 0;
-    if(last50.length >= settings.minTicks && gap <= settings.ouGapThreshold) {
-      strength = Math.min(100, Math.floor(100 * (1 - (gap-1)/(settings.ouGapThreshold+1)) + (last50.length/100)*20));
-    }
+    let strength = (last50.length >= settings.minTicks && gap <= settings.ouGapThreshold) ? Math.min(100, Math.floor(100*(1-(gap-1)/(settings.ouGapThreshold+1)) + (last50.length/100)*20)) : 0;
     if(!isActive && last50.length >= settings.minTicks && gap <= settings.ouGapThreshold) {
       let predicted = overCnt > underCnt ? "OVER 4 (5-9) 🔴" : "UNDER 5 (0-4) 🟢";
-      ouSignalExpiry[symbol] = now + settings.ouDuration * 60 * 1000;
+      ouSignalExpiry[symbol] = now + settings.ouDuration*60000;
       activeOUSignal[symbol] = predicted;
       signalDiv.innerHTML = `<div class="signal-flash signal-strong">📊 ${predicted} (${settings.ouDuration}min) <div class="strength-meter"><div class="strength-fill" style="width:${strength}%"></div></div></div>`;
       if(settings.soundEnabled) gentleBeep();
     } else if(isActive) {
       let remaining = Math.max(0, Math.floor((ouSignalExpiry[symbol]-now)/1000));
-      let mins = Math.floor(remaining/60);
-      let secs = remaining%60;
+      let mins = Math.floor(remaining/60), secs = remaining%60;
       signalDiv.innerHTML = `<div class="signal-flash signal-strong">📊 ACTIVE: ${activeOUSignal[symbol]} (${mins}:${secs<10?'0'+secs:secs}) <div class="strength-meter"><div class="strength-fill" style="width:${strength}%"></div></div></div>`;
     } else {
       signalDiv.innerHTML = `<span class="no-signal">⚡ no over/under signal (gap ${gap} > ${settings.ouGapThreshold} or ticks ${last50.length}/${settings.minTicks})</span>`;
     }
   }
-
   function updateStrengthIndicator(symbol, last50, type) {
-    const indicatorDiv = document.getElementById(`strengthIndicator_${symbol}`);
-    if (!indicatorDiv) return;
-    if (last50.length === 0) {
-      indicatorDiv.innerHTML = '';
-      return;
-    }
-    if (type === 'overunder') {
-      const overCnt = last50.filter(d=>d>=5).length;
-      const underCnt = last50.length - overCnt;
-      const overPct = (overCnt / last50.length) * 100;
-      const underPct = (underCnt / last50.length) * 100;
-      if (overCnt > underCnt) {
-        indicatorDiv.innerHTML = `<span class="strength-arrow-up">▲ Over ${overPct.toFixed(1)}%</span>`;
-      } else if (underCnt > overCnt) {
-        indicatorDiv.innerHTML = `<span class="strength-arrow-down">▼ Under ${underPct.toFixed(1)}%</span>`;
-      } else {
-        indicatorDiv.innerHTML = `<span>➖ Even 50%</span>`;
-      }
-    } else if (type === 'evenodd') {
-      const evenCnt = last50.filter(d=>d%2===0).length;
-      const oddCnt = last50.length - evenCnt;
-      const evenPct = (evenCnt / last50.length) * 100;
-      const oddPct = (oddCnt / last50.length) * 100;
-      if (evenCnt > oddCnt) {
-        indicatorDiv.innerHTML = `<span class="strength-arrow-up">▲ Even ${evenPct.toFixed(1)}%</span>`;
-      } else if (oddCnt > evenCnt) {
-        indicatorDiv.innerHTML = `<span class="strength-arrow-down">▼ Odd ${oddPct.toFixed(1)}%</span>`;
-      } else {
-        indicatorDiv.innerHTML = `<span>➖ Even 50%</span>`;
-      }
-    } else {
-      indicatorDiv.innerHTML = '';
-    }
+    let indicatorDiv = document.getElementById(`strengthIndicator_${symbol}`);
+    if(!indicatorDiv) return;
+    if(last50.length===0) { indicatorDiv.innerHTML=''; return; }
+    if(type==='overunder') {
+      let over=last50.filter(d=>d>=5).length, under=last50.length-over;
+      let overPct=(over/last50.length)*100, underPct=(under/last50.length)*100;
+      if(over>under) indicatorDiv.innerHTML=`<span class="strength-arrow-up">▲ Over ${overPct.toFixed(1)}%</span>`;
+      else if(under>over) indicatorDiv.innerHTML=`<span class="strength-arrow-down">▼ Under ${underPct.toFixed(1)}%</span>`;
+      else indicatorDiv.innerHTML=`<span>➖ Even 50%</span>`;
+    } else if(type==='evenodd') {
+      let even=last50.filter(d=>d%2===0).length, odd=last50.length-even;
+      let evenPct=(even/last50.length)*100, oddPct=(odd/last50.length)*100;
+      if(even>odd) indicatorDiv.innerHTML=`<span class="strength-arrow-up">▲ Even ${evenPct.toFixed(1)}%</span>`;
+      else if(odd>even) indicatorDiv.innerHTML=`<span class="strength-arrow-down">▼ Odd ${oddPct.toFixed(1)}%</span>`;
+      else indicatorDiv.innerHTML=`<span>➖ Even 50%</span>`;
+    } else indicatorDiv.innerHTML='';
   }
 
-  function rebuildDigitGrid(symbol) {
-    const data = marketData[symbol];
-    if (!data) return;
-    const total = data.digitCounts.reduce((a,b)=>a+b,0);
-    if (total === 0) return;
-    const pct = data.digitCounts.map(c=>((c/total)*100).toFixed(2));
-    const trends = calculateTrends(data);
-    const hotSet = getHotColdDigits(data).hot;
-    const coldSet = getHotColdDigits(data).cold;
-    const mostSet = getRankSet(data, 'most');
-    const secondSet = getRankSet(data, 'second');
-    const leastSet = getRankSet(data, 'least');
-    const secondLeastSet = getRankSet(data, 'secondleast');
-    const lastDigit = data.lastDigit;
-    const container = document.getElementById(`digitsContainer_${symbol}`);
-    if (!container) return;
-    if (globalTradeType === 'evenodd') {
-      const evens = [0,2,4,6,8];
-      const odds = [1,3,5,7,9];
-      container.className = 'digits-grid evenodd';
-      container.innerHTML = '';
-      const row1 = document.createElement('div'); row1.className = 'digits-row';
-      evens.forEach(d => row1.appendChild(createDigitCell(d, pct[d], trends[d], lastDigit===d, mostSet.has(d), secondSet.has(d), leastSet.has(d), secondLeastSet.has(d), hotSet.has(d), coldSet.has(d))));
-      const row2 = document.createElement('div'); row2.className = 'digits-row';
-      odds.forEach(d => row2.appendChild(createDigitCell(d, pct[d], trends[d], lastDigit===d, mostSet.has(d), secondSet.has(d), leastSet.has(d), secondLeastSet.has(d), hotSet.has(d), coldSet.has(d))));
-      container.appendChild(row1); container.appendChild(row2);
-    } else {
-      container.className = 'digits-grid';
-      container.innerHTML = '';
-      for(let d=0; d<10; d++) {
-        container.appendChild(createDigitCell(d, pct[d], trends[d], lastDigit===d, mostSet.has(d), secondSet.has(d), leastSet.has(d), secondLeastSet.has(d), hotSet.has(d), coldSet.has(d)));
-      }
-    }
-  }
-
-  function createDigitCell(digit, pct, trend, isLast, isMost, isSecond, isLeast, isSecondLeast, isHot, isCold) {
-    const cell = document.createElement('div');
-    cell.className = 'digit-cell';
-    if (isMost) cell.classList.add('most');
-    else if (isSecond) cell.classList.add('second');
-    else if (isLeast) cell.classList.add('least');
-    else if (isSecondLeast) cell.classList.add('secondleast');
-    if (isHot) cell.classList.add('hot');
-    if (isCold) cell.classList.add('cold');
-    let innerHtml = `<span class="digit">${digit}</span><div class="percent">${pct}%</div>`;
-    cell.innerHTML = innerHtml;
-    if (trend && trend !== '→') {
-      const trendSpan = document.createElement('span'); trendSpan.className = 'trend'; trendSpan.innerText = trend;
-      cell.appendChild(trendSpan);
-    } else if (trend === '→') {
-      const trendSpan = document.createElement('span'); trendSpan.className = 'trend'; trendSpan.innerText = '→';
-      cell.appendChild(trendSpan);
-    }
-    if (isLast) {
-      const pointer = document.createElement('div'); pointer.className = 'pointer-marker';
-      cell.appendChild(pointer);
-    }
-    return cell;
-  }
-
+  // Helper functions for digit grid
   function getRankSet(data, rank) {
-    const digitCounts = data.digitCounts.map((count, idx) => ({ digit: idx, count }));
-    const sorted = [...digitCounts].sort((a,b) => b.count - a.count);
-    if (rank === 'most') { const max = sorted[0].count; return new Set(sorted.filter(i => i.count === max).map(i => i.digit)); }
-    else if (rank === 'second') { const max = sorted[0].count; let second = null; for (let i of sorted) if (i.count !== max) { second = i.count; break; } if (second === null) return new Set(); return new Set(sorted.filter(i => i.count === second).map(i => i.digit)); }
-    else if (rank === 'least') { const min = sorted[sorted.length-1].count; return new Set(sorted.filter(i => i.count === min).map(i => i.digit)); }
-    else if (rank === 'secondleast') { const min = sorted[sorted.length-1].count; let secondMin = null; for (let i=sorted.length-2; i>=0; i--) if (sorted[i].count !== min) { secondMin = sorted[i].count; break; } if (secondMin === null) return new Set(); return new Set(sorted.filter(i => i.count === secondMin).map(i => i.digit)); }
+    let digitCounts = data.digitCounts.map((cnt,idx)=>({digit:idx,count:cnt}));
+    let sorted = [...digitCounts].sort((a,b)=>b.count-a.count);
+    if(rank==='most') { let max=sorted[0].count; return new Set(sorted.filter(i=>i.count===max).map(i=>i.digit)); }
+    else if(rank==='second') { let max=sorted[0].count, second=null; for(let i of sorted) if(i.count!==max) { second=i.count; break; } if(second===null) return new Set(); return new Set(sorted.filter(i=>i.count===second).map(i=>i.digit)); }
+    else if(rank==='least') { let min=sorted[sorted.length-1].count; return new Set(sorted.filter(i=>i.count===min).map(i=>i.digit)); }
+    else if(rank==='secondleast') { let min=sorted[sorted.length-1].count, secondMin=null; for(let i=sorted.length-2;i>=0;i--) if(sorted[i].count!==min) { secondMin=sorted[i].count; break; } if(secondMin===null) return new Set(); return new Set(sorted.filter(i=>i.count===secondMin).map(i=>i.digit)); }
     return new Set();
   }
-
   function getHotColdDigits(data) {
-    const total = data.digitCounts.reduce((a,b)=>a+b,0);
-    if (total === 0) return { hot: new Set(), cold: new Set() };
-    const pct = data.digitCounts.map(c => c/total);
-    const sorted = pct.map((p,i)=> ({dig:i, p})).sort((a,b)=>b.p - a.p);
-    return { hot: new Set(sorted.slice(0,2).map(x=>x.dig)), cold: new Set(sorted.slice(-2).map(x=>x.dig)) };
+    let total = data.digitCounts.reduce((a,b)=>a+b,0);
+    if(total===0) return {hot:new Set(), cold:new Set()};
+    let pct = data.digitCounts.map(c=>c/total);
+    let sorted = pct.map((p,i)=>({dig:i,p})).sort((a,b)=>b.p-a.p);
+    return {hot:new Set(sorted.slice(0,2).map(x=>x.dig)), cold:new Set(sorted.slice(-2).map(x=>x.dig))};
   }
-
   function calculateTrends(data) {
-    let trends = {};
+    let trends={};
     let totalOverall = data.digitCounts.reduce((a,b)=>a+b,0);
-    if(totalOverall === 0) return trends;
+    if(totalOverall===0) return trends;
     let overallPct = data.digitCounts.map(c=>c/totalOverall);
     let last50 = data.last50Array;
-    if(last50.length < 20) return trends;
+    if(last50.length<20) return trends;
     let last50Counts = new Array(10).fill(0);
     last50.forEach(d=>last50Counts[d]++);
     let last50Total = last50.length;
@@ -831,142 +695,113 @@
     }
     return trends;
   }
-
   function predictNextDigit(last50Array) {
-    if(last50Array.length < 10) return { digit: null, prob: 0 };
+    if(last50Array.length<10) return {digit:null,prob:0};
     let weights = new Array(10).fill(0);
-    for(let i=0; i<last50Array.length; i++) {
+    for(let i=0;i<last50Array.length;i++) {
       let digit = last50Array[i];
-      let weight = (i >= last50Array.length-10) ? 3 : 1;
+      let weight = (i>=last50Array.length-10) ? 3 : 1;
       weights[digit] += weight;
     }
-    let totalWeight = weights.reduce((a,b)=>a+b,0);
-    let maxWeight = 0, bestDigit = null;
-    for(let d=0;d<10;d++) if(weights[d] > maxWeight) { maxWeight = weights[d]; bestDigit = d; }
-    let prob = totalWeight > 0 ? (maxWeight/totalWeight*100).toFixed(1) : 0;
-    return { digit: bestDigit, prob: prob };
+    let totalW = weights.reduce((a,b)=>a+b,0);
+    let maxW = 0, best=null;
+    for(let d=0;d<10;d++) if(weights[d]>maxW) { maxW=weights[d]; best=d; }
+    let prob = totalW>0 ? (maxW/totalW*100).toFixed(1) : 0;
+    return {digit:best, prob:prob};
   }
-
-  let audioCtx=null;
-  function gentleBeep() {
-    try{
-      if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-      if(audioCtx.state==='suspended') audioCtx.resume();
-      let osc=audioCtx.createOscillator();
-      let gain=audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.frequency.value=880;
-      gain.gain.value=0.15;
-      osc.start();
-      gain.gain.exponentialRampToValueAtTime(0.00001,audioCtx.currentTime+0.2);
-      osc.stop(audioCtx.currentTime+0.2);
-    }catch(e){}
+  function createDigitCell(digit, pct, trend, isLast, isMost, isSecond, isLeast, isSecondLeast, isHot, isCold) {
+    let cell = document.createElement('div');
+    cell.className = 'digit-cell';
+    if(isMost) cell.classList.add('most');
+    else if(isSecond) cell.classList.add('second');
+    else if(isLeast) cell.classList.add('least');
+    else if(isSecondLeast) cell.classList.add('secondleast');
+    if(isHot) cell.classList.add('hot');
+    if(isCold) cell.classList.add('cold');
+    cell.innerHTML = `<span class="digit">${digit}</span><div class="percent">${pct}%</div>`;
+    if(trend && trend!=='→') { let trendSpan = document.createElement('span'); trendSpan.className='trend'; trendSpan.innerText=trend; cell.appendChild(trendSpan); }
+    else if(trend==='→') { let trendSpan = document.createElement('span'); trendSpan.className='trend'; trendSpan.innerText='→'; cell.appendChild(trendSpan); }
+    if(isLast) { let ptr = document.createElement('div'); ptr.className='pointer-marker'; cell.appendChild(ptr); }
+    return cell;
   }
-
-  function setGlobalTradeType(type) {
-    globalTradeType = type;
-    document.querySelectorAll('.global-trade-btn').forEach(btn => {
-      if (btn.getAttribute('data-type') === type) btn.classList.add('active');
-      else btn.classList.remove('active');
-    });
-    for (let sym of ALL_SYMBOLS) {
-      const parityStats = document.getElementById(`parityStats_${sym}`);
-      const overunderStats = document.getElementById(`overUnderStats_${sym}`);
-      const paritySeqWrapper = document.getElementById(`paritySeqWrapper_${sym}`);
-      const ouSeqWrapper = document.getElementById(`ouSeqWrapper_${sym}`);
-      const evenOddSignal = document.getElementById(`evenOddSignal_${sym}`);
-      const overUnderSignal = document.getElementById(`overUnderSignal_${sym}`);
-      const patternPanel = document.querySelector(`#market_${sym} .digit-match-panel`);
-      const strengthIndicator = document.getElementById(`strengthIndicator_${sym}`);
-      if (type === 'evenodd') {
-        if (parityStats) parityStats.classList.remove('hidden');
-        if (overunderStats) overunderStats.classList.add('hidden');
-        if (paritySeqWrapper) paritySeqWrapper.classList.remove('hidden');
-        if (ouSeqWrapper) ouSeqWrapper.classList.add('hidden');
-        if (evenOddSignal) evenOddSignal.classList.remove('hidden');
-        if (overUnderSignal) overUnderSignal.classList.add('hidden');
-        if (patternPanel) patternPanel.classList.add('hidden');
-        if (strengthIndicator) strengthIndicator.classList.remove('hidden');
-      } else if (type === 'overunder') {
-        if (parityStats) parityStats.classList.add('hidden');
-        if (overunderStats) overunderStats.classList.remove('hidden');
-        if (paritySeqWrapper) paritySeqWrapper.classList.add('hidden');
-        if (ouSeqWrapper) ouSeqWrapper.classList.remove('hidden');
-        if (evenOddSignal) evenOddSignal.classList.add('hidden');
-        if (overUnderSignal) overUnderSignal.classList.remove('hidden');
-        if (patternPanel) patternPanel.classList.add('hidden');
-        if (strengthIndicator) strengthIndicator.classList.remove('hidden');
-      } else { // differs
-        if (parityStats) parityStats.classList.add('hidden');
-        if (overunderStats) overunderStats.classList.add('hidden');
-        if (paritySeqWrapper) paritySeqWrapper.classList.add('hidden');
-        if (ouSeqWrapper) ouSeqWrapper.classList.add('hidden');
-        if (evenOddSignal) evenOddSignal.classList.add('hidden');
-        if (overUnderSignal) overUnderSignal.classList.add('hidden');
-        if (patternPanel) patternPanel.classList.remove('hidden');
-        if (strengthIndicator) strengthIndicator.classList.add('hidden');
-      }
-      rebuildDigitGrid(sym);
-      const last50 = marketData[sym]?.last50Array;
-      if (last50 && last50.length) updateStrengthIndicator(sym, last50, type);
+  function rebuildDigitGrid(symbol) {
+    let data = marketData[symbol];
+    if(!data) return;
+    let total = data.digitCounts.reduce((a,b)=>a+b,0);
+    if(total===0) return;
+    let pct = data.digitCounts.map(c=>((c/total)*100).toFixed(2));
+    let trends = calculateTrends(data);
+    let hotSet = getHotColdDigits(data).hot, coldSet = getHotColdDigits(data).cold;
+    let mostSet = getRankSet(data,'most'), secondSet=getRankSet(data,'second'), leastSet=getRankSet(data,'least'), secondLeastSet=getRankSet(data,'secondleast');
+    let lastDigit = data.lastDigit;
+    let container = document.getElementById(`digitsContainer_${symbol}`);
+    if(!container) return;
+    if(globalTradeType==='evenodd') {
+      let evens=[0,2,4,6,8], odds=[1,3,5,7,9];
+      container.className='digits-grid evenodd';
+      container.innerHTML='';
+      let row1=document.createElement('div'); row1.className='digits-row';
+      evens.forEach(d=>row1.appendChild(createDigitCell(d,pct[d],trends[d],lastDigit===d,mostSet.has(d),secondSet.has(d),leastSet.has(d),secondLeastSet.has(d),hotSet.has(d),coldSet.has(d))));
+      let row2=document.createElement('div'); row2.className='digits-row';
+      odds.forEach(d=>row2.appendChild(createDigitCell(d,pct[d],trends[d],lastDigit===d,mostSet.has(d),secondSet.has(d),leastSet.has(d),secondLeastSet.has(d),hotSet.has(d),coldSet.has(d))));
+      container.appendChild(row1); container.appendChild(row2);
+    } else {
+      container.className='digits-grid';
+      container.innerHTML='';
+      for(let d=0;d<10;d++) container.appendChild(createDigitCell(d,pct[d],trends[d],lastDigit===d,mostSet.has(d),secondSet.has(d),leastSet.has(d),secondLeastSet.has(d),hotSet.has(d),coldSet.has(d)));
     }
   }
 
-  // Update strong markets panel and market highlighting
-  function updateStrongMarkets() {
+  // Update all markets list - preserve original order, blink active ones, no reordering
+  function updateAllMarketsList() {
     const threshold = getSettings().signalThreshold;
-    const strongList = [];
+    const now = Date.now();
+    // Remove expired locks
+    for (let [sym, expiry] of lockedStrongMarkets.entries()) {
+      if (now > expiry) lockedStrongMarkets.delete(sym);
+    }
+    // Check for new signals
     for (let sym of ALL_SYMBOLS) {
       const data = marketData[sym];
       if (!data || !data.last50Array || data.last50Array.length < 20) continue;
       const score = computeSignalScore(sym, data.last50Array);
-      if (score >= threshold) {
-        strongList.push({ sym, score, name: MARKET_NAMES[sym] });
-      }
-    }
-    strongList.sort((a,b) => b.score - a.score);
-    const panel = document.getElementById('strongMarketsPanel');
-    const listDiv = document.getElementById('strongList');
-    if (strongList.length > 0) {
-      panel.classList.remove('hidden');
-      listDiv.innerHTML = strongList.map(s => `<span class="strong-item">${s.name} (${s.score})</span>`).join('');
-    } else {
-      panel.classList.add('hidden');
-    }
-    // Highlight market cards based on active signal (score >= threshold) and direction
-    for (let sym of ALL_SYMBOLS) {
-      const card = document.getElementById(`market_${sym}`);
-      if (!card) continue;
-      const data = marketData[sym];
-      if (!data || !data.last50Array || data.last50Array.length < 20) {
-        card.classList.remove('signal-active-green', 'signal-active-red');
-        continue;
-      }
-      const score = computeSignalScore(sym, data.last50Array);
-      if (score >= threshold) {
-        // Determine direction: for overunder mode check over/under, for evenodd mode check even/odd
-        const last50 = data.last50Array;
-        const overCnt = last50.filter(d=>d>=5).length;
-        const underCnt = last50.length - overCnt;
-        const evenCnt = last50.filter(d=>d%2===0).length;
-        const oddCnt = last50.length - evenCnt;
-        if (globalTradeType === 'overunder') {
-          if (overCnt > underCnt) card.classList.add('signal-active-green');
-          else if (underCnt > overCnt) card.classList.add('signal-active-red');
-          else card.classList.remove('signal-active-green', 'signal-active-red');
-        } else if (globalTradeType === 'evenodd') {
-          if (evenCnt > oddCnt) card.classList.add('signal-active-green');
-          else if (oddCnt > evenCnt) card.classList.add('signal-active-red');
-          else card.classList.remove('signal-active-green', 'signal-active-red');
-        } else {
-          // For differs, we don't have a clear direction, so just use green if score high
-          card.classList.add('signal-active-green');
+      if (score >= threshold && !lockedStrongMarkets.has(sym)) {
+        lockedStrongMarkets.set(sym, now + SIGNAL_LOCK_DURATION);
+        if (getSettings().soundEnabled) {
+          gentleBeep();
+          setTimeout(() => gentleBeep(), 200);
         }
-      } else {
-        card.classList.remove('signal-active-green', 'signal-active-red');
       }
     }
+    // Build list in the exact order of ALL_SYMBOLS
+    const items = [];
+    for (let sym of ALL_SYMBOLS) {
+      const data = marketData[sym];
+      let score = 0;
+      if (data && data.last50Array && data.last50Array.length >= 20) {
+        score = computeSignalScore(sym, data.last50Array);
+      }
+      const isActive = lockedStrongMarkets.has(sym);
+      items.push({ sym, name: MARKET_NAMES[sym], score, isActive });
+    }
+    const container = document.getElementById('marketsListContainer');
+    container.innerHTML = items.map(item => `
+      <div class="market-list-item ${item.isActive ? 'blink' : ''}" data-symbol="${item.sym}">
+        ${item.name} (${item.score})
+      </div>
+    `).join('');
+    // Add click handlers
+    document.querySelectorAll('.market-list-item').forEach(el => {
+      el.onclick = () => scrollToMarket(el.getAttribute('data-symbol'));
+    });
+  }
+
+  function scrollToMarket(symbol) {
+    const card = document.getElementById(`market_${symbol}`);
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('highlight-market');
+    setTimeout(() => card.classList.remove('highlight-market'), 2000);
   }
 
   function renderMarket(symbol) {
@@ -976,24 +811,18 @@
     if(priceSpan) priceSpan.innerText = data.lastPriceDisplay;
     let last50 = data.last50Array;
     if(last50.length>0) {
-      let evenCnt = last50.filter(d=>d%2===0).length;
-      let oddCnt = last50.length-evenCnt;
-      let evenPct = ((evenCnt/last50.length)*100).toFixed(1);
-      let oddPct = ((oddCnt/last50.length)*100).toFixed(1);
+      let evenCnt = last50.filter(d=>d%2===0).length, oddCnt = last50.length-evenCnt, evenPct = ((evenCnt/last50.length)*100).toFixed(1), oddPct = ((oddCnt/last50.length)*100).toFixed(1);
       let paritySpan = document.getElementById(`parityStats_${symbol}`);
       if(paritySpan) paritySpan.innerHTML = `🎲 E:${evenPct}% O:${oddPct}%`;
-      let overCnt = last50.filter(d=>d>=5).length;
-      let underCnt = last50.length - overCnt;
-      let overPct = ((overCnt/last50.length)*100).toFixed(1);
-      let underPct = ((underCnt/last50.length)*100).toFixed(1);
+      let overCnt = last50.filter(d=>d>=5).length, underCnt = last50.length-overCnt, overPct = ((overCnt/last50.length)*100).toFixed(1), underPct = ((underCnt/last50.length)*100).toFixed(1);
       let ouSpan = document.getElementById(`overUnderStats_${symbol}`);
       if(ouSpan) ouSpan.innerHTML = `📈 Over 4: ${overPct}% | Under 5: ${underPct}%`;
-      let streak = 1, lastParity = last50[last50.length-1]%2===0?'E':'O';
-      for(let i=last50.length-2;i>=0;i--) { if((last50[i]%2===0?'E':'O')===lastParity) streak++; else break; }
+      let streak=1, lastParity=last50[last50.length-1]%2===0?'E':'O';
+      for(let i=last50.length-2;i>=0;i--) if((last50[i]%2===0?'E':'O')===lastParity) streak++; else break;
       let streakSpan = document.getElementById(`streakStats_${symbol}`);
       if(streakSpan) streakSpan.innerHTML = `📊 Streak: ${streak}x ${lastParity}`;
-      let parityLetters = last50.map(d => d%2===0 ? '<span style="color:#4ade80;">E</span>' : '<span style="color:#f87171;">O</span>').join('');
-      let ouLetters = last50.map(d => d>=5 ? '<span style="color:#4ade80;">O</span>' : '<span style="color:#f87171;">U</span>').join('');
+      let parityLetters = last50.map(d=>d%2===0?'<span style="color:#4ade80;">E</span>':'<span style="color:#f87171;">O</span>').join('');
+      let ouLetters = last50.map(d=>d>=5?'<span style="color:#4ade80;">O</span>':'<span style="color:#f87171;">U</span>').join('');
       let paritySeqDiv = document.getElementById(`paritySeq_${symbol}`);
       if(paritySeqDiv) paritySeqDiv.innerHTML = parityLetters;
       let ouSeqDiv = document.getElementById(`ouSeq_${symbol}`);
@@ -1015,7 +844,7 @@
       if(predSpan) predSpan.innerHTML = `🔮 Next digit: —`;
     }
     rebuildDigitGrid(symbol);
-    updateStrongMarkets();
+    updateAllMarketsList();
   }
 
   function createMarketUI(symbol, displayName, isInvalid=false) {
@@ -1024,6 +853,7 @@
     let card = document.createElement('div');
     card.className = 'market-card';
     card.id = `market_${symbol}`;
+    card.onclick = (function(sym) { return function() { openMarketModal(sym); }; })(symbol);
     let warning = isInvalid ? `<div class="warning-msg">⚠️ Symbol not allowed for your token – check token permissions.</div>` : '';
     let statusText = isInvalid ? '🔴 BLOCKED' : '🔴 no data';
     let statusClass = isInvalid ? 'status-red' : 'status-red';
@@ -1082,27 +912,47 @@
     container.appendChild(card);
   }
 
+  function openMarketModal(symbol) {
+    const data = marketData[symbol];
+    if (!data) return;
+    const modal = document.getElementById('marketModal');
+    const title = document.getElementById('modalTitle');
+    const body = document.getElementById('modalBody');
+    title.innerText = `${MARKET_NAMES[symbol]} (${symbol}) - Detailed View`;
+    const last50 = data.last50Array.slice(-20).join(', ');
+    const counts = data.digitCounts.map((c,i)=>`${i}: ${c}`).join(', ');
+    const pattern = bestPattern[symbol] ? `Entry ${bestPattern[symbol].entryDigit} → after ${bestPattern[symbol].lookahead} ticks → ${bestPattern[symbol].outcomeDigit} (${bestPattern[symbol].probability}%)` : 'No pattern yet';
+    const score = computeSignalScore(symbol, data.last50Array);
+    const signalActive = lockedStrongMarkets.has(symbol) ? 'YES (locked for 60s)' : 'NO';
+    body.innerHTML = `
+      <p><strong>Price:</strong> ${data.lastPriceDisplay}</p>
+      <p><strong>Signal Score:</strong> ${score} (Threshold: ${getSettings().signalThreshold})</p>
+      <p><strong>Signal Lock Active:</strong> ${signalActive}</p>
+      <p><strong>Last 20 digits:</strong> ${last50}</p>
+      <p><strong>Digit counts (last 1000):</strong> ${counts}</p>
+      <p><strong>Best Pattern:</strong> ${pattern}</p>
+      <p><strong>Even/Odd Signal:</strong> ${activeEvenOddSignal[symbol] || 'none'}</p>
+      <p><strong>Over/Under Signal:</strong> ${activeOUSignal[symbol] || 'none'}</p>
+      <button onclick="window.resetStats('${symbol}')" class="reset-btn">Reset Pattern Stats</button>
+    `;
+    modal.style.display = 'flex';
+  }
+
   function manualAnalyze(symbol) {
     let entry = parseInt(document.getElementById(`match_entry_${symbol}`).value,10);
     let lookahead = parseInt(document.getElementById(`match_lookahead_${symbol}`).value,10);
     let data = marketData[symbol];
     if(!data || data.digitsArray.length === 0) { document.getElementById(`match_stats_${symbol}`).innerHTML = 'Not enough data yet.'; return; }
     let arr = data.digitsArray;
-    let counts = new Array(10).fill(0);
-    let total = 0;
-    for(let i=0; i<arr.length - lookahead; i++) {
-      if(arr[i] === entry) {
-        let outcome = arr[i+lookahead];
-        if(outcome !== undefined) { counts[outcome]++; total++; }
-      }
-    }
-    if(total === 0) { document.getElementById(`match_stats_${symbol}`).innerHTML = `No occurrences of digit ${entry} with lookahead ${lookahead}.`; return; }
-    let probs = counts.map(c => ((c/total)*100).toFixed(1));
-    let bestDigit = 0, bestProb = 0;
-    for(let d=0;d<10;d++) { let p = parseFloat(probs[d]); if(p > bestProb) { bestProb = p; bestDigit = d; } }
+    let counts = new Array(10).fill(0), total=0;
+    for(let i=0; i<arr.length - lookahead; i++) if(arr[i]===entry) { let out=arr[i+lookahead]; if(out!==undefined) { counts[out]++; total++; } }
+    if(total===0) { document.getElementById(`match_stats_${symbol}`).innerHTML = `No occurrences of digit ${entry} with lookahead ${lookahead}.`; return; }
+    let probs = counts.map(c=>((c/total)*100).toFixed(1));
+    let best=0, bestP=0;
+    for(let d=0;d<10;d++) { let p=parseFloat(probs[d]); if(p>bestP) { bestP=p; best=d; } }
     let statsHtml = `<div class="match-prob">Entry ${entry} → after ${lookahead} tick(s):</div>`;
-    for(let d=0;d<10;d++) if(parseFloat(probs[d]) > 0) statsHtml += `<div class="match-prob">${d}: ${probs[d]}%</div>`;
-    statsHtml += `<div class="match-best">🎯 High probability: ${bestDigit} (${bestProb}%)</div>`;
+    for(let d=0;d<10;d++) if(parseFloat(probs[d])>0) statsHtml += `<div class="match-prob">${d}: ${probs[d]}%</div>`;
+    statsHtml += `<div class="match-best">🎯 High probability: ${best} (${bestP}%)</div>`;
     document.getElementById(`match_stats_${symbol}`).innerHTML = statsHtml;
   }
 
@@ -1157,10 +1007,11 @@
       pendingEntry = {};
       successStats = {};
       consecutiveLosses = {};
+      lockedStrongMarkets.clear();
       for(let sym of ALL_SYMBOLS) createMarketUI(sym, MARKET_NAMES[sym], false);
       let idx = 0;
       function subNext() {
-        if(idx >= ALL_SYMBOLS.length) { document.getElementById('connectionStatus').innerHTML = '✅ Streaming live'; setInterval(() => { for(let sym of ALL_SYMBOLS) { if(marketData[sym] && marketData[sym].digitsArray.length >= 100) updateAutoPattern(sym); } }, 10000); return; }
+        if(idx >= ALL_SYMBOLS.length) { document.getElementById('connectionStatus').innerHTML = '✅ Streaming live'; setInterval(() => { for(let sym of ALL_SYMBOLS) if(marketData[sym] && marketData[sym].digitsArray.length >= 100) updateAutoPattern(sym); }, 10000); return; }
         let sym = ALL_SYMBOLS[idx];
         if(!invalidSymbols.has(sym)) subscribeToMarket(sym);
         idx++; setTimeout(subNext, 250);
@@ -1173,7 +1024,6 @@
 
   let pingInterval;
   function startPing() { if(pingInterval) clearInterval(pingInterval); pingInterval = setInterval(()=>{ if(ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify({ping:1})); }, 25000); }
-
   function connectWebSocket() {
     let token = document.getElementById('token').value.trim();
     if(!token) { alert("Enter your API token"); return; }
@@ -1187,18 +1037,86 @@
   }
 
   function toggleMode() { document.body.classList.toggle('light'); }
+  function setGlobalTradeType(type) {
+    globalTradeType = type;
+    document.querySelectorAll('.global-trade-btn').forEach(btn => {
+      if(btn.getAttribute('data-type') === type) btn.classList.add('active');
+      else btn.classList.remove('active');
+    });
+    for(let sym of ALL_SYMBOLS) {
+      let parityStats = document.getElementById(`parityStats_${sym}`);
+      let overunderStats = document.getElementById(`overUnderStats_${sym}`);
+      let paritySeqWrapper = document.getElementById(`paritySeqWrapper_${sym}`);
+      let ouSeqWrapper = document.getElementById(`ouSeqWrapper_${sym}`);
+      let evenOddSignal = document.getElementById(`evenOddSignal_${sym}`);
+      let overUnderSignal = document.getElementById(`overUnderSignal_${sym}`);
+      let patternPanel = document.querySelector(`#market_${sym} .digit-match-panel`);
+      let strengthIndicator = document.getElementById(`strengthIndicator_${sym}`);
+      if(type === 'evenodd') {
+        if(parityStats) parityStats.classList.remove('hidden');
+        if(overunderStats) overunderStats.classList.add('hidden');
+        if(paritySeqWrapper) paritySeqWrapper.classList.remove('hidden');
+        if(ouSeqWrapper) ouSeqWrapper.classList.add('hidden');
+        if(evenOddSignal) evenOddSignal.classList.remove('hidden');
+        if(overUnderSignal) overUnderSignal.classList.add('hidden');
+        if(patternPanel) patternPanel.classList.add('hidden');
+        if(strengthIndicator) strengthIndicator.classList.remove('hidden');
+      } else if(type === 'overunder') {
+        if(parityStats) parityStats.classList.add('hidden');
+        if(overunderStats) overunderStats.classList.remove('hidden');
+        if(paritySeqWrapper) paritySeqWrapper.classList.add('hidden');
+        if(ouSeqWrapper) ouSeqWrapper.classList.remove('hidden');
+        if(evenOddSignal) evenOddSignal.classList.add('hidden');
+        if(overUnderSignal) overUnderSignal.classList.remove('hidden');
+        if(patternPanel) patternPanel.classList.add('hidden');
+        if(strengthIndicator) strengthIndicator.classList.remove('hidden');
+      } else {
+        if(parityStats) parityStats.classList.add('hidden');
+        if(overunderStats) overunderStats.classList.add('hidden');
+        if(paritySeqWrapper) paritySeqWrapper.classList.add('hidden');
+        if(ouSeqWrapper) ouSeqWrapper.classList.add('hidden');
+        if(evenOddSignal) evenOddSignal.classList.add('hidden');
+        if(overUnderSignal) overUnderSignal.classList.add('hidden');
+        if(patternPanel) patternPanel.classList.remove('hidden');
+        if(strengthIndicator) strengthIndicator.classList.add('hidden');
+      }
+      rebuildDigitGrid(sym);
+      let last50 = marketData[sym]?.last50Array;
+      if(last50 && last50.length) updateStrengthIndicator(sym, last50, type);
+    }
+  }
+
+  let audioCtx = null;
+  function gentleBeep() {
+    try {
+      if (!audioCtx) audioCtx = new AudioContext();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      let osc = audioCtx.createOscillator();
+      let gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.value = 880;
+      gain.gain.value = 0.2;
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.2);
+      osc.stop(audioCtx.currentTime + 0.2);
+    } catch(e) {}
+  }
 
   window.manualAnalyze = manualAnalyze;
   window.resetStats = resetStats;
   window.connectWebSocket = connectWebSocket;
   window.toggleMode = toggleMode;
   window.setGlobalTradeType = setGlobalTradeType;
+  window.openMarketModal = openMarketModal;
+  window.scrollToMarket = scrollToMarket;
 
-  document.querySelectorAll('.global-trade-btn').forEach(btn => {
-    btn.onclick = () => setGlobalTradeType(btn.getAttribute('data-type'));
-  });
-
+  document.querySelectorAll('.global-trade-btn').forEach(btn => btn.onclick = () => setGlobalTradeType(btn.getAttribute('data-type')));
   setInterval(() => { for(let sym in marketData) if(marketData[sym].digitsArray.length) renderMarket(sym); }, 1000);
+  // Modal close handler
+  const modal = document.getElementById('marketModal');
+  document.querySelector('.close-modal').onclick = () => modal.style.display = 'none';
+  window.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
 </script>
 </body>
 </html>
