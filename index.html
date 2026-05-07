@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Deriv Pro – 4-Up Arrow Signal (Full Visible List, No Scroll)</title>
+<title>Deriv Pro – Arrow Signals (Colors Restored)</title>
 <style>
   :root {
     --bg-body: #0b1120;
@@ -52,13 +52,7 @@
     --trade-active: #059669;
   }
   * { box-sizing: border-box; transition: background 0.2s, color 0.2s; }
-  body {
-    font-family: 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg-body);
-    color: var(--text-primary);
-    margin: 0;
-    padding: 1rem;
-  }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg-body); color: var(--text-primary); margin: 0; padding: 1rem; }
   .container { max-width: 1800px; margin: 0 auto; }
   .top-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
   .global-trade-selector { display: flex; gap: 0.5rem; background: var(--bg-header); padding: 0.3rem 0.8rem; border-radius: 2rem; }
@@ -76,7 +70,7 @@
   .connect-btn { background: var(--btn-bg); border: none; padding: 0.6rem 1.5rem; border-radius: 2rem; font-weight: bold; color: white; cursor: pointer; }
   .connect-btn:hover { background: var(--btn-hover); }
 
-  /* TWO-COLUMN SPLIT: left 3/4, right 1/4 */
+  /* TWO-COLUMN LAYOUT: left 3/4, right 1/4 */
   .main-layout {
     display: flex;
     gap: 1.5rem;
@@ -91,14 +85,13 @@
     flex-direction: column;
     gap: 1.5rem;
   }
-  /* Right sidebar: NO SCROLLBAR, all markets visible */
+  /* Right sidebar: NO SCROLL, all markets visible */
   .all-markets-panel {
     flex: 1;
     background: var(--bg-header);
     border-radius: 1rem;
     padding: 0.6rem 0.8rem;
     border-left: 4px solid #facc15;
-    /* No max-height, no overflow: auto — list grows naturally */
     position: sticky;
     top: 1rem;
     align-self: flex-start;
@@ -154,8 +147,10 @@
   .digit-cell .percent { font-size: 0.65rem; color: var(--text-secondary); }
   .digit-cell .trend { font-size: 0.7rem; margin-left: 3px; font-weight: bold; }
   .pointer-marker { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); width: 28px; height: 5px; background: #ffcc00; border-radius: 3px; box-shadow: 0 0 6px #ffaa44; }
-  .most { background: #15803d; }
-  .least { background: #b91c1c; }
+  .most { background: #15803d; }       /* green */
+  .second { background: #1e40af; }    /* blue */
+  .least { background: #b91c1c; }     /* red */
+  .secondleast { background: #c2410c; } /* orange */
   .hot { box-shadow: 0 0 6px #facc15; border-color: #facc15; }
   .cold { opacity: 0.6; }
   .info-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.8rem; padding: 0.6rem 1.2rem; background: var(--bg-body); font-size: 0.75rem; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
@@ -193,16 +188,17 @@
 <body>
 <div class="container">
   <div class="top-bar">
-    <h1>⚡ DERIV PRO – 4-UP ARROW SIGNAL (All Markets Visible)</h1>
+    <h1>⚡ DERIV PRO – ARROW SIGNALS (Blue & Orange Restored)</h1>
     <div style="display: flex; gap: 0.5rem;">
       <div class="global-trade-selector">
-        <button class="global-trade-btn active" data-type="evenodd">🎲 4-Up Arrow Rule</button>
+        <button class="global-trade-btn" data-type="evenodd">🎲 Even/Odd (↑↓)</button>
+        <button class="global-trade-btn active" data-type="overunder">📊 Over/Under (→←)</button>
       </div>
       <button class="mode-toggle" onclick="toggleMode()">🌓 Dark/Light Mode</button>
     </div>
   </div>
   <div class="status-bar" id="connectionStatus">⚫ Disconnected</div>
-  <div class="sub">🔔 RIGHT SIDEBAR: all markets listed without any scrollbar – fully visible.</div>
+  <div class="sub">🔔 Right sidebar (all markets visible). Digit colors: green (most), blue (2nd), red (least), orange (2nd least). Hot digits glow, cold digits dim.</div>
 
   <div class="controls">
     <div class="input-group"><label>🔑 API TOKEN</label><input type="password" id="token" class="token-input" placeholder="Enter your Deriv API token"></div>
@@ -215,11 +211,11 @@
       <div id="marketsContainer" class="market-grid"></div>
     </div>
     <div id="allMarketsPanel" class="all-markets-panel">
-      <h3>📋 ALL MARKETS (no scroll)</h3>
+      <h3>📋 ALL MARKETS (click to jump)</h3>
       <div id="marketsListContainer" class="markets-list"></div>
     </div>
   </div>
-  <footer>✅ Signal = 4 ↑ & 1 → on leading side, 0 ↑ on trailing side. Blinking name = active signal (60s lock). Right sidebar fully visible, no internal scroll.</footer>
+  <footer>✅ Signal = 4 gaining arrows on lead side, 0 gaining on trail. Blinking name = active signal (60s lock).</footer>
 </div>
 
 <div id="marketModal" class="modal"><div class="modal-content"><span class="close-modal">&times;</span><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
@@ -230,12 +226,13 @@
   const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
   const SIGNAL_LOCK_DURATION = 60000;
   let marketData = {};
-  let arrowSignalExpiry = {};
-  let activeArrowSignal = {};
+  let signalExpiry = {};
+  let activeSignal = {};
   let ws = null;
   let invalidSymbols = new Set();
   let lockedStrongMarkets = new Map();
-  let digitTrendsCache = {};
+  let rawTrend = {}; // per symbol per digit: 1 (gaining), -1 (losing), 0 (flat)
+  let currentMode = 'overunder';
 
   function getSettings() {
     return { soundEnabled: document.getElementById('soundEnabled').value === 'true' };
@@ -245,6 +242,7 @@
   function formatHistoryPrice(symbol, priceNum) { let dec = DECIMAL_MAP[symbol] ?? 2; return priceNum.toFixed(dec); }
   function updateDigitRuler(symbol, lastDigit) { const rulerDiv = document.getElementById(`ruler_${symbol}`); if(rulerDiv) { const marker = rulerDiv.querySelector('.ruler-marker'); if(marker) marker.style.left = `${(lastDigit/9)*100}%`; } }
 
+  // Compute raw gaining/losing trend (1 = gaining, -1 = losing, 0 = flat)
   function updateTrends(symbol) {
     let data = marketData[symbol];
     if(!data || data.digitsArray.length < 30) return;
@@ -260,55 +258,81 @@
       let pctLast = lastCounts[d]/last50.length;
       let pctOverall = overallPct[d];
       let diff = pctLast - pctOverall;
-      trends[d] = Math.abs(diff) > 0.02 ? (diff > 0 ? '↑' : '↓') : '→';
+      if(Math.abs(diff) > 0.02) {
+        trends[d] = diff > 0 ? 1 : -1;
+      } else {
+        trends[d] = 0;
+      }
     }
-    digitTrendsCache[symbol] = trends;
+    rawTrend[symbol] = trends;
     return trends;
   }
 
-  function getArrowSignal(symbol) {
-    let trends = digitTrendsCache[symbol];
+  function getArrowSymbol(trendVal) {
+    if(trendVal === 1) return currentMode === 'evenodd' ? '↑' : '→';
+    if(trendVal === -1) return currentMode === 'evenodd' ? '↓' : '←';
+    return '•'; // flat
+  }
+
+  function getSignal(symbol) {
+    let trends = rawTrend[symbol];
     if(!trends) return { active: false, predicted: null, strength: 0 };
     let data = marketData[symbol];
     if(!data || !data.last50Array || data.last50Array.length < 30) return { active: false, predicted: null, strength: 0 };
     
-    let last50 = data.last50Array;
-    let evenCount = last50.filter(d=>d%2===0).length;
-    let oddCount = last50.length - evenCount;
-    let majorityIsEven = evenCount > oddCount;
-    
-    let evens = [0,2,4,6,8];
-    let odds = [1,3,5,7,9];
-    let evenUp = evens.filter(d=>trends[d]==='↑').length;
-    let evenDown = evens.filter(d=>trends[d]==='↓').length;
-    let evenFlat = evens.filter(d=>trends[d]==='→').length;
-    let oddUp = odds.filter(d=>trends[d]==='↑').length;
-    let oddDown = odds.filter(d=>trends[d]==='↓').length;
-    let oddFlat = odds.filter(d=>trends[d]==='→').length;
-    
-    let signalActive = false;
-    let predicted = null;
-    let strength = 0;
-    
-    if(majorityIsEven) {
-      if(evenUp === 4 && evenFlat === 1 && evenDown === 0 && oddUp === 0) {
-        signalActive = true;
-        predicted = "EVEN 🟢";
-        strength = 90;
+    if(currentMode === 'evenodd') {
+      let evens = [0,2,4,6,8];
+      let odds = [1,3,5,7,9];
+      let evenGain = evens.filter(d=>trends[d]===1).length;
+      let evenLoss = evens.filter(d=>trends[d]===-1).length;
+      let evenFlat = evens.filter(d=>trends[d]===0).length;
+      let oddGain = odds.filter(d=>trends[d]===1).length;
+      let oddLoss = odds.filter(d=>trends[d]===-1).length;
+      
+      let last50 = data.last50Array;
+      let evenCount = last50.filter(d=>d%2===0).length;
+      let oddCount = last50.length - evenCount;
+      let majorityIsEven = evenCount > oddCount;
+      
+      if(majorityIsEven) {
+        if(evenGain === 4 && evenFlat === 1 && evenLoss === 0 && oddGain === 0) {
+          return { active: true, predicted: "EVEN 🟢", strength: 90 };
+        }
+      } else {
+        if(oddGain === 4 && oddFlat === 1 && oddLoss === 0 && evenGain === 0) {
+          return { active: true, predicted: "ODD 🔴", strength: 90 };
+        }
       }
-    } else {
-      if(oddUp === 4 && oddFlat === 1 && oddDown === 0 && evenUp === 0) {
-        signalActive = true;
-        predicted = "ODD 🔴";
-        strength = 90;
+    } 
+    else { // overunder mode
+      let overDigits = [5,6,7,8,9];
+      let underDigits = [0,1,2,3,4];
+      let overGain = overDigits.filter(d=>trends[d]===1).length;
+      let overLoss = overDigits.filter(d=>trends[d]===-1).length;
+      let underGain = underDigits.filter(d=>trends[d]===1).length;
+      let underLoss = underDigits.filter(d=>trends[d]===-1).length;
+      
+      let last50 = data.last50Array;
+      let overCount = last50.filter(d=>d>=5).length;
+      let underCount = last50.length - overCount;
+      let majorityIsOver = overCount > underCount;
+      
+      if(majorityIsOver) {
+        if(overGain >= 4 && overLoss === 0 && underGain === 0) {
+          return { active: true, predicted: "OVER 4+ 🔴", strength: 90 };
+        }
+      } else {
+        if(underGain >= 4 && underLoss === 0 && overGain === 0) {
+          return { active: true, predicted: "UNDER 5 🟢", strength: 90 };
+        }
       }
     }
-    return { active: signalActive, predicted, strength };
+    return { active: false, predicted: null, strength: 0 };
   }
 
   function computeSignalScore(symbol) {
-    let arrow = getArrowSignal(symbol);
-    return arrow.active ? arrow.strength : 0;
+    let sig = getSignal(symbol);
+    return sig.active ? sig.strength : 0;
   }
 
   function processTick(symbol, priceNumeric, quoteDisplay=null) {
@@ -328,60 +352,148 @@
     renderMarket(symbol);
   }
 
-  function updateArrowSignalDisplay(symbol, now, settings) {
-    let isActive = (arrowSignalExpiry[symbol] && now < arrowSignalExpiry[symbol]);
-    let signalDiv = document.getElementById(`evenOddSignal_${symbol}`);
+  function updateSignalDisplay(symbol, now, settings) {
+    let isActive = (signalExpiry[symbol] && now < signalExpiry[symbol]);
+    let signalDiv = document.getElementById(`signalDisplay_${symbol}`);
     if(!signalDiv) return;
-    let arrow = getArrowSignal(symbol);
-    let strength = arrow.strength;
-    if(!isActive && arrow.active) {
-      arrowSignalExpiry[symbol] = now + SIGNAL_LOCK_DURATION;
-      activeArrowSignal[symbol] = arrow.predicted;
-      signalDiv.innerHTML = `<div class="signal-flash signal-strong">🎯 4-UP ARROW SIGNAL: ${arrow.predicted} (4 gaining, 1 flat on lead; 0 gaining on trail) <div class="strength-meter"><div class="strength-fill" style="width:${strength}%"></div></div></div>`;
+    let sig = getSignal(symbol);
+    let strength = sig.strength;
+    let modeName = currentMode === 'evenodd' ? 'Arrow Up' : 'Arrow Right';
+    if(!isActive && sig.active) {
+      signalExpiry[symbol] = now + SIGNAL_LOCK_DURATION;
+      activeSignal[symbol] = sig.predicted;
+      signalDiv.innerHTML = `<div class="signal-flash signal-strong">🎯 ${modeName} SIGNAL: ${sig.predicted} (4 gaining, 0 gaining on trail) <div class="strength-meter"><div class="strength-fill" style="width:${strength}%"></div></div></div>`;
       if(settings.soundEnabled) gentleBeep();
     } else if(isActive) {
-      let remaining = Math.max(0, Math.floor((arrowSignalExpiry[symbol]-now)/1000));
+      let remaining = Math.max(0, Math.floor((signalExpiry[symbol]-now)/1000));
       let mins = Math.floor(remaining/60), secs = remaining%60;
-      signalDiv.innerHTML = `<div class="signal-flash signal-strong">🎯 ACTIVE: ${activeArrowSignal[symbol]} (${mins}:${secs<10?'0'+secs:secs}) <div class="strength-meter"><div class="strength-fill" style="width:${strength}%"></div></div></div>`;
+      signalDiv.innerHTML = `<div class="signal-flash signal-strong">🎯 ACTIVE: ${activeSignal[symbol]} (${mins}:${secs<10?'0'+secs:secs}) <div class="strength-meter"><div class="strength-fill" style="width:${strength}%"></div></div></div>`;
     } else {
-      signalDiv.innerHTML = `<span class="no-signal">⚡ waiting for 4-up rule: 4 ↑ & 1 → on leading side, 0 ↑ on trailing side</span>`;
+      let ruleText = currentMode === 'evenodd' ? '4↑ on lead, 0↑ on trail' : '4→ on lead, 0→ on trail';
+      signalDiv.innerHTML = `<span class="no-signal">⚡ waiting: ${ruleText}</span>`;
     }
+  }
+
+  // Helper to get ranking sets (most, second, least, secondleast)
+  function getRankSets(digitCounts) {
+    let arr = digitCounts.map((cnt, idx) => ({ digit: idx, count: cnt }));
+    let sorted = [...arr].sort((a,b) => b.count - a.count);
+    let max = sorted[0].count;
+    let mostSet = new Set(sorted.filter(i => i.count === max).map(i => i.digit));
+    let secondCount = null;
+    for(let i of sorted) if(i.count !== max) { secondCount = i.count; break; }
+    let secondSet = secondCount !== null ? new Set(sorted.filter(i => i.count === secondCount).map(i => i.digit)) : new Set();
+    let min = sorted[sorted.length-1].count;
+    let leastSet = new Set(sorted.filter(i => i.count === min).map(i => i.digit));
+    let secondMinCount = null;
+    for(let i=sorted.length-2; i>=0; i--) if(sorted[i].count !== min) { secondMinCount = sorted[i].count; break; }
+    let secondLeastSet = secondMinCount !== null ? new Set(sorted.filter(i => i.count === secondMinCount).map(i => i.digit)) : new Set();
+    return { mostSet, secondSet, leastSet, secondLeastSet };
   }
 
   function rebuildDigitGrid(symbol) {
     let data = marketData[symbol]; if(!data) return;
     let total = data.digitCounts.reduce((a,b)=>a+b,0); if(total===0) return;
     let pct = data.digitCounts.map(c=>((c/total)*100).toFixed(2));
-    let trends = digitTrendsCache[symbol] || {};
+    let trends = rawTrend[symbol] || {};
     if(Object.keys(trends).length===0 && data.last50Array.length>=20) updateTrends(symbol);
-    trends = digitTrendsCache[symbol] || {};
-    let hotCold = (()=>{ let sorted = data.digitCounts.map((c,i)=>({dig:i,pct:c/total})).sort((a,b)=>b.pct-a.pct); return {hot:new Set(sorted.slice(0,2).map(x=>x.dig)), cold:new Set(sorted.slice(-2).map(x=>x.dig))}; })();
-    let mostSet = (()=>{ let max=Math.max(...data.digitCounts); return new Set(data.digitCounts.map((c,i)=>c===max?i:null).filter(v=>v!==null)); })();
-    let leastSet = (()=>{ let min=Math.min(...data.digitCounts.filter(c=>c>0)); return new Set(data.digitCounts.map((c,i)=>c===min?i:null).filter(v=>v!==null)); })();
+    trends = rawTrend[symbol] || {};
+    
+    // Hot/cold based on recent 50 vs overall (same as before)
+    let overallPct = data.digitCounts.map(c=>c/total);
+    let last50 = data.last50Array;
+    let lastCounts = new Array(10).fill(0);
+    last50.forEach(d=>lastCounts[d]++);
+    let hot = new Set(), cold = new Set();
+    if(last50.length >= 20) {
+      let diffArray = lastCounts.map((c,i) => (c/last50.length) - overallPct[i]);
+      let sortedDiff = diffArray.map((d,i)=>({dig:i,diff:d})).sort((a,b)=>b.diff-a.diff);
+      hot = new Set(sortedDiff.slice(0,2).map(x=>x.dig));
+      cold = new Set(sortedDiff.slice(-2).map(x=>x.dig));
+    }
+    
+    let { mostSet, secondSet, leastSet, secondLeastSet } = getRankSets(data.digitCounts);
+    
     let container = document.getElementById(`digitsContainer_${symbol}`); if(!container) return;
     container.innerHTML = '';
-    let evens=[0,2,4,6,8], odds=[1,3,5,7,9];
-    let row1=document.createElement('div'); row1.className='digits-row';
-    evens.forEach(d=>{ let cell=document.createElement('div'); cell.className='digit-cell'; if(mostSet.has(d)) cell.classList.add('most'); if(leastSet.has(d)) cell.classList.add('least'); if(hotCold.hot.has(d)) cell.classList.add('hot'); if(hotCold.cold.has(d)) cell.classList.add('cold'); cell.innerHTML=`<span class="digit">${d}</span><div class="percent">${pct[d]}%</div>`; if(trends[d]){let span=document.createElement('span'); span.className='trend'; span.innerText=trends[d]; cell.appendChild(span);} if(data.lastDigit===d){let ptr=document.createElement('div'); ptr.className='pointer-marker'; cell.appendChild(ptr);} row1.appendChild(cell); });
-    let row2=document.createElement('div'); row2.className='digits-row';
-    odds.forEach(d=>{ let cell=document.createElement('div'); cell.className='digit-cell'; if(mostSet.has(d)) cell.classList.add('most'); if(leastSet.has(d)) cell.classList.add('least'); if(hotCold.hot.has(d)) cell.classList.add('hot'); if(hotCold.cold.has(d)) cell.classList.add('cold'); cell.innerHTML=`<span class="digit">${d}</span><div class="percent">${pct[d]}%</div>`; if(trends[d]){let span=document.createElement('span'); span.className='trend'; span.innerText=trends[d]; cell.appendChild(span);} if(data.lastDigit===d){let ptr=document.createElement('div'); ptr.className='pointer-marker'; cell.appendChild(ptr);} row2.appendChild(cell); });
-    container.appendChild(row1); container.appendChild(row2);
+    
+    if(currentMode === 'evenodd') {
+      let evens = [0,2,4,6,8];
+      let odds = [1,3,5,7,9];
+      let row1 = document.createElement('div'); row1.className = 'digits-row';
+      evens.forEach(d => {
+        let cell = document.createElement('div'); cell.className = 'digit-cell';
+        if(mostSet.has(d)) cell.classList.add('most');
+        if(secondSet.has(d)) cell.classList.add('second');
+        if(leastSet.has(d)) cell.classList.add('least');
+        if(secondLeastSet.has(d)) cell.classList.add('secondleast');
+        if(hot.has(d)) cell.classList.add('hot');
+        if(cold.has(d)) cell.classList.add('cold');
+        let arrow = getArrowSymbol(trends[d] || 0);
+        cell.innerHTML = `<span class="digit">${d}</span><div class="percent">${pct[d]}%</div><span class="trend">${arrow}</span>`;
+        if(data.lastDigit === d) { let ptr = document.createElement('div'); ptr.className='pointer-marker'; cell.appendChild(ptr); }
+        row1.appendChild(cell);
+      });
+      let row2 = document.createElement('div'); row2.className = 'digits-row';
+      odds.forEach(d => {
+        let cell = document.createElement('div'); cell.className = 'digit-cell';
+        if(mostSet.has(d)) cell.classList.add('most');
+        if(secondSet.has(d)) cell.classList.add('second');
+        if(leastSet.has(d)) cell.classList.add('least');
+        if(secondLeastSet.has(d)) cell.classList.add('secondleast');
+        if(hot.has(d)) cell.classList.add('hot');
+        if(cold.has(d)) cell.classList.add('cold');
+        let arrow = getArrowSymbol(trends[d] || 0);
+        cell.innerHTML = `<span class="digit">${d}</span><div class="percent">${pct[d]}%</div><span class="trend">${arrow}</span>`;
+        if(data.lastDigit === d) { let ptr = document.createElement('div'); ptr.className='pointer-marker'; cell.appendChild(ptr); }
+        row2.appendChild(cell);
+      });
+      container.appendChild(row1); container.appendChild(row2);
+    } else {
+      // Over/Under: show all digits in one row
+      let row = document.createElement('div'); row.className = 'digits-row';
+      for(let d=0; d<10; d++) {
+        let cell = document.createElement('div'); cell.className = 'digit-cell';
+        if(mostSet.has(d)) cell.classList.add('most');
+        if(secondSet.has(d)) cell.classList.add('second');
+        if(leastSet.has(d)) cell.classList.add('least');
+        if(secondLeastSet.has(d)) cell.classList.add('secondleast');
+        if(hot.has(d)) cell.classList.add('hot');
+        if(cold.has(d)) cell.classList.add('cold');
+        let arrow = getArrowSymbol(trends[d] || 0);
+        cell.innerHTML = `<span class="digit">${d}</span><div class="percent">${pct[d]}%</div><span class="trend">${arrow}</span>`;
+        if(data.lastDigit === d) { let ptr = document.createElement('div'); ptr.className='pointer-marker'; cell.appendChild(ptr); }
+        row.appendChild(cell);
+      }
+      container.appendChild(row);
+    }
   }
 
   function renderMarket(symbol) { 
     let data = marketData[symbol]; if(!data || data.digitsArray.length===0) return; 
     let priceSpan=document.getElementById(`livePriceBig_${symbol}`); if(priceSpan) priceSpan.innerText=data.lastPriceDisplay; 
     let last50=data.last50Array; if(last50.length>0){ 
-      let evenCnt=last50.filter(d=>d%2===0).length, evenPct=((evenCnt/last50.length)*100).toFixed(1); 
-      let paritySpan=document.getElementById(`parityStats_${symbol}`); if(paritySpan) paritySpan.innerHTML=`🎲 E:${evenPct}% O:${(100-evenPct).toFixed(1)}%`; 
-      let streak=1, lastParity=last50[last50.length-1]%2===0?'E':'O'; for(let i=last50.length-2;i>=0;i--) if((last50[i]%2===0?'E':'O')===lastParity) streak++; else break; 
-      let streakSpan=document.getElementById(`streakStats_${symbol}`); if(streakSpan) streakSpan.innerHTML=`📊 Streak: ${streak}x ${lastParity}`; 
-      let parityLetters=last50.map(d=>d%2===0?'<span style="color:#4ade80;">E</span>':'<span style="color:#f87171;">O</span>').join(''); 
-      let paritySeqDiv=document.getElementById(`paritySeq_${symbol}`); if(paritySeqDiv) paritySeqDiv.innerHTML=parityLetters; 
+      if(currentMode === 'evenodd') {
+        let evenCnt=last50.filter(d=>d%2===0).length, evenPct=((evenCnt/last50.length)*100).toFixed(1); 
+        let paritySpan=document.getElementById(`parityStats_${symbol}`); if(paritySpan) paritySpan.innerHTML=`🎲 E:${evenPct}% O:${(100-evenPct).toFixed(1)}%`; 
+        let streak=1, lastParity=last50[last50.length-1]%2===0?'E':'O'; for(let i=last50.length-2;i>=0;i--) if((last50[i]%2===0?'E':'O')===lastParity) streak++; else break; 
+        let streakSpan=document.getElementById(`streakStats_${symbol}`); if(streakSpan) streakSpan.innerHTML=`📊 Streak: ${streak}x ${lastParity}`; 
+        let parityLetters=last50.map(d=>d%2===0?'<span style="color:#4ade80;">E</span>':'<span style="color:#f87171;">O</span>').join(''); 
+        let paritySeqDiv=document.getElementById(`paritySeq_${symbol}`); if(paritySeqDiv) paritySeqDiv.innerHTML=parityLetters;
+        let ouSeqDiv=document.getElementById(`ouSeq_${symbol}`); if(ouSeqDiv) ouSeqDiv.innerHTML='';
+      } else {
+        let overCnt=last50.filter(d=>d>=5).length, overPct=((overCnt/last50.length)*100).toFixed(1);
+        let paritySpan=document.getElementById(`parityStats_${symbol}`); if(paritySpan) paritySpan.innerHTML=`📈 Over 4: ${overPct}% | Under 5: ${(100-overPct).toFixed(1)}%`;
+        let streak=1, lastOU=last50[last50.length-1]>=5?'O':'U'; for(let i=last50.length-2;i>=0;i--) if((last50[i]>=5?'O':'U')===lastOU) streak++; else break;
+        let streakSpan=document.getElementById(`streakStats_${symbol}`); if(streakSpan) streakSpan.innerHTML=`📊 Streak: ${streak}x ${lastOU}`;
+        let ouLetters=last50.map(d=>d>=5?'<span style="color:#4ade80;">O</span>':'<span style="color:#f87171;">U</span>').join('');
+        let ouSeqDiv=document.getElementById(`ouSeq_${symbol}`); if(ouSeqDiv) ouSeqDiv.innerHTML=ouLetters;
+        let paritySeqDiv=document.getElementById(`paritySeq_${symbol}`); if(paritySeqDiv) paritySeqDiv.innerHTML='';
+      }
       let prediction=(()=>{if(last50.length<10)return{digit:null,prob:0};let w=new Array(10).fill(0);for(let i=0;i<last50.length;i++)w[last50[i]]+=(i>=last50.length-10?3:1);let best=w.indexOf(Math.max(...w));let prob=(w[best]/w.reduce((a,b)=>a+b,0))*100;return{digit:best,prob:prob.toFixed(1)};})(); 
       let predSpan=document.getElementById(`prediction_${symbol}`); if(predSpan) predSpan.innerHTML=`🔮 Next digit: ${prediction.digit!==null?`<span class="prediction-digit">${prediction.digit}</span> (${prediction.prob}%)`:'—'}`; 
       let settings=getSettings(), now=Date.now(); 
-      updateArrowSignalDisplay(symbol, now, settings);
+      updateSignalDisplay(symbol, now, settings);
     } 
     rebuildDigitGrid(symbol); 
     updateAllMarketsList(); 
@@ -393,8 +505,8 @@
     for (let sym of ALL_SYMBOLS) {
       const data = marketData[sym];
       if (!data || !data.last50Array || data.last50Array.length < 30) continue;
-      let arrow = getArrowSignal(sym);
-      if (arrow.active && !lockedStrongMarkets.has(sym)) {
+      let sig = getSignal(sym);
+      if (sig.active && !lockedStrongMarkets.has(sym)) {
         lockedStrongMarkets.set(sym, now + SIGNAL_LOCK_DURATION);
         if (settings.soundEnabled) { gentleBeep(); setTimeout(()=>gentleBeep(),200); }
       }
@@ -426,7 +538,7 @@
       </div>
       <div id="digitsContainer_${symbol}" class="digits-grid"></div>
       <div class="info-row">
-        <div class="parity-stats" id="parityStats_${symbol}">E:--% O:--%</div>
+        <div class="parity-stats" id="parityStats_${symbol}">--</div>
         <div class="streak-stats" id="streakStats_${symbol}">Streak: 0</div>
         <div class="prediction-box" id="prediction_${symbol}">🔮 Next digit: —</div>
       </div>
@@ -437,35 +549,49 @@
       </div>
       <div class="ruler-labels" style="margin: -0.2rem 1rem 0.5rem 1rem;"><span>Under 5 (0-4)</span><span>Over 4 (5-9)</span></div>
       <div class="letter-sequence-wrapper" id="paritySeqWrapper_${symbol}">
-        <div class="sequence-label">Even / Odd (E=Even, O=Odd)</div>
-        <div class="letter-sequence" id="paritySeq_${symbol}">⏳ collecting ticks...</div>
+        <div class="sequence-label" id="seqLabel_${symbol}">Sequence</div>
+        <div class="letter-sequence" id="paritySeq_${symbol}">⏳ ticks...</div>
+        <div class="letter-sequence" id="ouSeq_${symbol}"></div>
       </div>
-      <div class="signal-area" id="evenOddSignal_${symbol}"><span class="no-signal">⏳ waiting for 4-up arrow pattern...</span></div>
+      <div class="signal-area" id="signalDisplay_${symbol}"><span class="no-signal">⏳ waiting for arrow pattern...</span></div>
     `;
     container.appendChild(card); 
+    refreshUIBasedOnMode(symbol);
+  }
+
+  function refreshUIBasedOnMode(symbol) {
+    let paritySeqDiv = document.getElementById(`paritySeq_${symbol}`);
+    let ouSeqDiv = document.getElementById(`ouSeq_${symbol}`);
+    let labelDiv = document.getElementById(`seqLabel_${symbol}`);
+    if(currentMode === 'evenodd') {
+      if(paritySeqDiv) paritySeqDiv.classList.remove('hidden');
+      if(ouSeqDiv) ouSeqDiv.classList.add('hidden');
+      if(labelDiv) labelDiv.innerText = 'Even / Odd (E=Even, O=Odd)';
+    } else {
+      if(paritySeqDiv) paritySeqDiv.classList.add('hidden');
+      if(ouSeqDiv) ouSeqDiv.classList.remove('hidden');
+      if(labelDiv) labelDiv.innerText = 'Over / Under (O=Over 4+, U=Under 5)';
+    }
   }
 
   function openMarketModal(symbol) { 
     let data=marketData[symbol]; if(!data)return; 
     let modal=document.getElementById('marketModal'); 
-    document.getElementById('modalTitle').innerText=`${MARKET_NAMES[symbol]} (${symbol}) - 4-Up Arrow Rule`; 
+    document.getElementById('modalTitle').innerText=`${MARKET_NAMES[symbol]} (${symbol}) - ${currentMode === 'evenodd' ? 'Even/Odd Arrows' : 'Over/Under Arrows'}`; 
     let last20=data.last50Array.slice(-20).join(', '); 
-    let trends=digitTrendsCache[symbol]||{}; 
-    let trendSummary=Object.entries(trends).map(([d,t])=>`${d}:${t}`).join(', '); 
-    let arrow=getArrowSignal(symbol);
-    let evens=[0,2,4,6,8]; let odds=[1,3,5,7,9];
-    let evenUp=evens.filter(d=>trends[d]==='↑').length, evenFlat=evens.filter(d=>trends[d]==='→').length, evenDown=evens.filter(d=>trends[d]==='↓').length;
-    let oddUp=odds.filter(d=>trends[d]==='↑').length, oddFlat=odds.filter(d=>trends[d]==='→').length, oddDown=odds.filter(d=>trends[d]==='↓').length;
+    let trends=rawTrend[symbol]||{}; 
+    let trendSummary=Object.entries(trends).map(([d,t])=>`${d}:${t===1?(currentMode==='evenodd'?'↑':'→'):(t===-1?(currentMode==='evenodd'?'↓':'←'):'•')}`).join(', ');
+    let sig=getSignal(symbol);
+    let { mostSet, secondSet, leastSet, secondLeastSet } = getRankSets(data.digitCounts);
     document.getElementById('modalBody').innerHTML=`
       <p><strong>Price:</strong> ${data.lastPriceDisplay}</p>
-      <p><strong>4-Up Signal Active:</strong> ${arrow.active ? 'YES ✅' : 'NO'}</p>
-      <p><strong>Predicted:</strong> ${arrow.predicted || '—'}</p>
-      <p><strong>Strength:</strong> ${arrow.strength}</p>
-      <p><strong>Even digits trend:</strong> ↑=${evenUp}, →=${evenFlat}, ↓=${evenDown}</p>
-      <p><strong>Odd digits trend:</strong> ↑=${oddUp}, →=${oddFlat}, ↓=${oddDown}</p>
-      <p><strong>Digit trends (↑ gaining, ↓ losing):</strong> ${trendSummary||'none'}</p>
+      <p><strong>Signal Active:</strong> ${sig.active ? 'YES ✅' : 'NO'}</p>
+      <p><strong>Predicted:</strong> ${sig.predicted || '—'}</p>
+      <p><strong>Strength:</strong> ${sig.strength}</p>
+      <p><strong>Arrows (gain/loss):</strong> ${trendSummary||'none'}</p>
+      <p><strong>Digit rankings:</strong> Most: ${[...mostSet].join(',')}, 2nd: ${[...secondSet].join(',')}, Least: ${[...leastSet].join(',')}, 2nd least: ${[...secondLeastSet].join(',')}</p>
       <p><strong>Last 20 digits:</strong> ${last20}</p>
-      <p><strong>Rule:</strong> Leading side (based on last 50 ticks) must have 4 ↑ & 1 →, trailing side must have 0 ↑.</p>
+      <p><strong>Rule:</strong> ${currentMode === 'evenodd' ? 'Majority side has 4 ↑ and 1 flat, minority side 0 ↑' : 'Majority side has 4 → and 0 ←, minority side 0 →'}</p>
     `; 
     modal.style.display='flex'; 
   }
@@ -500,13 +626,13 @@
     } 
     if(msg.msg_type==='authorize'){ 
       if(msg.error){document.getElementById('connectionStatus').innerHTML='❌ Auth failed';return;} 
-      document.getElementById('connectionStatus').innerHTML='✅ Connected – loading markets (no scroll list)...'; 
+      document.getElementById('connectionStatus').innerHTML='✅ Connected – loading markets...'; 
       document.getElementById('marketsContainer').innerHTML=''; 
-      marketData={}; invalidSymbols.clear(); arrowSignalExpiry={}; activeArrowSignal={}; lockedStrongMarkets.clear(); digitTrendsCache={}; 
+      marketData={}; invalidSymbols.clear(); signalExpiry={}; activeSignal={}; lockedStrongMarkets.clear(); rawTrend={}; 
       for(let sym of ALL_SYMBOLS) createMarketUI(sym,MARKET_NAMES[sym],false); 
       let idx=0; 
       function subNext(){ 
-        if(idx>=ALL_SYMBOLS.length){document.getElementById('connectionStatus').innerHTML='✅ Streaming – all markets visible in sidebar'; return;} 
+        if(idx>=ALL_SYMBOLS.length){document.getElementById('connectionStatus').innerHTML='✅ Streaming – arrow signals active (colors restored)'; return;} 
         let sym=ALL_SYMBOLS[idx]; 
         if(!invalidSymbols.has(sym)) subscribeToMarket(sym); 
         idx++; setTimeout(subNext,250); 
@@ -536,11 +662,25 @@
     try{ if(!audioCtx) audioCtx=new AudioContext(); if(audioCtx.state==='suspended') audioCtx.resume(); let osc=audioCtx.createOscillator(); let gain=audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.frequency.value=880; gain.gain.value=0.2; osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001,audioCtx.currentTime+0.2); osc.stop(audioCtx.currentTime+0.2); }catch(e){} 
   }
 
+  function setGlobalTradeType(type) {
+    currentMode = type;
+    document.querySelectorAll('.global-trade-btn').forEach(btn => {
+      if(btn.getAttribute('data-type') === type) btn.classList.add('active');
+      else btn.classList.remove('active');
+    });
+    for(let sym of ALL_SYMBOLS) {
+      refreshUIBasedOnMode(sym);
+      if(marketData[sym]) renderMarket(sym);
+    }
+  }
+
   window.connectWebSocket = connectWebSocket;
   window.toggleMode = toggleMode;
+  window.setGlobalTradeType = setGlobalTradeType;
   window.openMarketModal = openMarketModal;
   window.scrollToMarket = scrollToMarket;
 
+  document.querySelectorAll('.global-trade-btn').forEach(btn => btn.onclick = () => setGlobalTradeType(btn.getAttribute('data-type')));
   setInterval(()=>{ for(let sym in marketData) if(marketData[sym].digitsArray.length) renderMarket(sym); }, 1000);
   const modal=document.getElementById('marketModal'); 
   document.querySelector('.close-modal').onclick=()=>modal.style.display='none'; 
