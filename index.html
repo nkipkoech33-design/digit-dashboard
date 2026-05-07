@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Deriv Pro Analyzer – Big Price + Short Lookahead (2-3 ticks)</title>
+<title>Deriv Pro Analyzer – Global Trade Type</title>
 <style>
-  /* Light / Dark mode variables */
   :root {
     --bg-body: #0b1120;
     --bg-card: #111827;
@@ -20,35 +19,41 @@
     --status-red-bg: #450a0a;
     --signal-bg: #2e1e3e;
     --signal-strong-bg: #3b0f3b;
-    --success-bg: #0a2f1a;
-    --miss-bg: #2d0a0a;
-    --warning-bg: #2d1a0a;
     --strength-meter-bg: #334155;
     --strength-fill: #4ade80;
     --btn-bg: #3b82f6;
     --btn-hover: #2563eb;
+    --warning-bg: #2d1a0a;
+    --ruler-under-bg: #1e3a1e;
+    --ruler-over-bg: #3b1e0a;
+    --ruler-marker: #facc15;
+    --last50-font-size: 1.3rem;
+    --trade-active: #10b981;
   }
   body.light {
-    --bg-body: #f0f4f8;
+    --bg-body: #f8fafc;
     --bg-card: #ffffff;
     --bg-header: #e2e8f0;
     --bg-panel: #f1f5f9;
-    --bg-digit: #f8fafc;
+    --bg-digit: #ffffff;
     --border-color: #cbd5e1;
     --text-primary: #0f172a;
     --text-secondary: #475569;
     --price-color: #0f172a;
-    --status-green-bg: #bbf7d0;
+    --status-green-bg: #dcfce7;
     --status-red-bg: #fee2e2;
-    --signal-bg: #e0e7ff;
-    --signal-strong-bg: #c7d2fe;
-    --success-bg: #bbf7d0;
-    --miss-bg: #fee2e2;
-    --warning-bg: #fef9c3;
+    --signal-bg: #dbeafe;
+    --signal-strong-bg: #bfdbfe;
     --strength-meter-bg: #cbd5e1;
     --strength-fill: #15803d;
     --btn-bg: #2563eb;
     --btn-hover: #1d4ed8;
+    --warning-bg: #fef9c3;
+    --ruler-under-bg: #bbf7d0;
+    --ruler-over-bg: #fed7aa;
+    --ruler-marker: #0f172a;
+    --last50-font-size: 1.3rem;
+    --trade-active: #059669;
   }
   * { box-sizing: border-box; transition: background 0.2s, color 0.2s; }
   body {
@@ -59,14 +64,6 @@
     padding: 1rem;
   }
   .container { max-width: 1800px; margin: 0 auto; }
-  h1 {
-    font-size: 1.7rem;
-    font-weight: 600;
-    background: linear-gradient(135deg, #c084fc, #60a5fa);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
   .top-bar {
     display: flex;
     justify-content: space-between;
@@ -74,51 +71,36 @@
     flex-wrap: wrap;
     margin-bottom: 1rem;
   }
-  .status-bar {
-    background: var(--bg-header);
-    padding: 0.5rem 1rem;
-    border-radius: 2rem;
-    display: inline-block;
-    font-size: 0.8rem;
-  }
-  .mode-toggle {
-    background: var(--btn-bg);
-    border: none;
-    padding: 0.4rem 1rem;
-    border-radius: 2rem;
-    color: white;
-    cursor: pointer;
-    font-weight: bold;
-  }
-  .mode-toggle:hover { background: var(--btn-hover); }
-  .sub {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    margin-bottom: 1.5rem;
-    border-left: 3px solid #3b82f6;
-    padding-left: 0.75rem;
-  }
-  .controls {
-    background: var(--bg-header);
-    padding: 1rem;
-    border-radius: 1.5rem;
-    margin-bottom: 2rem;
+  .global-trade-selector {
     display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    align-items: flex-end;
+    gap: 0.5rem;
+    background: var(--bg-header);
+    padding: 0.3rem 0.8rem;
+    border-radius: 2rem;
   }
-  .input-group {
-    flex: 2;
-    min-width: 160px;
+  .global-trade-btn {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 1.5rem;
+    cursor: pointer;
+    opacity: 0.6;
+    font-weight: bold;
+    color: var(--text-primary);
   }
-  .input-group label {
-    display: block;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-bottom: 0.25rem;
+  .global-trade-btn.active {
+    opacity: 1;
+    background: var(--trade-active);
+    box-shadow: 0 0 4px currentColor;
   }
+  .status-bar { background: var(--bg-header); padding: 0.5rem 1rem; border-radius: 2rem; display: inline-block; font-size: 0.8rem; margin-bottom: 1rem; }
+  .mode-toggle { background: var(--btn-bg); border: none; padding: 0.4rem 1rem; border-radius: 2rem; color: white; cursor: pointer; font-weight: bold; }
+  .mode-toggle:hover { background: var(--btn-hover); }
+  .sub { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem; border-left: 3px solid #3b82f6; padding-left: 0.75rem; }
+  .controls { background: var(--bg-header); padding: 1rem; border-radius: 1.5rem; margin-bottom: 2rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
+  .input-group { flex: 2; min-width: 160px; }
+  .input-group label { display: block; font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem; }
   .token-input, .setting-input {
     width: 100%;
     background: var(--bg-body);
@@ -129,23 +111,10 @@
     font-size: 0.85rem;
   }
   .setting-input { width: 80px; display: inline-block; margin: 0 0.3rem; text-align: center; }
-  .connect-btn {
-    background: var(--btn-bg);
-    border: none;
-    padding: 0.6rem 1.5rem;
-    border-radius: 2rem;
-    font-weight: bold;
-    color: white;
-    cursor: pointer;
-  }
+  .connect-btn { background: var(--btn-bg); border: none; padding: 0.6rem 1.5rem; border-radius: 2rem; font-weight: bold; color: white; cursor: pointer; }
   .connect-btn:hover { background: var(--btn-hover); }
   .market-grid { display: flex; flex-direction: column; gap: 1.5rem; }
-  .market-card {
-    background: var(--bg-card);
-    border-radius: 1.25rem;
-    border: 1px solid var(--border-color);
-    overflow: hidden;
-  }
+  .market-card { background: var(--bg-card); border-radius: 1.25rem; border: 1px solid var(--border-color); overflow: hidden; }
   .market-header {
     background: var(--bg-header);
     padding: 0.7rem 1.2rem;
@@ -155,15 +124,7 @@
     align-items: center;
     gap: 0.5rem;
   }
-  .market-title {
-    font-size: 1rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 0.7rem;
-    flex-wrap: wrap;
-  }
-  /* BIG PRICE STYLES */
+  .market-title { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
   .live-price-big {
     font-size: 2.2rem;
     font-weight: 800;
@@ -177,35 +138,39 @@
     display: inline-block;
     margin: 0 0.5rem;
   }
-  .live-tick-badge {
-    background: #0f172a;
-    padding: 0.2rem 0.7rem;
-    border-radius: 2rem;
-    font-size: 0.7rem;
-    font-weight: bold;
-    color: #4ade80;
-  }
-  .market-status {
-    font-size: 0.7rem;
-    padding: 0.2rem 0.6rem;
-    border-radius: 2rem;
-  }
+  .live-tick-badge { background: #0f172a; padding: 0.2rem 0.7rem; border-radius: 2rem; font-size: 0.7rem; font-weight: bold; color: #4ade80; }
+  .market-status { font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 2rem; }
   .status-red { color: #f87171; background: var(--status-red-bg); }
   .status-green { color: #4ade80; background: var(--status-green-bg); }
-  .warning-msg {
-    background: var(--warning-bg);
-    color: #b45309;
-    padding: 0.4rem;
-    margin: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    font-size: 0.7rem;
+  .strength-indicator {
+    background: var(--bg-panel);
+    border-radius: 2rem;
+    padding: 0.2rem 0.8rem;
+    font-size: 0.9rem;
+    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin: 0.3rem 1rem;
   }
+  .strength-arrow-up { color: #4ade80; }
+  .strength-arrow-down { color: #f87171; }
   .digits-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 6px;
     padding: 1rem;
     background: var(--bg-body);
+  }
+  .digits-grid.evenodd {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .digits-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
   }
   .digit-cell {
     background: var(--bg-digit);
@@ -217,18 +182,8 @@
   }
   .digit-cell span.digit { font-size: 1.2rem; font-weight: 800; display: block; }
   .digit-cell .percent { font-size: 0.65rem; color: var(--text-secondary); }
-  .digit-cell .trend { font-size: 0.7rem; margin-left: 3px; }
-  .pointer-marker {
-    position: absolute;
-    bottom: 3px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 28px;
-    height: 5px;
-    background: #ffcc00;
-    border-radius: 3px;
-    box-shadow: 0 0 6px #ffaa44;
-  }
+  .digit-cell .trend { font-size: 0.7rem; margin-left: 3px; font-weight: bold; }
+  .pointer-marker { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); width: 28px; height: 5px; background: #ffcc00; border-radius: 3px; box-shadow: 0 0 6px #ffaa44; }
   .most { background: #15803d; }
   .second { background: #1e40af; }
   .least { background: #b91c1c; }
@@ -252,138 +207,104 @@
     border-radius: 1rem;
     font-family: monospace;
   }
-  .last50-badge { font-family: monospace; font-size: 0.7rem; letter-spacing: 1px; word-break: break-all; }
-  .signal-area, .overunder-signal-area { padding: 0.6rem 1.2rem; text-align: center; background: var(--bg-body); }
-  .signal-flash {
-    background: var(--signal-bg);
-    color: #facc15;
-    padding: 4px 10px;
-    border-radius: 2rem;
-    display: inline-block;
-    font-size: 0.8rem;
-  }
-  .signal-strong { background: var(--signal-strong-bg); box-shadow: 0 0 8px #ffaa44; }
-  .strength-meter {
-    width: 100px;
-    height: 6px;
-    background: var(--strength-meter-bg);
-    border-radius: 3px;
-    display: inline-block;
-    margin-left: 8px;
-    overflow: hidden;
-  }
-  .strength-fill {
-    height: 100%;
-    background: var(--strength-fill);
-    width: 0%;
-    transition: width 0.3s;
-  }
-  .prediction-digit {
-    font-size: 1.2rem;
-    font-weight: bold;
-    background: var(--bg-panel);
-    padding: 0 0.3rem;
-    border-radius: 0.5rem;
-    margin-left: 0.3rem;
-  }
-  .digit-match-panel {
-    background: var(--bg-panel);
-    margin: 0.5rem 1rem 1rem 1rem;
-    padding: 0.8rem;
-    border-radius: 1rem;
-    border: 1px solid var(--border-color);
-  }
-  .match-controls {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-    align-items: center;
-    margin-bottom: 0.8rem;
-  }
-  .match-controls select, .match-controls input {
-    background: var(--bg-digit);
-    border: 1px solid var(--border-color);
-    padding: 0.3rem 0.6rem;
-    border-radius: 1rem;
-    color: var(--text-primary);
-  }
-  .match-stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    font-size: 0.7rem;
-    margin-top: 0.5rem;
-  }
-  .match-prob {
-    background: var(--bg-digit);
-    padding: 0.2rem 0.5rem;
-    border-radius: 1rem;
-  }
-  .match-best {
-    background: #15803d;
-    padding: 0.2rem 0.8rem;
-    border-radius: 1rem;
-    font-weight: bold;
-  }
-  .auto-pattern {
+  .letter-sequence-wrapper {
+    padding: 0.4rem 1rem;
     background: var(--bg-body);
-    padding: 0.5rem;
-    margin-top: 0.5rem;
-    border-radius: 0.8rem;
-    text-align: center;
-    font-size: 0.75rem;
-    border-left: 3px solid #facc15;
+    border-bottom: 1px solid var(--border-color);
   }
-  .entry-signal {
-    background: var(--warning-bg);
-    color: #b45309;
-    padding: 0.3rem;
-    border-radius: 0.5rem;
-    margin: 0.3rem 0;
+  .letter-sequence {
+    font-family: monospace;
+    font-size: var(--last50-font-size);
     font-weight: bold;
-    font-size: 0.75rem;
-  }
-  .success-stats {
-    background: var(--bg-header);
-    padding: 0.3rem;
-    border-radius: 0.5rem;
+    line-height: 1.4;
+    letter-spacing: 2px;
+    word-break: break-all;
+    white-space: normal;
+    display: block;
+    width: 100%;
     text-align: center;
-    font-size: 0.75rem;
-    margin-top: 0.3rem;
+    background: var(--bg-panel);
+    border-radius: 0.8rem;
+    padding: 0.5rem;
+    margin-bottom: 0.4rem;
+  }
+  .letter-sequence:last-child { margin-bottom: 0; }
+  .sequence-label { font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.2rem; text-align: center; }
+  .digit-ruler {
+    background: var(--bg-panel);
+    padding: 0.3rem 0.5rem;
+    border-radius: 2rem;
+    margin: 0.2rem 1rem;
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 0.5rem;
     flex-wrap: wrap;
   }
-  .reset-btn {
-    background: #475569;
-    border: none;
-    border-radius: 1rem;
-    padding: 0.2rem 0.6rem;
-    color: white;
-    cursor: pointer;
-    font-size: 0.65rem;
+  .ruler-bar {
+    flex: 1;
+    height: 20px;
+    background: linear-gradient(90deg, var(--ruler-under-bg) 0%, var(--ruler-under-bg) 55.5%, var(--ruler-over-bg) 55.6%, var(--ruler-over-bg) 100%);
+    border-radius: 10px;
+    position: relative;
+    min-width: 150px;
   }
+  .ruler-marker {
+    position: absolute;
+    width: 8px;
+    height: 28px;
+    background: var(--ruler-marker);
+    border-radius: 4px;
+    top: -4px;
+    transform: translateX(-50%);
+    box-shadow: 0 0 4px currentColor;
+  }
+  .ruler-labels { display: flex; justify-content: space-between; width: 100%; font-size: 0.65rem; margin-top: 4px; }
+  .signal-area, .overunder-signal-area { padding: 0.6rem 1.2rem; text-align: center; background: var(--bg-body); }
+  .signal-flash { background: var(--signal-bg); color: #facc15; padding: 4px 10px; border-radius: 2rem; display: inline-block; font-size: 0.8rem; }
+  .signal-strong { background: var(--signal-strong-bg); box-shadow: 0 0 8px #ffaa44; }
+  .strength-meter { width: 100px; height: 6px; background: var(--strength-meter-bg); border-radius: 3px; display: inline-block; margin-left: 8px; overflow: hidden; }
+  .strength-fill { height: 100%; background: var(--strength-fill); width: 0%; transition: width 0.3s; }
+  .prediction-digit { font-size: 1.2rem; font-weight: bold; background: var(--bg-panel); padding: 0 0.3rem; border-radius: 0.5rem; margin-left: 0.3rem; }
+  .digit-match-panel { background: var(--bg-panel); margin: 0.5rem 1rem 1rem 1rem; padding: 0.8rem; border-radius: 1rem; border: 1px solid var(--border-color); }
+  .match-controls { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.8rem; }
+  .match-controls select, .match-controls input { background: var(--bg-digit); border: 1px solid var(--border-color); padding: 0.3rem 0.6rem; border-radius: 1rem; color: var(--text-primary); }
+  .match-stats { display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.7rem; margin-top: 0.5rem; }
+  .match-prob { background: var(--bg-digit); padding: 0.2rem 0.5rem; border-radius: 1rem; }
+  .match-best { background: #15803d; padding: 0.2rem 0.8rem; border-radius: 1rem; font-weight: bold; }
+  .auto-pattern { background: var(--bg-body); padding: 0.5rem; margin-top: 0.5rem; border-radius: 0.8rem; text-align: center; font-size: 0.75rem; border-left: 3px solid #facc15; }
+  .entry-signal { background: var(--warning-bg); color: #b45309; padding: 0.3rem; border-radius: 0.5rem; margin: 0.3rem 0; font-weight: bold; font-size: 0.75rem; }
+  .success-stats { background: var(--bg-header); padding: 0.3rem; border-radius: 0.5rem; text-align: center; font-size: 0.75rem; margin-top: 0.3rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+  .reset-btn { background: #475569; border: none; border-radius: 1rem; padding: 0.2rem 0.6rem; color: white; cursor: pointer; font-size: 0.65rem; }
   footer { margin-top: 2rem; font-size: 0.7rem; text-align: center; color: var(--text-secondary); }
+  .hidden { display: none; }
   @media (max-width: 700px) {
     .digits-grid { grid-template-columns: repeat(5, 1fr); gap: 4px; }
     .digit-cell span.digit { font-size: 1rem; }
     .live-price-big { font-size: 1.5rem; }
+    .letter-sequence { font-size: 1rem; letter-spacing: 1px; }
+    .ruler-bar { min-width: 100px; }
   }
 </style>
 </head>
 <body>
 <div class="container">
   <div class="top-bar">
-    <h1>⚡ DERIV PRO ANALYZER – BIG PRICE + SHORT LOOKAHEAD (2-3ticks)</h1>
-    <button class="mode-toggle" onclick="toggleMode()">🌓 Dark/Light Mode</button>
+    <h1>⚡ DERIV PRO ANALYZER – GLOBAL TRADE TYPE</h1>
+    <div style="display: flex; gap: 0.5rem;">
+      <div class="global-trade-selector">
+        <button class="global-trade-btn" data-type="evenodd">🎲 Even/Odd</button>
+        <button class="global-trade-btn active" data-type="overunder">📊 Over/Under</button>
+        <button class="global-trade-btn" data-type="differs">🔄 Differs/Matches</button>
+      </div>
+      <button class="mode-toggle" onclick="toggleMode()">🌓 Dark/Light Mode</button>
+    </div>
   </div>
   <div class="status-bar" id="connectionStatus">⚫ Disconnected</div>
-  <div class="sub">🎯 Huge price display next to LIVE TICKS | Pattern matches now focus on 2-3 tick lookahead for faster signals</div>
+  <div class="sub">🎲 Global trade type – all markets switch together. Per‑digit arrows (↑↓→) and strength indicator (▲/▼) included.</div>
 
   <div class="controls">
     <div class="input-group">
-      <label>🔑 API TOKEN</label>
+      <label>🔑 API TOKEN (real or demo)</label>
       <input type="password" id="token" class="token-input" placeholder="Enter your Deriv API token">
     </div>
     <div class="input-group">
@@ -421,18 +342,20 @@
   </div>
 
   <div id="marketsContainer" class="market-grid"></div>
-  <footer>✅ Last price is now huge and positioned near LIVE TICKS | Pattern scanner limited to lookahead 2-3 ticks (for faster, more relevant predictions)</footer>
+  <footer>✅ Global trade type – all markets respond to the same selection. Per‑digit trend arrows and strength indicator work for each market individually.</footer>
 </div>
 
 <script>
+  // Market configuration (correct symbols)
   const DECIMAL_MAP = {
-    "R_10_1s":2,"R_15_1s":3,"R_25_1s":2,"R_30_1s":3,"R_50_1s":2,"R_75_1s":2,"R_90_1s":3,"R_100_1s":2,
+    "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,
+    "1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,
     "R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,
     "JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2
   };
   const MARKET_NAMES = {
-    "R_10_1s":"Vol 10 (1s)","R_15_1s":"Vol 15 (1s)","R_25_1s":"Vol 25 (1s)","R_30_1s":"Vol 30 (1s)",
-    "R_50_1s":"Vol 50 (1s)","R_75_1s":"Vol 75 (1s)","R_90_1s":"Vol 90 (1s)","R_100_1s":"Vol 100 (1s)",
+    "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)",
+    "1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)",
     "R_10":"Vol 10","R_25":"Vol 25","R_50":"Vol 50","R_75":"Vol 75","R_100":"Vol 100",
     "JD10":"Jump 10","JD25":"Jump 25","JD50":"Jump 50","JD75":"Jump 75","JD100":"Jump 100"
   };
@@ -445,10 +368,10 @@
   let activeOUSignal = {};
   let ws = null;
   let invalidSymbols = new Set();
-
   let bestPattern = {};
   let pendingEntry = {};
   let successStats = {};
+  let globalTradeType = 'overunder'; // 'evenodd', 'overunder', 'differs'
 
   function getSettings() {
     return {
@@ -474,7 +397,16 @@
     return priceNum.toFixed(dec);
   }
 
-  // Enhanced scanner that only considers lookahead between 2 and 3 ticks (as requested)
+  function updateDigitRuler(symbol, lastDigit) {
+    const rulerDiv = document.getElementById(`ruler_${symbol}`);
+    if (!rulerDiv) return;
+    const marker = rulerDiv.querySelector('.ruler-marker');
+    if (marker) {
+      const percent = (lastDigit / 9) * 100;
+      marker.style.left = `${percent}%`;
+    }
+  }
+
   function scanBestPattern(symbol) {
     let data = marketData[symbol];
     if(!data || data.digitsArray.length < 100) return null;
@@ -482,8 +414,7 @@
     let settings = getSettings();
     let bestProb = 0;
     let bestEntry = null, bestLookahead = null, bestOutcome = null, bestTotal = 0;
-    // Only lookahead 2 and 3 as per user request
-    for(let look of [2, 3]) {
+    for(let look of [2,3]) {
       for(let entry=0; entry<=9; entry++) {
         let counts = new Array(10).fill(0);
         let total = 0;
@@ -520,7 +451,7 @@
     let pattern = scanBestPattern(symbol);
     let panel = document.getElementById(`autoPattern_${symbol}`);
     if(!pattern) {
-      if(panel) panel.innerHTML = `🤖 No pattern meets thresholds (lookahead 2-3 only). Try lowering min prob/occurrences.`;
+      if(panel) panel.innerHTML = `🤖 No pattern meets thresholds (need 100+ ticks).`;
       return;
     }
     bestPattern[symbol] = pattern;
@@ -550,7 +481,6 @@
   function checkEntrySignal(symbol, newDigit) {
     let pattern = bestPattern[symbol];
     if(!pattern) return;
-
     if(!pendingEntry[symbol] && newDigit === pattern.entryDigit) {
       pendingEntry[symbol] = {
         entryDigit: pattern.entryDigit,
@@ -565,11 +495,9 @@
         if(getSettings().soundEnabled) gentleBeep();
       }
     }
-
     if(pendingEntry[symbol]) {
       pendingEntry[symbol].remainingTicks--;
       let pending = pendingEntry[symbol];
-
       if(pending.remainingTicks === 0) {
         let actualDigit = newDigit;
         if(!successStats[symbol]) successStats[symbol] = { hits: 0, total: 0 };
@@ -622,6 +550,7 @@
     if(data.last50Array.length>50) data.last50Array.shift();
 
     checkEntrySignal(symbol, digit);
+    updateDigitRuler(symbol, digit);
     renderMarket(symbol);
   }
 
@@ -679,88 +608,119 @@
     }
   }
 
-  function renderMarket(symbol) {
-    let data = marketData[symbol];
-    if(!data || data.digitsArray.length===0) return;
-    let total = data.digitCounts.reduce((a,b)=>a+b,0);
-    if(total===0) return;
-    let pct = data.digitCounts.map(c=>((c/total)*100).toFixed(2));
-    let indexed = data.digitCounts.map((cnt,idx)=>({idx,cnt}));
-    let sorted = [...indexed].sort((a,b)=>b.cnt-a.cnt);
-    let most=sorted[0].idx, second=sorted[1].idx, least=sorted[9].idx, secondLeast=sorted[8].idx;
-    let trends = calculateTrends(data);
-    let prediction = predictNextDigit(data.last50Array);
-    let hotDigits = new Set([most, second]);
-    let coldDigits = new Set([least, secondLeast]);
-
-    for(let d=0;d<10;d++) {
-      let cell = document.getElementById(`digitCell_${symbol}_${d}`);
-      if(!cell) continue;
-      cell.className = 'digit-cell';
-      if(d===most) cell.classList.add('most');
-      else if(d===second) cell.classList.add('second');
-      else if(d===least) cell.classList.add('least');
-      else if(d===secondLeast) cell.classList.add('secondleast');
-      if(hotDigits.has(d)) cell.classList.add('hot');
-      if(coldDigits.has(d)) cell.classList.add('cold');
-      let pSpan = cell.querySelector('.percent');
-      if(pSpan) pSpan.innerText = `${pct[d]}%`;
-      let trendSpan = cell.querySelector('.trend') || (()=>{let s=document.createElement('span'); s.className='trend'; cell.appendChild(s); return s;})();
-      trendSpan.innerText = trends[d] || '';
-      let ptr = cell.querySelector('.pointer-marker');
-      if(d===data.lastDigit) {
-        if(!ptr) { let p=document.createElement('div'); p.className='pointer-marker'; cell.appendChild(p); }
-      } else if(ptr) ptr.remove();
+  function updateStrengthIndicator(symbol, last50, type) {
+    const indicatorDiv = document.getElementById(`strengthIndicator_${symbol}`);
+    if (!indicatorDiv) return;
+    if (last50.length === 0) {
+      indicatorDiv.innerHTML = '';
+      return;
     }
-
-    // Update BIG price display next to LIVE TICKS
-    let priceSpan = document.getElementById(`livePriceBig_${symbol}`);
-    if(priceSpan) priceSpan.innerText = data.lastPriceDisplay;
-
-    let last50 = data.last50Array;
-    if(last50.length>0) {
-      let evenCnt = last50.filter(d=>d%2===0).length;
-      let oddCnt = last50.length-evenCnt;
-      let evenPct = ((evenCnt/last50.length)*100).toFixed(1);
-      let oddPct = ((oddCnt/last50.length)*100).toFixed(1);
-      let paritySpan = document.getElementById(`parityStats_${symbol}`);
-      if(paritySpan) paritySpan.innerHTML = `🎲 E:${evenPct}% O:${oddPct}%`;
-
-      let overCnt = last50.filter(d=>d>=5).length;
-      let underCnt = last50.length - overCnt;
-      let overPct = ((overCnt/last50.length)*100).toFixed(1);
-      let underPct = ((underCnt/last50.length)*100).toFixed(1);
-      let ouSpan = document.getElementById(`overUnderStats_${symbol}`);
-      if(ouSpan) ouSpan.innerHTML = `📈 Over 4: ${overPct}% | Under 5: ${underPct}%`;
-
-      let streak = 1;
-      let lastParity = last50[last50.length-1] % 2 === 0 ? 'E' : 'O';
-      for(let i=last50.length-2; i>=0; i--) {
-        let currParity = last50[i] % 2 === 0 ? 'E' : 'O';
-        if(currParity === lastParity) streak++;
-        else break;
+    if (type === 'overunder') {
+      const overCnt = last50.filter(d=>d>=5).length;
+      const underCnt = last50.length - overCnt;
+      const overPct = (overCnt / last50.length) * 100;
+      const underPct = (underCnt / last50.length) * 100;
+      if (overCnt > underCnt) {
+        indicatorDiv.innerHTML = `<span class="strength-arrow-up">▲ Over ${overPct.toFixed(1)}%</span>`;
+      } else if (underCnt > overCnt) {
+        indicatorDiv.innerHTML = `<span class="strength-arrow-down">▼ Under ${underPct.toFixed(1)}%</span>`;
+      } else {
+        indicatorDiv.innerHTML = `<span>➖ Even 50%</span>`;
       }
-      let streakSpan = document.getElementById(`streakStats_${symbol}`);
-      if(streakSpan) streakSpan.innerHTML = `📊 Streak: ${streak}x ${lastParity}`;
-
-      let seqHtml = last50.map(d=>d%2===0?'<span style="color:#4ade80;">E</span>':'<span style="color:#f87171;">O</span>').join('');
-      let last50Span = document.getElementById(`last50Seq_${symbol}`);
-      if(last50Span) last50Span.innerHTML = `📜 Last 50: ${seqHtml}`;
-
-      let predHtml = prediction.digit !== null ? `<span class="prediction-digit">${prediction.digit}</span> (${prediction.prob}%)` : '—';
-      let predSpan = document.getElementById(`prediction_${symbol}`);
-      if(predSpan) predSpan.innerHTML = `🔮 Next digit: ${predHtml}`;
-
-      let settings = getSettings();
-      let now = Date.now();
-      updateEvenOddSignal(symbol, last50, now, settings);
-      updateOverUnderSignal(symbol, last50, now, settings);
+    } else if (type === 'evenodd') {
+      const evenCnt = last50.filter(d=>d%2===0).length;
+      const oddCnt = last50.length - evenCnt;
+      const evenPct = (evenCnt / last50.length) * 100;
+      const oddPct = (oddCnt / last50.length) * 100;
+      if (evenCnt > oddCnt) {
+        indicatorDiv.innerHTML = `<span class="strength-arrow-up">▲ Even ${evenPct.toFixed(1)}%</span>`;
+      } else if (oddCnt > evenCnt) {
+        indicatorDiv.innerHTML = `<span class="strength-arrow-down">▼ Odd ${oddPct.toFixed(1)}%</span>`;
+      } else {
+        indicatorDiv.innerHTML = `<span>➖ Even 50%</span>`;
+      }
     } else {
-      let last50Span = document.getElementById(`last50Seq_${symbol}`);
-      if(last50Span) last50Span.innerHTML = `📜 Last 50: collecting...`;
-      let predSpan = document.getElementById(`prediction_${symbol}`);
-      if(predSpan) predSpan.innerHTML = `🔮 Next digit: —`;
+      indicatorDiv.innerHTML = '';
     }
+  }
+
+  // Rebuild digit grid based on global trade type
+  function rebuildDigitGrid(symbol) {
+    const data = marketData[symbol];
+    if (!data) return;
+    const total = data.digitCounts.reduce((a,b)=>a+b,0);
+    if (total === 0) return;
+    const pct = data.digitCounts.map(c=>((c/total)*100).toFixed(2));
+    const trends = calculateTrends(data);
+    const hotSet = getHotColdDigits(data).hot;
+    const coldSet = getHotColdDigits(data).cold;
+    const mostSet = getRankSet(data, 'most');
+    const secondSet = getRankSet(data, 'second');
+    const leastSet = getRankSet(data, 'least');
+    const secondLeastSet = getRankSet(data, 'secondleast');
+    const lastDigit = data.lastDigit;
+    const container = document.getElementById(`digitsContainer_${symbol}`);
+    if (!container) return;
+    if (globalTradeType === 'evenodd') {
+      const evens = [0,2,4,6,8];
+      const odds = [1,3,5,7,9];
+      container.className = 'digits-grid evenodd';
+      container.innerHTML = '';
+      const row1 = document.createElement('div'); row1.className = 'digits-row';
+      evens.forEach(d => row1.appendChild(createDigitCell(d, pct[d], trends[d], lastDigit===d, mostSet.has(d), secondSet.has(d), leastSet.has(d), secondLeastSet.has(d), hotSet.has(d), coldSet.has(d))));
+      const row2 = document.createElement('div'); row2.className = 'digits-row';
+      odds.forEach(d => row2.appendChild(createDigitCell(d, pct[d], trends[d], lastDigit===d, mostSet.has(d), secondSet.has(d), leastSet.has(d), secondLeastSet.has(d), hotSet.has(d), coldSet.has(d))));
+      container.appendChild(row1); container.appendChild(row2);
+    } else {
+      container.className = 'digits-grid';
+      container.innerHTML = '';
+      for(let d=0; d<10; d++) {
+        container.appendChild(createDigitCell(d, pct[d], trends[d], lastDigit===d, mostSet.has(d), secondSet.has(d), leastSet.has(d), secondLeastSet.has(d), hotSet.has(d), coldSet.has(d)));
+      }
+    }
+  }
+
+  function createDigitCell(digit, pct, trend, isLast, isMost, isSecond, isLeast, isSecondLeast, isHot, isCold) {
+    const cell = document.createElement('div');
+    cell.className = 'digit-cell';
+    if (isMost) cell.classList.add('most');
+    else if (isSecond) cell.classList.add('second');
+    else if (isLeast) cell.classList.add('least');
+    else if (isSecondLeast) cell.classList.add('secondleast');
+    if (isHot) cell.classList.add('hot');
+    if (isCold) cell.classList.add('cold');
+    let innerHtml = `<span class="digit">${digit}</span><div class="percent">${pct}%</div>`;
+    cell.innerHTML = innerHtml;
+    if (trend && trend !== '→') {
+      const trendSpan = document.createElement('span'); trendSpan.className = 'trend'; trendSpan.innerText = trend;
+      cell.appendChild(trendSpan);
+    } else if (trend === '→') {
+      const trendSpan = document.createElement('span'); trendSpan.className = 'trend'; trendSpan.innerText = '→';
+      cell.appendChild(trendSpan);
+    }
+    if (isLast) {
+      const pointer = document.createElement('div'); pointer.className = 'pointer-marker';
+      cell.appendChild(pointer);
+    }
+    return cell;
+  }
+
+  function getRankSet(data, rank) {
+    const digitCounts = data.digitCounts.map((count, idx) => ({ digit: idx, count }));
+    const sorted = [...digitCounts].sort((a,b) => b.count - a.count);
+    if (rank === 'most') { const max = sorted[0].count; return new Set(sorted.filter(i => i.count === max).map(i => i.digit)); }
+    else if (rank === 'second') { const max = sorted[0].count; let second = null; for (let i of sorted) if (i.count !== max) { second = i.count; break; } if (second === null) return new Set(); return new Set(sorted.filter(i => i.count === second).map(i => i.digit)); }
+    else if (rank === 'least') { const min = sorted[sorted.length-1].count; return new Set(sorted.filter(i => i.count === min).map(i => i.digit)); }
+    else if (rank === 'secondleast') { const min = sorted[sorted.length-1].count; let secondMin = null; for (let i=sorted.length-2; i>=0; i--) if (sorted[i].count !== min) { secondMin = sorted[i].count; break; } if (secondMin === null) return new Set(); return new Set(sorted.filter(i => i.count === secondMin).map(i => i.digit)); }
+    return new Set();
+  }
+
+  function getHotColdDigits(data) {
+    const total = data.digitCounts.reduce((a,b)=>a+b,0);
+    if (total === 0) return { hot: new Set(), cold: new Set() };
+    const pct = data.digitCounts.map(c => c/total);
+    const sorted = pct.map((p,i)=> ({dig:i, p})).sort((a,b)=>b.p - a.p);
+    return { hot: new Set(sorted.slice(0,2).map(x=>x.dig)), cold: new Set(sorted.slice(-2).map(x=>x.dig)) };
   }
 
   function calculateTrends(data) {
@@ -777,11 +737,7 @@
       let pctLast50 = last50Counts[d]/last50Total;
       let pctOverall = overallPct[d];
       let diff = pctLast50 - pctOverall;
-      if(Math.abs(diff) > 0.02) {
-        trends[d] = diff > 0 ? '↑' : '↓';
-      } else {
-        trends[d] = '→';
-      }
+      trends[d] = Math.abs(diff) > 0.02 ? (diff > 0 ? '↑' : '↓') : '→';
     }
     return trends;
   }
@@ -796,18 +752,13 @@
     }
     let totalWeight = weights.reduce((a,b)=>a+b,0);
     let maxWeight = 0, bestDigit = null;
-    for(let d=0;d<10;d++) {
-      if(weights[d] > maxWeight) {
-        maxWeight = weights[d];
-        bestDigit = d;
-      }
-    }
+    for(let d=0;d<10;d++) if(weights[d] > maxWeight) { maxWeight = weights[d]; bestDigit = d; }
     let prob = totalWeight > 0 ? (maxWeight/totalWeight*100).toFixed(1) : 0;
     return { digit: bestDigit, prob: prob };
   }
 
   let audioCtx=null;
-  function gentleBeep(){
+  function gentleBeep() {
     try{
       if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
       if(audioCtx.state==='suspended') audioCtx.resume();
@@ -823,13 +774,113 @@
     }catch(e){}
   }
 
+  function setGlobalTradeType(type) {
+    globalTradeType = type;
+    document.querySelectorAll('.global-trade-btn').forEach(btn => {
+      if (btn.getAttribute('data-type') === type) btn.classList.add('active');
+      else btn.classList.remove('active');
+    });
+    // Update UI for all markets
+    for (let sym of ALL_SYMBOLS) {
+      const parityStats = document.getElementById(`parityStats_${sym}`);
+      const overunderStats = document.getElementById(`overUnderStats_${sym}`);
+      const paritySeqWrapper = document.getElementById(`paritySeqWrapper_${sym}`);
+      const ouSeqWrapper = document.getElementById(`ouSeqWrapper_${sym}`);
+      const evenOddSignal = document.getElementById(`evenOddSignal_${sym}`);
+      const overUnderSignal = document.getElementById(`overUnderSignal_${sym}`);
+      const patternPanel = document.querySelector(`#market_${sym} .digit-match-panel`);
+      const strengthIndicator = document.getElementById(`strengthIndicator_${sym}`);
+      if (type === 'evenodd') {
+        if (parityStats) parityStats.classList.remove('hidden');
+        if (overunderStats) overunderStats.classList.add('hidden');
+        if (paritySeqWrapper) paritySeqWrapper.classList.remove('hidden');
+        if (ouSeqWrapper) ouSeqWrapper.classList.add('hidden');
+        if (evenOddSignal) evenOddSignal.classList.remove('hidden');
+        if (overUnderSignal) overUnderSignal.classList.add('hidden');
+        if (patternPanel) patternPanel.classList.add('hidden');
+        if (strengthIndicator) strengthIndicator.classList.remove('hidden');
+      } else if (type === 'overunder') {
+        if (parityStats) parityStats.classList.add('hidden');
+        if (overunderStats) overunderStats.classList.remove('hidden');
+        if (paritySeqWrapper) paritySeqWrapper.classList.add('hidden');
+        if (ouSeqWrapper) ouSeqWrapper.classList.remove('hidden');
+        if (evenOddSignal) evenOddSignal.classList.add('hidden');
+        if (overUnderSignal) overUnderSignal.classList.remove('hidden');
+        if (patternPanel) patternPanel.classList.add('hidden');
+        if (strengthIndicator) strengthIndicator.classList.remove('hidden');
+      } else { // differs
+        if (parityStats) parityStats.classList.add('hidden');
+        if (overunderStats) overunderStats.classList.add('hidden');
+        if (paritySeqWrapper) paritySeqWrapper.classList.add('hidden');
+        if (ouSeqWrapper) ouSeqWrapper.classList.add('hidden');
+        if (evenOddSignal) evenOddSignal.classList.add('hidden');
+        if (overUnderSignal) overUnderSignal.classList.add('hidden');
+        if (patternPanel) patternPanel.classList.remove('hidden');
+        if (strengthIndicator) strengthIndicator.classList.add('hidden');
+      }
+      rebuildDigitGrid(sym);
+      const last50 = marketData[sym]?.last50Array;
+      if (last50 && last50.length) updateStrengthIndicator(sym, last50, type);
+    }
+  }
+
+  function renderMarket(symbol) {
+    let data = marketData[symbol];
+    if(!data || data.digitsArray.length===0) return;
+    let priceSpan = document.getElementById(`livePriceBig_${symbol}`);
+    if(priceSpan) priceSpan.innerText = data.lastPriceDisplay;
+    let last50 = data.last50Array;
+    if(last50.length>0) {
+      let evenCnt = last50.filter(d=>d%2===0).length;
+      let oddCnt = last50.length-evenCnt;
+      let evenPct = ((evenCnt/last50.length)*100).toFixed(1);
+      let oddPct = ((oddCnt/last50.length)*100).toFixed(1);
+      let paritySpan = document.getElementById(`parityStats_${symbol}`);
+      if(paritySpan) paritySpan.innerHTML = `🎲 E:${evenPct}% O:${oddPct}%`;
+      let overCnt = last50.filter(d=>d>=5).length;
+      let underCnt = last50.length - overCnt;
+      let overPct = ((overCnt/last50.length)*100).toFixed(1);
+      let underPct = ((underCnt/last50.length)*100).toFixed(1);
+      let ouSpan = document.getElementById(`overUnderStats_${symbol}`);
+      if(ouSpan) ouSpan.innerHTML = `📈 Over 4: ${overPct}% | Under 5: ${underPct}%`;
+      let streak = 1, lastParity = last50[last50.length-1]%2===0?'E':'O';
+      for(let i=last50.length-2;i>=0;i--) { if((last50[i]%2===0?'E':'O')===lastParity) streak++; else break; }
+      let streakSpan = document.getElementById(`streakStats_${symbol}`);
+      if(streakSpan) streakSpan.innerHTML = `📊 Streak: ${streak}x ${lastParity}`;
+      let parityLetters = last50.map(d => d%2===0 ? '<span style="color:#4ade80;">E</span>' : '<span style="color:#f87171;">O</span>').join('');
+      let ouLetters = last50.map(d => d>=5 ? '<span style="color:#4ade80;">O</span>' : '<span style="color:#f87171;">U</span>').join('');
+      let paritySeqDiv = document.getElementById(`paritySeq_${symbol}`);
+      if(paritySeqDiv) paritySeqDiv.innerHTML = parityLetters;
+      let ouSeqDiv = document.getElementById(`ouSeq_${symbol}`);
+      if(ouSeqDiv) ouSeqDiv.innerHTML = ouLetters;
+      let prediction = predictNextDigit(last50);
+      let predSpan = document.getElementById(`prediction_${symbol}`);
+      if(predSpan) predSpan.innerHTML = `🔮 Next digit: ${prediction.digit !== null ? `<span class="prediction-digit">${prediction.digit}</span> (${prediction.prob}%)` : '—'}`;
+      let settings = getSettings();
+      let now = Date.now();
+      updateEvenOddSignal(symbol, last50, now, settings);
+      updateOverUnderSignal(symbol, last50, now, settings);
+      updateStrengthIndicator(symbol, last50, globalTradeType);
+    } else {
+      let paritySeqDiv = document.getElementById(`paritySeq_${symbol}`);
+      if(paritySeqDiv) paritySeqDiv.innerHTML = '⏳ collecting ticks...';
+      let ouSeqDiv = document.getElementById(`ouSeq_${symbol}`);
+      if(ouSeqDiv) ouSeqDiv.innerHTML = '⏳ collecting ticks...';
+      let predSpan = document.getElementById(`prediction_${symbol}`);
+      if(predSpan) predSpan.innerHTML = `🔮 Next digit: —`;
+    }
+    rebuildDigitGrid(symbol);
+  }
+
   function createMarketUI(symbol, displayName, isInvalid=false) {
     let container = document.getElementById('marketsContainer');
     if(document.getElementById(`market_${symbol}`)) return;
     let card = document.createElement('div');
     card.className = 'market-card';
     card.id = `market_${symbol}`;
-    let warning = isInvalid ? `<div class="warning-msg">⚠️ Symbol not allowed for your token</div>` : '';
+    let warning = isInvalid ? `<div class="warning-msg">⚠️ Symbol not allowed for your token – check token permissions.</div>` : '';
+    let statusText = isInvalid ? '🔴 BLOCKED' : '🔴 no data';
+    let statusClass = isInvalid ? 'status-red' : 'status-red';
     card.innerHTML = `
       <div class="market-header">
         <div class="market-title">
@@ -837,21 +888,37 @@
           <span class="live-tick-badge">⚡ LIVE TICKS</span>
           <span class="live-price-big" id="livePriceBig_${symbol}">—</span>
         </div>
-        <div class="market-status" id="status_${symbol}">${isInvalid ? '🔴 blocked' : '🔴 no data'}</div>
+        <div class="market-status ${statusClass}" id="status_${symbol}">${statusText}</div>
       </div>
+      <div class="strength-indicator hidden" id="strengthIndicator_${symbol}"></div>
       ${warning}
-      <div class="digits-grid" id="digitsGrid_${symbol}"></div>
+      <div id="digitsContainer_${symbol}" class="digits-grid"></div>
       <div class="info-row">
         <div class="parity-stats" id="parityStats_${symbol}">E:--% O:--%</div>
         <div class="overunder-stats" id="overUnderStats_${symbol}">Over 4: --% | Under 5: --%</div>
         <div class="streak-stats" id="streakStats_${symbol}">Streak: 0</div>
         <div class="prediction-box" id="prediction_${symbol}">🔮 Next digit: —</div>
       </div>
-      <div class="last50-badge" style="padding:0 1rem 0.3rem 1rem;" id="last50Seq_${symbol}">Last 50: —</div>
+      <div class="digit-ruler" id="ruler_${symbol}">
+        <div style="font-size:0.7rem;">0</div>
+        <div class="ruler-bar"><div class="ruler-marker" style="left:0%"></div></div>
+        <div style="font-size:0.7rem;">9</div>
+      </div>
+      <div class="ruler-labels" style="margin: -0.2rem 1rem 0.5rem 1rem; display: flex; justify-content: space-between;">
+        <span>Under 5 (0-4)</span><span>Over 4 (5-9)</span>
+      </div>
+      <div class="letter-sequence-wrapper" id="paritySeqWrapper_${symbol}">
+        <div class="sequence-label">Even / Odd (E=Even, O=Odd)</div>
+        <div class="letter-sequence" id="paritySeq_${symbol}">⏳ collecting ticks...</div>
+      </div>
+      <div class="letter-sequence-wrapper" id="ouSeqWrapper_${symbol}">
+        <div class="sequence-label">Over / Under (O=Over 4, U=Under 5)</div>
+        <div class="letter-sequence" id="ouSeq_${symbol}"></div>
+      </div>
       <div class="signal-area" id="evenOddSignal_${symbol}"><span class="no-signal">⏳ waiting for even/odd signal...</span></div>
       <div class="overunder-signal-area" id="overUnderSignal_${symbol}"><span class="no-signal">⏳ waiting for over/under signal...</span></div>
       <div class="digit-match-panel">
-        <div class="auto-pattern" id="autoPattern_${symbol}">🤖 Scanning for patterns (lookahead 2-3 ticks only)...</div>
+        <div class="auto-pattern" id="autoPattern_${symbol}">🤖 Scanning for patterns (need 100+ ticks)...</div>
         <div id="entrySignal_${symbol}" class="entry-signal" style="display:block; min-height: 2rem;"></div>
         <div id="successStats_${symbol}" class="success-stats">📊 Pattern Success: 0/0 (0%) <button class="reset-btn" onclick="window.resetStats('${symbol}')">Reset Stats</button></div>
         <div class="match-controls">
@@ -867,57 +934,28 @@
       </div>
     `;
     container.appendChild(card);
-    let grid = document.getElementById(`digitsGrid_${symbol}`);
-    grid.innerHTML = '';
-    for(let i=0;i<10;i++) {
-      let cell = document.createElement('div');
-      cell.className = 'digit-cell';
-      cell.id = `digitCell_${symbol}_${i}`;
-      cell.innerHTML = `<span class="digit">${i}</span><div class="percent">0.00%</div>`;
-      grid.appendChild(cell);
-    }
-    if(isInvalid) {
-      let st = document.getElementById(`status_${symbol}`);
-      if(st) st.className = 'market-status status-red';
-    }
   }
 
   function manualAnalyze(symbol) {
     let entry = parseInt(document.getElementById(`match_entry_${symbol}`).value,10);
     let lookahead = parseInt(document.getElementById(`match_lookahead_${symbol}`).value,10);
     let data = marketData[symbol];
-    if(!data || data.digitsArray.length === 0) {
-      document.getElementById(`match_stats_${symbol}`).innerHTML = 'Not enough data yet.';
-      return;
-    }
+    if(!data || data.digitsArray.length === 0) { document.getElementById(`match_stats_${symbol}`).innerHTML = 'Not enough data yet.'; return; }
     let arr = data.digitsArray;
     let counts = new Array(10).fill(0);
     let total = 0;
     for(let i=0; i<arr.length - lookahead; i++) {
       if(arr[i] === entry) {
         let outcome = arr[i+lookahead];
-        if(outcome !== undefined) {
-          counts[outcome]++;
-          total++;
-        }
+        if(outcome !== undefined) { counts[outcome]++; total++; }
       }
     }
-    if(total === 0) {
-      document.getElementById(`match_stats_${symbol}`).innerHTML = `No occurrences of digit ${entry} with lookahead ${lookahead}.`;
-      return;
-    }
+    if(total === 0) { document.getElementById(`match_stats_${symbol}`).innerHTML = `No occurrences of digit ${entry} with lookahead ${lookahead}.`; return; }
     let probs = counts.map(c => ((c/total)*100).toFixed(1));
     let bestDigit = 0, bestProb = 0;
-    for(let d=0;d<10;d++) {
-      let p = parseFloat(probs[d]);
-      if(p > bestProb) { bestProb = p; bestDigit = d; }
-    }
+    for(let d=0;d<10;d++) { let p = parseFloat(probs[d]); if(p > bestProb) { bestProb = p; bestDigit = d; } }
     let statsHtml = `<div class="match-prob">Entry ${entry} → after ${lookahead} tick(s):</div>`;
-    for(let d=0;d<10;d++) {
-      if(parseFloat(probs[d]) > 0) {
-        statsHtml += `<div class="match-prob">${d}: ${probs[d]}%</div>`;
-      }
-    }
+    for(let d=0;d<10;d++) if(parseFloat(probs[d]) > 0) statsHtml += `<div class="match-prob">${d}: ${probs[d]}%</div>`;
     statsHtml += `<div class="match-best">🎯 High probability: ${bestDigit} (${bestProb}%)</div>`;
     document.getElementById(`match_stats_${symbol}`).innerHTML = statsHtml;
   }
@@ -937,10 +975,7 @@
         if(!marketData[sym]) processTick(sym, msg.tick.quote, msg.tick.quote_display);
         else processTick(sym, msg.tick.quote, msg.tick.quote_display);
         let statusSpan = document.getElementById(`status_${sym}`);
-        if(statusSpan && statusSpan.innerText !== '🟢 live ticks') {
-          statusSpan.innerHTML = '🟢 live ticks';
-          statusSpan.className = 'market-status status-green';
-        }
+        if(statusSpan && statusSpan.innerText !== '🟢 live ticks') { statusSpan.innerHTML = '🟢 live ticks'; statusSpan.className = 'market-status status-green'; }
       }
       return;
     }
@@ -957,15 +992,14 @@
       if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) {
         invalidSymbols.add(sym);
         createMarketUI(sym, MARKET_NAMES[sym], true);
+        let statusSpan = document.getElementById(`status_${sym}`);
+        if(statusSpan) { statusSpan.innerHTML = '🔴 BLOCKED'; statusSpan.className = 'market-status status-red'; }
       }
       return;
     }
     if(msg.msg_type === 'authorize') {
-      if(msg.error) {
-        document.getElementById('connectionStatus').innerHTML = '❌ Auth failed';
-        return;
-      }
-      document.getElementById('connectionStatus').innerHTML = '✅ Connected – loading...';
+      if(msg.error) { document.getElementById('connectionStatus').innerHTML = '❌ Authorization failed – invalid token'; return; }
+      document.getElementById('connectionStatus').innerHTML = '✅ Connected – loading markets...';
       document.getElementById('marketsContainer').innerHTML = '';
       marketData = {};
       invalidSymbols.clear();
@@ -979,57 +1013,47 @@
       for(let sym of ALL_SYMBOLS) createMarketUI(sym, MARKET_NAMES[sym], false);
       let idx = 0;
       function subNext() {
-        if(idx >= ALL_SYMBOLS.length) {
-          document.getElementById('connectionStatus').innerHTML = '✅ Streaming live';
-          setInterval(() => {
-            for(let sym of ALL_SYMBOLS) {
-              if(marketData[sym] && marketData[sym].digitsArray.length >= 100) {
-                updateAutoPattern(sym);
-              }
-            }
-          }, 10000);
-          return;
-        }
+        if(idx >= ALL_SYMBOLS.length) { document.getElementById('connectionStatus').innerHTML = '✅ Streaming live'; setInterval(() => { for(let sym of ALL_SYMBOLS) { if(marketData[sym] && marketData[sym].digitsArray.length >= 100) updateAutoPattern(sym); } }, 10000); return; }
         let sym = ALL_SYMBOLS[idx];
         if(!invalidSymbols.has(sym)) subscribeToMarket(sym);
-        idx++;
-        setTimeout(subNext, 250);
+        idx++; setTimeout(subNext, 250);
       }
       subNext();
+      // Apply global trade type after markets are created
+      setTimeout(() => setGlobalTradeType(globalTradeType), 500);
       return;
     }
   }
 
   let pingInterval;
-  function startPing() {
-    if(pingInterval) clearInterval(pingInterval);
-    pingInterval = setInterval(()=>{ if(ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify({ping:1})); }, 25000);
-  }
+  function startPing() { if(pingInterval) clearInterval(pingInterval); pingInterval = setInterval(()=>{ if(ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify({ping:1})); }, 25000); }
 
   function connectWebSocket() {
     let token = document.getElementById('token').value.trim();
-    if(!token) { alert("Enter API token"); return; }
+    if(!token) { alert("Enter your API token"); return; }
     if(ws && (ws.readyState===WebSocket.OPEN || ws.readyState===WebSocket.CONNECTING)) ws.close();
     document.getElementById('connectionStatus').innerHTML = '⏳ Connecting...';
     ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089');
     ws.onopen = () => { ws.send(JSON.stringify({ authorize: token })); startPing(); };
     ws.onmessage = (e) => { try { handleMessage(JSON.parse(e.data)); } catch(err) { console.warn(err); } };
-    ws.onerror = () => { document.getElementById('connectionStatus').innerHTML = '⚠️ Connection error'; };
+    ws.onerror = () => { document.getElementById('connectionStatus').innerHTML = '⚠️ WebSocket error'; };
     ws.onclose = () => { if(pingInterval) clearInterval(pingInterval); };
   }
 
-  function toggleMode() {
-    document.body.classList.toggle('light');
-  }
+  function toggleMode() { document.body.classList.toggle('light'); }
 
   window.manualAnalyze = manualAnalyze;
   window.resetStats = resetStats;
   window.connectWebSocket = connectWebSocket;
   window.toggleMode = toggleMode;
+  window.setGlobalTradeType = setGlobalTradeType;
 
-  setInterval(() => {
-    for(let sym in marketData) if(marketData[sym].digitsArray.length) renderMarket(sym);
-  }, 1000);
+  // Initialise global trade type buttons
+  document.querySelectorAll('.global-trade-btn').forEach(btn => {
+    btn.onclick = () => setGlobalTradeType(btn.getAttribute('data-type'));
+  });
+
+  setInterval(() => { for(let sym in marketData) if(marketData[sym].digitsArray.length) renderMarket(sym); }, 1000);
 </script>
 </body>
 </html>
