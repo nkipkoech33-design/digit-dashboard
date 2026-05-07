@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Deriv Pro – 4-Up Arrow Signal (Right Sidebar 1/4)</title>
+<title>Deriv Pro – 4-Up Arrow Signal (Full Visible List, No Scroll)</title>
 <style>
   :root {
     --bg-body: #0b1120;
@@ -76,32 +76,29 @@
   .connect-btn { background: var(--btn-bg); border: none; padding: 0.6rem 1.5rem; border-radius: 2rem; font-weight: bold; color: white; cursor: pointer; }
   .connect-btn:hover { background: var(--btn-hover); }
 
-  /* TWO-COLUMN SPLIT: left 3/4, right 1/4 with vertical line */
+  /* TWO-COLUMN SPLIT: left 3/4, right 1/4 */
   .main-layout {
     display: flex;
     gap: 1.5rem;
     align-items: flex-start;
-    position: relative;
   }
-  /* Left side: market cards (3/4 width) */
   .market-grid-container {
     flex: 3;
-    min-width: 0; /* avoid overflow */
+    min-width: 0;
   }
   .market-grid {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
   }
-  /* Right side: vertical market list (1/4 width) with a visual vertical line */
+  /* Right sidebar: NO SCROLLBAR, all markets visible */
   .all-markets-panel {
     flex: 1;
     background: var(--bg-header);
     border-radius: 1rem;
     padding: 0.6rem 0.8rem;
-    border-left: 4px solid #facc15;  /* bright vertical line on the left edge of the sidebar */
-    max-height: calc(100vh - 200px);
-    overflow-y: auto;
+    border-left: 4px solid #facc15;
+    /* No max-height, no overflow: auto — list grows naturally */
     position: sticky;
     top: 1rem;
     align-self: flex-start;
@@ -183,7 +180,7 @@
   .close-modal { float: right; font-size: 1.5rem; font-weight: bold; cursor: pointer; color: var(--text-secondary); }
   @media (max-width: 900px) {
     .main-layout { flex-direction: column; }
-    .all-markets-panel { position: static; max-height: 300px; width: 100%; border-left: 4px solid #facc15; margin-top: 1rem; }
+    .all-markets-panel { position: static; width: 100%; border-left: 4px solid #facc15; margin-top: 1rem; }
   }
   @media (max-width: 700px) {
     .digit-cell span.digit { font-size: 1rem; }
@@ -196,7 +193,7 @@
 <body>
 <div class="container">
   <div class="top-bar">
-    <h1>⚡ DERIV PRO – 4-UP ARROW SIGNAL (Right Sidebar 1/4)</h1>
+    <h1>⚡ DERIV PRO – 4-UP ARROW SIGNAL (All Markets Visible)</h1>
     <div style="display: flex; gap: 0.5rem;">
       <div class="global-trade-selector">
         <button class="global-trade-btn active" data-type="evenodd">🎲 4-Up Arrow Rule</button>
@@ -205,7 +202,7 @@
     </div>
   </div>
   <div class="status-bar" id="connectionStatus">⚫ Disconnected</div>
-  <div class="sub">🔔 SCREEN SPLIT: Left 3/4 = market cards, Right 1/4 = vertical market list (click any name to jump).</div>
+  <div class="sub">🔔 RIGHT SIDEBAR: all markets listed without any scrollbar – fully visible.</div>
 
   <div class="controls">
     <div class="input-group"><label>🔑 API TOKEN</label><input type="password" id="token" class="token-input" placeholder="Enter your Deriv API token"></div>
@@ -213,17 +210,16 @@
     <button onclick="connectWebSocket()" class="connect-btn">🚀 CONNECT</button>
   </div>
 
-  <!-- Two-column split: left (3/4) cards, right (1/4) list -->
   <div class="main-layout">
     <div class="market-grid-container">
       <div id="marketsContainer" class="market-grid"></div>
     </div>
     <div id="allMarketsPanel" class="all-markets-panel">
-      <h3>📋 ALL MARKETS (vertical list - 1/4 width)</h3>
+      <h3>📋 ALL MARKETS (no scroll)</h3>
       <div id="marketsListContainer" class="markets-list"></div>
     </div>
   </div>
-  <footer>✅ Signal = 4 ↑ & 1 → on leading side, 0 ↑ on trailing side. Blinking name = active signal (60s lock). Right sidebar always visible.</footer>
+  <footer>✅ Signal = 4 ↑ & 1 → on leading side, 0 ↑ on trailing side. Blinking name = active signal (60s lock). Right sidebar fully visible, no internal scroll.</footer>
 </div>
 
 <div id="marketModal" class="modal"><div class="modal-content"><span class="close-modal">&times;</span><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
@@ -504,13 +500,13 @@
     } 
     if(msg.msg_type==='authorize'){ 
       if(msg.error){document.getElementById('connectionStatus').innerHTML='❌ Auth failed';return;} 
-      document.getElementById('connectionStatus').innerHTML='✅ Connected – loading markets (split screen: left cards, right list)...'; 
+      document.getElementById('connectionStatus').innerHTML='✅ Connected – loading markets (no scroll list)...'; 
       document.getElementById('marketsContainer').innerHTML=''; 
       marketData={}; invalidSymbols.clear(); arrowSignalExpiry={}; activeArrowSignal={}; lockedStrongMarkets.clear(); digitTrendsCache={}; 
       for(let sym of ALL_SYMBOLS) createMarketUI(sym,MARKET_NAMES[sym],false); 
       let idx=0; 
       function subNext(){ 
-        if(idx>=ALL_SYMBOLS.length){document.getElementById('connectionStatus').innerHTML='✅ Streaming – 4-up arrow signals (right sidebar 1/4)'; return;} 
+        if(idx>=ALL_SYMBOLS.length){document.getElementById('connectionStatus').innerHTML='✅ Streaming – all markets visible in sidebar'; return;} 
         let sym=ALL_SYMBOLS[idx]; 
         if(!invalidSymbols.has(sym)) subscribeToMarket(sym); 
         idx++; setTimeout(subNext,250); 
