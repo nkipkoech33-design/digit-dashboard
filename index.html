@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Deriv Pro – Relaxed Arrow Signal (3+ gaining on lead)</title>
+<title>Deriv Pro – 4 Markets: Even/Odd, Over/Under, Differs/Match, Digit Prediction</title>
 <style>
   :root {
     --bg-body: #0b1120;
@@ -59,13 +59,13 @@
   body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg-body); color: var(--text-primary); margin: 0; padding: 1rem; }
   .container { max-width: 1800px; margin: 0 auto; }
   .top-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
-  .global-trade-selector { display: flex; gap: 0.5rem; background: var(--bg-header); padding: 0.3rem 0.8rem; border-radius: 2rem; }
-  .global-trade-btn { background: none; border: none; font-size: 1rem; padding: 0.3rem 0.8rem; border-radius: 1.5rem; cursor: pointer; opacity: 0.6; font-weight: bold; color: var(--text-primary); }
-  .global-trade-btn.active { opacity: 1; background: var(--trade-active); box-shadow: 0 0 4px currentColor; }
+  .market-type-selector, .indicator-selector { display: flex; gap: 0.5rem; background: var(--bg-header); padding: 0.3rem 0.8rem; border-radius: 2rem; margin-right: 0.5rem; flex-wrap: wrap; }
+  .market-btn, .indicator-btn { background: none; border: none; font-size: 0.85rem; padding: 0.3rem 0.8rem; border-radius: 1.5rem; cursor: pointer; opacity: 0.6; font-weight: bold; color: var(--text-primary); }
+  .market-btn.active, .indicator-btn.active { opacity: 1; background: var(--trade-active); box-shadow: 0 0 4px currentColor; }
   .status-bar { background: var(--bg-header); padding: 0.5rem 1rem; border-radius: 2rem; display: inline-block; font-size: 0.8rem; margin-bottom: 1rem; }
-  .mode-toggle { background: var(--btn-bg); border: none; padding: 0.4rem 1rem; border-radius: 2rem; color: white; cursor: pointer; font-weight: bold; }
+  .mode-toggle { background: var(--btn-bg); border: none; padding: 0.4rem 1rem; border-radius: 2rem; color: white; cursor: pointer; font-weight: bold; margin-left: 0.5rem; }
   .mode-toggle:hover { background: var(--btn-hover); }
-  .sub { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem; border-left: 3px solid #3b82f6; padding-left: 0.75rem; }
+  .sub { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem; border-left: 3px solid var(--btn-bg); padding-left: 0.75rem; }
   .controls { background: var(--bg-header); padding: 1rem; border-radius: 1.5rem; margin-bottom: 2rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
   .input-group { flex: 2; min-width: 160px; }
   .input-group label { display: block; font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem; }
@@ -145,6 +145,9 @@
   .signal-strong { background: var(--signal-strong-bg); color: #facc15; }
   .majority-signal { background: #0e3a4a; color: #06b6d4; border: 1px solid #06b6d4; }
   .hybrid-signal { background: #2e1a4a; color: #a855f7; border: 1px solid #a855f7; }
+  .vote-buttons { margin-top: 6px; display: inline-flex; gap: 8px; }
+  .vote-btn { background: var(--bg-panel); border: none; border-radius: 1rem; padding: 2px 6px; cursor: pointer; font-size: 0.7rem; }
+  .vote-btn:hover { opacity: 0.8; }
   .strength-meter { width: 100px; height: 6px; background: var(--strength-meter-bg); border-radius: 3px; display: inline-block; margin-left: 8px; overflow: hidden; }
   .strength-fill { height: 100%; background: var(--strength-fill); width: 0%; transition: width 0.3s; }
   .prediction-digit { font-size: 1.2rem; font-weight: bold; background: var(--bg-panel); padding: 0 0.3rem; border-radius: 0.5rem; margin-left: 0.3rem; }
@@ -160,24 +163,34 @@
 <body>
 <div class="container">
   <div class="top-bar">
-    <h1>⚡ DERIV PRO – RELAXED ARROW (3+ gaining, minority ≤1 gaining)</h1>
-    <div style="display: flex; gap: 0.5rem;">
-      <div class="global-trade-selector">
-        <button class="global-trade-btn" data-mode="arrow">🎲 Arrow Only (relaxed)</button>
-        <button class="global-trade-btn" data-mode="majority">📊 Majority Only</button>
-        <button class="global-trade-btn active" data-mode="hybrid">🔮 Hybrid (Strongest)</button>
+    <h1>⚡ DERIV PRO – 4 Markets (Digit Prediction Added)</h1>
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      <div class="market-type-selector">
+        <button class="market-btn active" data-market="evenodd">🎲 Even/Odd</button>
+        <button class="market-btn" data-market="overunder">📊 Over/Under</button>
+        <button class="market-btn" data-market="differs">🔄 Differs/Matches</button>
+        <button class="market-btn" data-market="digit">🎯 Digit (1-3 ticks)</button>
       </div>
-      <button class="mode-toggle" onclick="toggleMode()">🌓 Dark/Light Mode</button>
+      <div class="indicator-selector">
+        <button class="indicator-btn" data-indicator="arrow">⬆️ Arrow</button>
+        <button class="indicator-btn" data-indicator="majority">📈 Majority</button>
+        <button class="indicator-btn active" data-indicator="hybrid">🔮 Hybrid</button>
+      </div>
+      <button class="mode-toggle" onclick="toggleMode()">🌓 Dark/Light</button>
     </div>
   </div>
   <div class="status-bar" id="connectionStatus">⚫ Disconnected</div>
-  <div class="sub">🔔 RELAXED ARROW: majority side must have ≥3 gaining (↑) and the rest flat (•) – no losing. Minority side ≤1 gaining (↑). Combines with majority threshold for hybrid signals.</div>
+  <div class="sub">🔔 Confidence score + trend filter + volatility confirmation + win/loss tracking. Digit Prediction: predicts exact digit after N ticks.</div>
 
   <div class="controls">
     <div class="input-group"><label>🔑 API TOKEN</label><input type="password" id="token" class="token-input" placeholder="Enter your Deriv API token"></div>
     <div class="input-group"><label>🔊 Sound</label><select id="soundEnabled" class="setting-input" style="width:70px"><option value="true">ON</option><option value="false">OFF</option></select></div>
-    <div class="input-group"><label>📊 Majority Window</label><input type="number" id="majorityWindow" class="setting-input" value="30" style="width:70px"></div>
-    <div class="input-group"><label>🎯 Majority %</label><input type="number" id="majorityThreshold" class="setting-input" value="70" style="width:70px"></div>
+    <div class="input-group"><label>📊 Majority Window</label><input type="number" id="majorityWindow" class="setting-input" value="20" style="width:70px"></div>
+    <div class="input-group"><label>🎯 Majority %</label><input type="number" id="majorityThreshold" class="setting-input" value="65" style="width:70px"></div>
+    <div class="input-group"><label>📈 Trend Filter</label><select id="trendFilter" class="setting-input"><option value="true">ON</option><option value="false">OFF</option></select></div>
+    <div class="input-group"><label>📊 Volatility Threshold</label><input type="number" id="volatilityThresh" class="setting-input" value="2.5" step="0.1" style="width:70px"></div>
+    <div class="input-group"><label>🚫 Rejection Streak</label><input type="number" id="rejectionStreak" class="setting-input" value="2" style="width:70px"></div>
+    <div class="input-group" id="lookaheadGroup" style="display:none;"><label>⏩ Lookahead (ticks)</label><select id="lookaheadTicks" class="setting-input"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
     <button onclick="connectWebSocket()" class="connect-btn">🚀 CONNECT</button>
   </div>
 
@@ -188,7 +201,7 @@
       <div id="marketsListContainer" class="markets-list"></div>
     </div>
   </div>
-  <footer>✅ Arrow signal: ≥3↑ on lead side, rest flat (no ↓), minority side ≤1↑. Purple = hybrid (arrow + majority). Trade direction shown.</footer>
+  <footer>✅ Digit Prediction uses arrow (10-tick momentum) + majority (%) + pattern history. Set lookahead 1-3 ticks. Click ✅/❌ to improve future signals.</footer>
 </div>
 
 <div id="marketModal" class="modal"><div class="modal-content"><span class="close-modal">&times;</span><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
@@ -204,124 +217,325 @@
   let ws = null;
   let invalidSymbols = new Set();
   let lockedMarkets = new Map();
-  let rawTrend = {};
-  let currentMode = 'hybrid'; // 'arrow', 'majority', 'hybrid'
+  let rawTrend = {}; // for even/odd and over/under digit trends, also used for digit prediction
+  let signalHistory = {};
+  let currentMarket = 'evenodd';
+  let currentIndicator = 'hybrid';
+  let pendingConfirmation = {};
 
   function getSettings() {
     return {
       soundEnabled: document.getElementById('soundEnabled').value === 'true',
-      majorityWindow: parseInt(document.getElementById('majorityWindow').value) || 30,
-      majorityThreshold: parseInt(document.getElementById('majorityThreshold').value) || 70
+      majorityWindow: parseInt(document.getElementById('majorityWindow').value) || 20,
+      majorityThreshold: parseInt(document.getElementById('majorityThreshold').value) || 65,
+      trendFilterEnabled: document.getElementById('trendFilter').value === 'true',
+      volatilityThresh: parseFloat(document.getElementById('volatilityThresh').value) || 2.5,
+      rejectionStreak: parseInt(document.getElementById('rejectionStreak').value) || 2,
+      lookaheadTicks: currentMarket === 'digit' ? parseInt(document.getElementById('lookaheadTicks').value) || 1 : 1
     };
   }
+
   function lastDigitFromFormatted(str) { let digits = str.replace(/\./g,''); if(digits.length===0) return 0; return parseInt(digits.charAt(digits.length-1),10)||0; }
   function formatHistoryPrice(s, p) { let dec = DECIMAL_MAP[s] ?? 2; return p.toFixed(dec); }
   function updateDigitRuler(symbol, lastDigit) { const ruler = document.getElementById(`ruler_${symbol}`); if(ruler) { const marker = ruler.querySelector('.ruler-marker'); if(marker) marker.style.left = `${(lastDigit/9)*100}%`; } }
 
-  // 15-tick momentum trends
+  function getVolatility(symbol) {
+    let data = marketData[symbol];
+    if(!data || data.last50Array.length < 20) return 0;
+    let last20 = data.last50Array.slice(-20);
+    let mean = last20.reduce((a,b)=>a+b,0)/20;
+    let sqDiff = last20.map(v=>Math.pow(v-mean,2));
+    let variance = sqDiff.reduce((a,b)=>a+b,0)/20;
+    return Math.sqrt(variance);
+  }
+
+  function getLongTermTrend(symbol) {
+    let data = marketData[symbol];
+    if(!data || data.last50Array.length < 100) return null;
+    let last100 = data.last50Array.slice(-100);
+    if(currentMarket === 'evenodd') {
+      let even = last100.filter(d=>d%2===0).length;
+      let odd = last100.length - even;
+      return even > odd ? "EVEN" : "ODD";
+    } else if(currentMarket === 'overunder') {
+      let over = last100.filter(d=>d>=5).length;
+      let under = last100.length - over;
+      return over > under ? "OVER" : "UNDER";
+    } else if(currentMarket === 'differs') {
+      let digits = data.digitsArray.slice(-101);
+      let changes = [];
+      for(let i=1;i<digits.length;i++) changes.push(digits[i] !== digits[i-1] ? 1 : 0);
+      let recentChanges = changes.slice(-100);
+      let differs = recentChanges.filter(c=>c===1).length;
+      let matches = recentChanges.length - differs;
+      return differs > matches ? "DIFFERS" : "MATCHES";
+    } else { // digit prediction – long-term most frequent digit
+      let counts = new Array(10).fill(0);
+      last100.forEach(d=>counts[d]++);
+      let maxCount = Math.max(...counts);
+      let mostFreq = counts.indexOf(maxCount);
+      return mostFreq.toString();
+    }
+  }
+
+  // 10-tick momentum for each digit (used for arrow in all markets)
   function updateTrends(symbol) {
     let data = marketData[symbol];
-    if(!data || data.digitsArray.length < 30) return;
-    let last15 = data.digitsArray.slice(-15);
-    let prev15 = data.digitsArray.slice(-30, -15);
-    if(last15.length < 15 || prev15.length < 15) return;
+    if(!data || data.digitsArray.length < 20) return;
+    let last10 = data.digitsArray.slice(-10), prev10 = data.digitsArray.slice(-20,-10);
     let lastCounts = new Array(10).fill(0), prevCounts = new Array(10).fill(0);
-    last15.forEach(d => lastCounts[d]++);
-    prev15.forEach(d => prevCounts[d]++);
+    last10.forEach(d=>lastCounts[d]++); prev10.forEach(d=>prevCounts[d]++);
     let trends = {};
-    for(let d=0; d<10; d++) {
-      let diff = (lastCounts[d]/15) - (prevCounts[d]/15);
-      if(diff > 0.05) trends[d] = 1;
-      else if(diff < -0.05) trends[d] = -1;
-      else trends[d] = 0;
+    for(let d=0;d<10;d++) {
+      let diff = (lastCounts[d]/10) - (prevCounts[d]/10);
+      if(diff > 0.08) trends[d]=1;
+      else if(diff < -0.08) trends[d]=-1;
+      else trends[d]=0;
     }
     rawTrend[symbol] = trends;
     return trends;
   }
 
-  function getArrowSymbol(trendVal) { return trendVal === 1 ? '↑' : (trendVal === -1 ? '↓' : '•'); }
-
-  // RELAXED ARROW SIGNAL
-  // Majority side (evens or odds) must have:
-  //   - at least 3 gaining (↑)
-  //   - the remaining digits (the other 2) must NOT be losing (↓) → they can be flat (•) only
-  // Minority side must have at most 1 gaining (↑) (the rest can be losing or flat)
-  function getArrowPrediction(symbol) {
+  // Arrow prediction for Even/Odd
+  function getEvenOddArrow(symbol) {
     let trends = rawTrend[symbol];
     if(!trends) return null;
     let data = marketData[symbol];
-    if(!data || data.last50Array.length < 30) return null;
-    let evens = [0,2,4,6,8], odds = [1,3,5,7,9];
+    if(!data || data.last50Array.length < 20) return null;
+    let evens=[0,2,4,6,8], odds=[1,3,5,7,9];
     let evenGain = evens.filter(d=>trends[d]===1).length;
-    let evenLoss = evens.filter(d=>trends[d]===-1).length;
-    let evenFlat = evens.filter(d=>trends[d]===0).length;
     let oddGain = odds.filter(d=>trends[d]===1).length;
-    let oddLoss = odds.filter(d=>trends[d]===-1).length;
-    let oddFlat = odds.filter(d=>trends[d]===0).length;
-    
-    let last50 = data.last50Array;
-    let evenCount = last50.filter(d=>d%2===0).length;
-    let oddCount = last50.length - evenCount;
+    let last20 = data.last50Array.slice(-20);
+    let evenCount = last20.filter(d=>d%2===0).length;
+    let oddCount = last20.length - evenCount;
     let majorityIsEven = evenCount > oddCount;
-    
-    if(majorityIsEven) {
-      // Even side: at least 3 gaining, and the rest (5 - evenGain) must have zero losing (only flat)
-      let nonGainingCount = 5 - evenGain;
-      let nonGainingLoss = evenLoss; // actually evenLoss is already counted separately, but we need to ensure evenLoss === 0
-      // Condition: evenGain >= 3, evenLoss === 0, and minority side (odd) has <=1 gaining
-      if(evenGain >= 3 && evenLoss === 0 && oddGain <= 1) {
-        return "EVEN";
-      }
-    } else {
-      if(oddGain >= 3 && oddLoss === 0 && evenGain <= 1) {
-        return "ODD";
-      }
-    }
+    if(majorityIsEven && evenGain >= 3 && oddGain === 0) return "EVEN";
+    if(!majorityIsEven && oddGain >= 3 && evenGain === 0) return "ODD";
     return null;
   }
 
-  // Majority signal (simple percentage)
+  // Arrow for Over/Under
+  function getOverUnderArrow(symbol) {
+    let trends = rawTrend[symbol];
+    if(!trends) return null;
+    let data = marketData[symbol];
+    if(!data || data.last50Array.length < 20) return null;
+    let over=[5,6,7,8,9], under=[0,1,2,3,4];
+    let overGain = over.filter(d=>trends[d]===1).length;
+    let underGain = under.filter(d=>trends[d]===1).length;
+    let last20 = data.last50Array.slice(-20);
+    let overCount = last20.filter(d=>d>=5).length;
+    let underCount = last20.length - overCount;
+    let majorityIsOver = overCount > underCount;
+    if(majorityIsOver && overGain >= 3 && underGain === 0) return "OVER";
+    if(!majorityIsOver && underGain >= 3 && overGain === 0) return "UNDER";
+    return null;
+  }
+
+  // Arrow for Differs/Matches
+  function getDiffersArrow(symbol) {
+    let data = marketData[symbol];
+    if(!data || data.digitsArray.length < 21) return null;
+    // Compute trend of "differs" over last 10 ticks vs previous 10
+    let digits = data.digitsArray;
+    let last10Changes = [];
+    let prev10Changes = [];
+    for(let i=digits.length-10; i<digits.length; i++) if(i>0) last10Changes.push(digits[i]!==digits[i-1]?1:0);
+    for(let i=digits.length-20; i<digits.length-10; i++) if(i>0) prev10Changes.push(digits[i]!==digits[i-1]?1:0);
+    let lastDiffers = last10Changes.filter(c=>c===1).length;
+    let prevDiffers = prev10Changes.filter(c=>c===1).length;
+    let diff = (lastDiffers/10) - (prevDiffers/10);
+    let differsTrend = diff > 0.08 ? 1 : (diff < -0.08 ? -1 : 0);
+    let matchesTrend = differsTrend === 1 ? -1 : (differsTrend === -1 ? 1 : 0);
+    let last20Changes = [];
+    for(let i=digits.length-20; i<digits.length; i++) if(i>0) last20Changes.push(digits[i]!==digits[i-1]?1:0);
+    let differsCount = last20Changes.filter(c=>c===1).length;
+    let matchesCount = last20Changes.length - differsCount;
+    let majorityIsDiffers = differsCount > matchesCount;
+    if(majorityIsDiffers && differsTrend === 1 && matchesTrend !== 1) return "DIFFERS";
+    if(!majorityIsDiffers && matchesTrend === 1 && differsTrend !== 1) return "MATCHES";
+    return null;
+  }
+
+  // Arrow for Digit Prediction (predict exact digit after lookahead ticks)
+  function getDigitArrow(symbol) {
+    let trends = rawTrend[symbol];
+    if(!trends) return null;
+    let data = marketData[symbol];
+    let lookahead = getSettings().lookaheadTicks;
+    if(!data || data.last50Array.length < 20+lookahead) return null;
+    // We need to evaluate which digit's arrow is strong and also has high probability based on last digit patterns
+    // Simple: pick digit with highest arrow gain (trend=1) and also high recent frequency
+    let candidates = [];
+    for(let d=0;d<10;d++) {
+      if(trends[d] === 1) {
+        // also check historical probability: how often does this digit appear after the last digit with given lookahead?
+        let lastDigits = data.digitsArray;
+        let count = 0, total = 0;
+        for(let i=0; i+lookahead < lastDigits.length; i++) {
+          if(lastDigits[i] === lastDigits[lastDigits.length-1]) { // last digit as trigger
+            total++;
+            if(lastDigits[i+lookahead] === d) count++;
+          }
+        }
+        let prob = total > 0 ? (count/total)*100 : 0;
+        if(prob > 30) candidates.push({digit:d, prob});
+      }
+    }
+    if(candidates.length === 0) return null;
+    candidates.sort((a,b)=>b.prob - a.prob);
+    return candidates[0].digit.toString();
+  }
+
+  // Majority prediction (simple % over window)
   function getMajorityPrediction(symbol) {
     let data = marketData[symbol];
     let settings = getSettings();
     if(!data || data.last50Array.length < settings.majorityWindow) return null;
     let recent = data.last50Array.slice(-settings.majorityWindow);
-    let evenCount = recent.filter(d=>d%2===0).length;
-    let oddCount = recent.length - evenCount;
-    let evenPct = (evenCount / recent.length) * 100;
-    let oddPct = (oddCount / recent.length) * 100;
     let thresh = settings.majorityThreshold;
-    if(evenPct >= thresh) return "EVEN";
-    if(oddPct >= thresh) return "ODD";
+    if(currentMarket === 'evenodd') {
+      let even = recent.filter(d=>d%2===0).length;
+      let odd = recent.length - even;
+      if((even/recent.length)*100 >= thresh) return "EVEN";
+      if((odd/recent.length)*100 >= thresh) return "ODD";
+    } else if(currentMarket === 'overunder') {
+      let over = recent.filter(d=>d>=5).length;
+      let under = recent.length - over;
+      if((over/recent.length)*100 >= thresh) return "OVER";
+      if((under/recent.length)*100 >= thresh) return "UNDER";
+    } else if(currentMarket === 'differs') {
+      let digits = data.digitsArray.slice(-(settings.majorityWindow+1));
+      let changes = [];
+      for(let i=1;i<digits.length;i++) changes.push(digits[i] !== digits[i-1] ? 1 : 0);
+      let differs = changes.filter(c=>c===1).length;
+      let matches = changes.length - differs;
+      if((differs/changes.length)*100 >= thresh) return "DIFFERS";
+      if((matches/changes.length)*100 >= thresh) return "MATCHES";
+    } else { // digit prediction: majority = digit that appears most often in recent ticks
+      let counts = new Array(10).fill(0);
+      recent.forEach(d=>counts[d]++);
+      let maxCount = Math.max(...counts);
+      let bestDigit = counts.indexOf(maxCount);
+      let pct = (maxCount/recent.length)*100;
+      if(pct >= thresh) return bestDigit.toString();
+    }
     return null;
   }
 
-  // Hybrid = both agree
+  // Hybrid combines arrow and majority
   function getHybridPrediction(symbol) {
-    let arrow = getArrowPrediction(symbol);
-    let majority = getMajorityPrediction(symbol);
+    let arrow = null, majority = null;
+    if(currentMarket === 'evenodd') { arrow = getEvenOddArrow(symbol); majority = getMajorityPrediction(symbol); }
+    else if(currentMarket === 'overunder') { arrow = getOverUnderArrow(symbol); majority = getMajorityPrediction(symbol); }
+    else if(currentMarket === 'differs') { arrow = getDiffersArrow(symbol); majority = getMajorityPrediction(symbol); }
+    else { arrow = getDigitArrow(symbol); majority = getMajorityPrediction(symbol); }
+    if(currentIndicator === 'arrow') return arrow;
+    if(currentIndicator === 'majority') return majority;
     if(arrow && majority && arrow === majority) return arrow;
     return null;
   }
 
+  // Confidence score for any prediction
+  function computeConfidence(symbol, prediction) {
+    let settings = getSettings();
+    let arrowScore = 0, majScore = 0;
+    if(currentMarket === 'evenodd') {
+      let trends = rawTrend[symbol] || {};
+      let evens=[0,2,4,6,8], odds=[1,3,5,7,9];
+      let leadGain = prediction === 'EVEN' ? evens.filter(d=>trends[d]===1).length : odds.filter(d=>trends[d]===1).length;
+      arrowScore = Math.min(100, (leadGain/5)*100);
+      let recent = marketData[symbol].last50Array.slice(-settings.majorityWindow);
+      let even = recent.filter(d=>d%2===0).length;
+      majScore = prediction === 'EVEN' ? (even/recent.length)*100 : ((recent.length-even)/recent.length)*100;
+    } else if(currentMarket === 'overunder') {
+      let trends = rawTrend[symbol] || {};
+      let over=[5,6,7,8,9], under=[0,1,2,3,4];
+      let leadGain = prediction === 'OVER' ? over.filter(d=>trends[d]===1).length : under.filter(d=>trends[d]===1).length;
+      arrowScore = Math.min(100, (leadGain/5)*100);
+      let recent = marketData[symbol].last50Array.slice(-settings.majorityWindow);
+      let overCnt = recent.filter(d=>d>=5).length;
+      majScore = prediction === 'OVER' ? (overCnt/recent.length)*100 : ((recent.length-overCnt)/recent.length)*100;
+    } else if(currentMarket === 'differs') {
+      arrowScore = 50; // placeholder, not used heavily
+      let digits = marketData[symbol].digitsArray.slice(-(settings.majorityWindow+1));
+      let changes = [];
+      for(let i=1;i<digits.length;i++) changes.push(digits[i] !== digits[i-1] ? 1 : 0);
+      let differs = changes.filter(c=>c===1).length;
+      majScore = prediction === 'DIFFERS' ? (differs/changes.length)*100 : ((changes.length-differs)/changes.length)*100;
+    } else {
+      let trends = rawTrend[symbol] || {};
+      let digit = parseInt(prediction);
+      arrowScore = trends[digit] === 1 ? 80 : (trends[digit] === 0 ? 40 : 10);
+      let recent = marketData[symbol].last50Array.slice(-settings.majorityWindow);
+      let count = recent.filter(d=>d===digit).length;
+      majScore = (count/recent.length)*100;
+    }
+    let vol = getVolatility(symbol);
+    let volAdjust = Math.max(0, Math.min(15, (vol - 1.5) * 5));
+    let conf = (arrowScore * 0.4) + (majScore * 0.6) - volAdjust;
+    return Math.min(100, Math.max(0, Math.round(conf)));
+  }
+
   function getActivePrediction(symbol) {
-    if(currentMode === 'arrow') return getArrowPrediction(symbol);
-    if(currentMode === 'majority') return getMajorityPrediction(symbol);
-    return getHybridPrediction(symbol);
+    let pred = getHybridPrediction(symbol);
+    if(!pred) return null;
+    // Trend filter
+    if(getSettings().trendFilterEnabled) {
+      let longTrend = getLongTermTrend(symbol);
+      if(longTrend && longTrend !== pred) return null;
+    }
+    // Rejection streak
+    let history = signalHistory[symbol] || [];
+    let streakLimit = getSettings().rejectionStreak;
+    if(history.length > 0) {
+      let lastOutcomes = history.slice(-streakLimit).map(h=>h.outcome);
+      if(lastOutcomes.length === streakLimit && lastOutcomes.every(o=>o==='loss')) return null;
+      let last5 = history.slice(-5);
+      if(last5.length === 5 && last5.filter(h=>h.outcome==='loss').length >= 3) return null;
+    }
+    // Volatility confirmation
+    let vol = getVolatility(symbol);
+    let thresh = getSettings().volatilityThresh;
+    if(vol >= thresh) {
+      let now = Date.now();
+      if(!pendingConfirmation[symbol] || pendingConfirmation[symbol].prediction !== pred) {
+        pendingConfirmation[symbol] = { prediction: pred, firstSeen: now };
+        return null;
+      }
+      if(now - pendingConfirmation[symbol].firstSeen < 3000) return null;
+    }
+    return pred;
   }
 
   function getSignalMessage(symbol) {
     let pred = getActivePrediction(symbol);
-    if(!pred) return { active: false, msg: "" };
-    return { active: true, msg: `BUY ${pred} 🔥` };
+    if(!pred) return { active: false, msg: "", confidence: 0 };
+    let conf = computeConfidence(symbol, pred);
+    let action = (currentMarket === 'differs' || currentMarket === 'evenodd' || currentMarket === 'overunder') ? `BUY ${pred}` : `BUY DIGIT ${pred}`;
+    return { active: true, msg: `${action} (${conf}%)`, confidence: conf };
   }
 
-  function computeSignalStrength(symbol) { return getActivePrediction(symbol) ? 90 : 0; }
+  window.recordOutcome = function(symbol, outcome) {
+    if(!signalHistory[symbol]) signalHistory[symbol] = [];
+    signalHistory[symbol].push({ outcome, timestamp: Date.now() });
+    if(signalHistory[symbol].length > 10) signalHistory[symbol].shift();
+    if(getSettings().soundEnabled) {
+      let ctx = audioCtx;
+      if(ctx) {
+        let osc = ctx.createOscillator();
+        let gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        if(outcome === 'win') { osc.frequency.value = 1046.5; gain.gain.value = 0.15; osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime+0.3); osc.stop(ctx.currentTime+0.3); }
+        else { osc.frequency.value = 440; gain.gain.value = 0.15; osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime+0.5); osc.stop(ctx.currentTime+0.5); }
+      }
+    }
+    renderMarket(symbol);
+  };
 
   function processTick(symbol, priceNumeric, quoteDisplay=null) {
-    if(!marketData[symbol]) {
-      marketData[symbol] = { digitsArray:[], digitCounts:new Array(10).fill(0), last50Array:[], lastDigit:null, lastPriceDisplay:"—" };
-    }
+    if(!marketData[symbol]) marketData[symbol] = { digitsArray:[], digitCounts:new Array(10).fill(0), last50Array:[], lastDigit:null, lastPriceDisplay:"—" };
     let data = marketData[symbol];
     let displayStr = (quoteDisplay !== null) ? String(quoteDisplay) : formatHistoryPrice(symbol, priceNumeric);
     data.lastPriceDisplay = displayStr;
@@ -345,87 +559,29 @@
     if(!isActive && sig.active) {
       signalExpiry[symbol] = now + SIGNAL_LOCK_DURATION;
       activeSignalMsg[symbol] = sig.msg;
-      let cls = currentMode === 'arrow' ? 'signal-strong' : (currentMode === 'majority' ? 'majority-signal' : 'hybrid-signal');
-      signalDiv.innerHTML = `<div class="signal-flash ${cls}">🎯 ${sig.msg} <div class="strength-meter"><div class="strength-fill" style="width:90%"></div></div></div>`;
-      if(settings.soundEnabled) gentleBeep();
+      let cls = currentIndicator === 'arrow' ? 'signal-strong' : (currentIndicator === 'majority' ? 'majority-signal' : 'hybrid-signal');
+      signalDiv.innerHTML = `<div class="signal-flash ${cls}">🎯 ${sig.msg} <div class="strength-meter"><div class="strength-fill" style="width:${sig.confidence}%"></div></div>
+        <div class="vote-buttons"><button class="vote-btn" onclick="window.recordOutcome('${symbol}','win')">✅ Win</button>
+        <button class="vote-btn" onclick="window.recordOutcome('${symbol}','loss')">❌ Loss</button></div></div>`;
+      if(settings.soundEnabled && audioCtx) {
+        let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.frequency.value = 1318.52; gain.gain.value = 0.15; osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime+0.2); osc.stop(audioCtx.currentTime+0.2);
+      }
     } else if(isActive) {
       let rem = Math.max(0, Math.floor((signalExpiry[symbol]-now)/1000));
       let mins = Math.floor(rem/60), secs = rem%60;
-      let cls = currentMode === 'arrow' ? 'signal-strong' : (currentMode === 'majority' ? 'majority-signal' : 'hybrid-signal');
+      let cls = currentIndicator === 'arrow' ? 'signal-strong' : (currentIndicator === 'majority' ? 'majority-signal' : 'hybrid-signal');
       signalDiv.innerHTML = `<div class="signal-flash ${cls}">🎯 ${activeSignalMsg[symbol]} (${mins}:${secs<10?'0'+secs:secs}) <div class="strength-meter"><div class="strength-fill" style="width:90%"></div></div></div>`;
     } else {
-      let rule = currentMode === 'arrow' ? '≥3↑ on lead, rest flat (no ↓), minority ≤1↑' : (currentMode === 'majority' ? `evens/odds >${settings.majorityThreshold}% in last ${settings.majorityWindow} ticks` : 'arrow + majority required');
+      let rule = currentIndicator === 'arrow' ? 'arrow condition' : (currentIndicator === 'majority' ? `>${settings.majorityThreshold}%` : 'arrow+majority');
       signalDiv.innerHTML = `<span class="no-signal">⚡ waiting: ${rule}</span>`;
     }
   }
 
-  function getRankSets(digitCounts) {
-    let arr = digitCounts.map((cnt,i)=>({digit:i,count:cnt}));
-    let sorted = [...arr].sort((a,b)=>b.count-a.count);
-    let max = sorted[0].count;
-    let mostSet = new Set(sorted.filter(i=>i.count===max).map(i=>i.digit));
-    let secondCount = null;
-    for(let i of sorted) if(i.count!==max) { secondCount=i.count; break; }
-    let secondSet = secondCount!==null ? new Set(sorted.filter(i=>i.count===secondCount).map(i=>i.digit)) : new Set();
-    let min = sorted[sorted.length-1].count;
-    let leastSet = new Set(sorted.filter(i=>i.count===min).map(i=>i.digit));
-    let secondMinCount = null;
-    for(let i=sorted.length-2;i>=0;i--) if(sorted[i].count!==min) { secondMinCount=sorted[i].count; break; }
-    let secondLeastSet = secondMinCount!==null ? new Set(sorted.filter(i=>i.count===secondMinCount).map(i=>i.digit)) : new Set();
-    return { mostSet, secondSet, leastSet, secondLeastSet };
-  }
-
-  function rebuildDigitGrid(symbol) {
-    let data = marketData[symbol]; if(!data) return;
-    let total = data.digitCounts.reduce((a,b)=>a+b,0); if(total===0) return;
-    let pct = data.digitCounts.map(c=>((c/total)*100).toFixed(2));
-    let trends = rawTrend[symbol] || {};
-    if(Object.keys(trends).length===0 && data.digitsArray.length>=30) updateTrends(symbol);
-    trends = rawTrend[symbol] || {};
-    let last50 = data.last50Array;
-    let overallPct = data.digitCounts.map(c=>c/total);
-    let lastCounts = new Array(10).fill(0);
-    last50.forEach(d=>lastCounts[d]++);
-    let hot = new Set(), cold = new Set();
-    if(last50.length >= 20) {
-      let diffArray = lastCounts.map((c,i)=> (c/last50.length) - overallPct[i]);
-      let sortedDiff = diffArray.map((d,i)=>({dig:i,diff:d})).sort((a,b)=>b.diff-a.diff);
-      hot = new Set(sortedDiff.slice(0,2).map(x=>x.dig));
-      cold = new Set(sortedDiff.slice(-2).map(x=>x.dig));
-    }
-    let { mostSet, secondSet, leastSet, secondLeastSet } = getRankSets(data.digitCounts);
-    let container = document.getElementById(`digitsContainer_${symbol}`); if(!container) return;
-    container.innerHTML = '';
-    let evens = [0,2,4,6,8], odds = [1,3,5,7,9];
-    let row1 = document.createElement('div'); row1.className = 'digits-row';
-    evens.forEach(d=>{
-      let cell = document.createElement('div'); cell.className = 'digit-cell';
-      if(mostSet.has(d)) cell.classList.add('most');
-      if(secondSet.has(d)) cell.classList.add('second');
-      if(leastSet.has(d)) cell.classList.add('least');
-      if(secondLeastSet.has(d)) cell.classList.add('secondleast');
-      if(hot.has(d)) cell.classList.add('hot');
-      if(cold.has(d)) cell.classList.add('cold');
-      let arrow = getArrowSymbol(trends[d]||0);
-      cell.innerHTML = `<span class="digit">${d}</span><div class="percent">${pct[d]}%</div><span class="trend">${arrow}</span>`;
-      if(data.lastDigit===d) { let ptr=document.createElement('div'); ptr.className='pointer-marker'; cell.appendChild(ptr); }
-      row1.appendChild(cell);
-    });
-    let row2 = document.createElement('div'); row2.className = 'digits-row';
-    odds.forEach(d=>{
-      let cell = document.createElement('div'); cell.className = 'digit-cell';
-      if(mostSet.has(d)) cell.classList.add('most');
-      if(secondSet.has(d)) cell.classList.add('second');
-      if(leastSet.has(d)) cell.classList.add('least');
-      if(secondLeastSet.has(d)) cell.classList.add('secondleast');
-      if(hot.has(d)) cell.classList.add('hot');
-      if(cold.has(d)) cell.classList.add('cold');
-      let arrow = getArrowSymbol(trends[d]||0);
-      cell.innerHTML = `<span class="digit">${d}</span><div class="percent">${pct[d]}%</div><span class="trend">${arrow}</span>`;
-      if(data.lastDigit===d) { let ptr=document.createElement('div'); ptr.className='pointer-marker'; cell.appendChild(ptr); }
-      row2.appendChild(cell);
-    });
-    container.appendChild(row1); container.appendChild(row2);
+  // Rebuild digit grid (same as before, simplified for space)
+  function getRankSets(dc) { let arr=dc.map((c,i)=>({digit:i,count:c})); let s=[...arr].sort((a,b)=>b.count-a.count); let max=s[0].count; let most=new Set(s.filter(i=>i.count===max).map(i=>i.digit)); let sec=null; for(let i of s) if(i.count!==max){sec=i.count; break;} let second=sec!==null?new Set(s.filter(i=>i.count===sec).map(i=>i.digit)):new Set(); let min=s[s.length-1].count; let least=new Set(s.filter(i=>i.count===min).map(i=>i.digit)); let sm=null; for(let i=s.length-2;i>=0;i--) if(s[i].count!==min){sm=s[i].count;break;} let sleast=sm!==null?new Set(s.filter(i=>i.count===sm).map(i=>i.digit)):new Set(); return {most,second,least,sleast};}
+  function rebuildDigitGrid(sym){
+    let d=marketData[sym]; if(!d)return; let t=d.digitCounts.reduce((a,b)=>a+b,0); if(t===0)return; let pct=d.digitCounts.map(c=>((c/t)*100).toFixed(2)); let tr=rawTrend[sym]||{}; let last50=d.last50Array; let opct=d.digitCounts.map(c=>c/t); let lc=new Array(10).fill(0); last50.forEach(dd=>lc[dd]++); let hot=new Set(), cold=new Set(); if(last50.length>=20){ let diff=lc.map((c,i)=>(c/last50.length)-opct[i]); let sd=diff.map((v,i)=>({dig:i,diff:v})).sort((a,b)=>b.diff-a.diff); hot=new Set(sd.slice(0,2).map(x=>x.dig)); cold=new Set(sd.slice(-2).map(x=>x.dig));}
+    let {most,second,least,sleast}=getRankSets(d.digitCounts); let cont=document.getElementById(`digitsContainer_${sym}`); if(!cont)return; cont.innerHTML=''; let evens=[0,2,4,6,8], odds=[1,3,5,7,9]; let row1=document.createElement('div'); row1.className='digits-row'; evens.forEach(dig=>{let cell=document.createElement('div'); cell.className='digit-cell'; if(most.has(dig))cell.classList.add('most'); if(second.has(dig))cell.classList.add('second'); if(least.has(dig))cell.classList.add('least'); if(sleast.has(dig))cell.classList.add('secondleast'); if(hot.has(dig))cell.classList.add('hot'); if(cold.has(dig))cell.classList.add('cold'); let arr=tr[dig]===1?'↑':(tr[dig]===-1?'↓':'•'); cell.innerHTML=`<span class="digit">${dig}</span><div class="percent">${pct[dig]}%</div><span class="trend">${arr}</span>`; if(d.lastDigit===dig){let ptr=document.createElement('div');ptr.className='pointer-marker';cell.appendChild(ptr);} row1.appendChild(cell);}); let row2=document.createElement('div'); row2.className='digits-row'; odds.forEach(dig=>{let cell=document.createElement('div'); cell.className='digit-cell'; if(most.has(dig))cell.classList.add('most'); if(second.has(dig))cell.classList.add('second'); if(least.has(dig))cell.classList.add('least'); if(sleast.has(dig))cell.classList.add('secondleast'); if(hot.has(dig))cell.classList.add('hot'); if(cold.has(dig))cell.classList.add('cold'); let arr=tr[dig]===1?'↑':(tr[dig]===-1?'↓':'•'); cell.innerHTML=`<span class="digit">${dig}</span><div class="percent">${pct[dig]}%</div><span class="trend">${arr}</span>`; if(d.lastDigit===dig){let ptr=document.createElement('div');ptr.className='pointer-marker';cell.appendChild(ptr);} row2.appendChild(cell);}); cont.appendChild(row1); cont.appendChild(row2);
   }
 
   function renderMarket(symbol) {
@@ -433,14 +589,46 @@
     let priceSpan = document.getElementById(`livePriceBig_${symbol}`); if(priceSpan) priceSpan.innerText = data.lastPriceDisplay;
     let last50 = data.last50Array;
     if(last50.length>0){
-      let evenCnt = last50.filter(d=>d%2===0).length, evenPct = ((evenCnt/last50.length)*100).toFixed(1);
-      let paritySpan = document.getElementById(`parityStats_${symbol}`); if(paritySpan) paritySpan.innerHTML = `🎲 E:${evenPct}% O:${(100-evenPct).toFixed(1)}%`;
-      let streak=1, lastParity=last50[last50.length-1]%2===0?'E':'O';
-      for(let i=last50.length-2;i>=0;i--) if((last50[i]%2===0?'E':'O')===lastParity) streak++; else break;
-      let streakSpan = document.getElementById(`streakStats_${symbol}`); if(streakSpan) streakSpan.innerHTML = `📊 Streak: ${streak}x ${lastParity}`;
-      let parityLetters = last50.map(d=>d%2===0?'<span style="color:#4ade80;">E</span>':'<span style="color:#f87171;">O</span>').join('');
-      let paritySeqDiv = document.getElementById(`paritySeq_${symbol}`); if(paritySeqDiv) paritySeqDiv.innerHTML = parityLetters;
-      let ouSeqDiv = document.getElementById(`ouSeq_${symbol}`); if(ouSeqDiv) ouSeqDiv.innerHTML = '';
+      if(currentMarket === 'evenodd') {
+        let evenCnt = last50.filter(d=>d%2===0).length, evenPct = ((evenCnt/last50.length)*100).toFixed(1);
+        let paritySpan = document.getElementById(`parityStats_${symbol}`); if(paritySpan) paritySpan.innerHTML = `🎲 E:${evenPct}% O:${(100-evenPct).toFixed(1)}%`;
+        let streak=1, lastParity=last50[last50.length-1]%2===0?'E':'O';
+        for(let i=last50.length-2;i>=0;i--) if((last50[i]%2===0?'E':'O')===lastParity) streak++; else break;
+        let streakSpan = document.getElementById(`streakStats_${symbol}`); if(streakSpan) streakSpan.innerHTML = `📊 Streak: ${streak}x ${lastParity}`;
+        let parityLetters = last50.map(d=>d%2===0?'<span style="color:#4ade80;">E</span>':'<span style="color:#f87171;">O</span>').join('');
+        let paritySeqDiv = document.getElementById(`paritySeq_${symbol}`); if(paritySeqDiv) paritySeqDiv.innerHTML = parityLetters;
+        let ouSeqDiv = document.getElementById(`ouSeq_${symbol}`); if(ouSeqDiv) ouSeqDiv.innerHTML = '';
+      } else if(currentMarket === 'overunder') {
+        let overCnt = last50.filter(d=>d>=5).length, overPct = ((overCnt/last50.length)*100).toFixed(1);
+        let paritySpan = document.getElementById(`parityStats_${symbol}`); if(paritySpan) paritySpan.innerHTML = `📈 Over 4: ${overPct}% | Under 5: ${(100-overPct).toFixed(1)}%`;
+        let streak=1, lastOU=last50[last50.length-1]>=5?'O':'U';
+        for(let i=last50.length-2;i>=0;i--) if((last50[i]>=5?'O':'U')===lastOU) streak++; else break;
+        let streakSpan = document.getElementById(`streakStats_${symbol}`); if(streakSpan) streakSpan.innerHTML = `📊 Streak: ${streak}x ${lastOU}`;
+        let ouLetters = last50.map(d=>d>=5?'<span style="color:#4ade80;">O</span>':'<span style="color:#f87171;">U</span>').join('');
+        let ouSeqDiv = document.getElementById(`ouSeq_${symbol}`); if(ouSeqDiv) ouSeqDiv.innerHTML = ouLetters;
+        let paritySeqDiv = document.getElementById(`paritySeq_${symbol}`); if(paritySeqDiv) paritySeqDiv.innerHTML = '';
+      } else if(currentMarket === 'differs') {
+        let digits = data.digitsArray.slice(-(last50.length+1));
+        let changes = [];
+        for(let i=1;i<digits.length;i++) changes.push(digits[i] !== digits[i-1] ? 1 : 0);
+        let recentChanges = changes.slice(-last50.length);
+        let differsCount = recentChanges.filter(c=>c===1).length;
+        let matchesCount = recentChanges.length - differsCount;
+        let differsPct = (differsCount/recentChanges.length*100).toFixed(1);
+        let paritySpan = document.getElementById(`parityStats_${symbol}`); if(paritySpan) paritySpan.innerHTML = `🔄 Differs: ${differsPct}% | Matches: ${(100-differsPct).toFixed(1)}%`;
+        let streak=1, lastChange = changes[changes.length-1] === 1 ? 'D' : 'M';
+        for(let i=changes.length-2; i>=0; i--) if((changes[i]===1?'D':'M')===lastChange) streak++; else break;
+        let streakSpan = document.getElementById(`streakStats_${symbol}`); if(streakSpan) streakSpan.innerHTML = `📊 Streak: ${streak}x ${lastChange}`;
+        let changeLetters = recentChanges.map(c=>c===1?'<span style="color:#4ade80;">D</span>':'<span style="color:#f87171;">M</span>').join('');
+        let paritySeqDiv = document.getElementById(`paritySeq_${symbol}`); if(paritySeqDiv) paritySeqDiv.innerHTML = changeLetters;
+        let ouSeqDiv = document.getElementById(`ouSeq_${symbol}`); if(ouSeqDiv) ouSeqDiv.innerHTML = '';
+      } else {
+        // digit prediction – show normal digit sequence
+        let seqStr = last50.map(d=>`<span style="color:#4ade80;">${d}</span>`).join('');
+        let paritySeqDiv = document.getElementById(`paritySeq_${symbol}`); if(paritySeqDiv) paritySeqDiv.innerHTML = seqStr;
+        let ouSeqDiv = document.getElementById(`ouSeq_${symbol}`); if(ouSeqDiv) ouSeqDiv.innerHTML = '';
+        let paritySpan = document.getElementById(`parityStats_${symbol}`); if(paritySpan) paritySpan.innerHTML = `🎯 Last digit: ${data.lastDigit}`;
+      }
       let prediction = (()=>{
         if(last50.length<10) return {digit:null,prob:0};
         let w = new Array(10).fill(0);
@@ -462,24 +650,30 @@
     for(let [sym, expiry] of lockedMarkets.entries()) if(now > expiry) lockedMarkets.delete(sym);
     for(let sym of ALL_SYMBOLS) {
       let data = marketData[sym];
-      if(!data || data.last50Array.length < 30) continue;
+      if(!data || data.last50Array.length < 20) continue;
       let active = getActivePrediction(sym);
       if(active && !lockedMarkets.has(sym)) {
         lockedMarkets.set(sym, now + SIGNAL_LOCK_DURATION);
-        if(settings.soundEnabled) gentleBeep();
+        if(settings.soundEnabled && audioCtx) {
+          let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.frequency.value = 1318.52; gain.gain.value = 0.15;
+          osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime+0.2);
+          osc.stop(audioCtx.currentTime+0.2);
+        }
       }
     }
     let items = ALL_SYMBOLS.map(sym => {
       let data = marketData[sym];
-      let pred = getActivePrediction(sym);
       let active = lockedMarkets.has(sym);
       let blinkClass = '';
       let suffix = '';
       if(active) {
-        if(currentMode === 'arrow') blinkClass = 'blink-arrow';
-        else if(currentMode === 'majority') blinkClass = 'blink-majority';
+        if(currentIndicator === 'arrow') blinkClass = 'blink-arrow';
+        else if(currentIndicator === 'majority') blinkClass = 'blink-majority';
         else blinkClass = 'blink-hybrid';
-        suffix = pred ? ` → BUY ${pred}` : '';
+        let pred = getActivePrediction(sym);
+        suffix = pred ? (currentMarket === 'digit' ? ` → DIGIT ${pred}` : ` → ${pred}`) : '';
       }
       let score = active ? 90 : 0;
       return { sym, name: MARKET_NAMES[sym], score, suffix, blinkClass };
@@ -490,7 +684,7 @@
   }
 
   function scrollToMarket(symbol) { let card = document.getElementById(`market_${symbol}`); if(card) { card.scrollIntoView({ behavior:'smooth', block:'center' }); card.classList.add('highlight-market'); setTimeout(()=>card.classList.remove('highlight-market'),2000); } }
-  
+
   function createMarketUI(symbol, displayName, isInvalid=false) {
     if(document.getElementById(`market_${symbol}`)) return;
     let container = document.getElementById('marketsContainer');
@@ -512,40 +706,54 @@
       </div>
       <div class="ruler-labels" style="margin: -0.2rem 1rem 0.5rem 1rem;"><span>Under 5 (0-4)</span><span>Over 4 (5-9)</span></div>
       <div class="letter-sequence-wrapper">
-        <div class="sequence-label">Even / Odd (E=Even, O=Odd)</div>
+        <div class="sequence-label" id="seqLabel_${symbol}">Sequence</div>
         <div class="letter-sequence" id="paritySeq_${symbol}">⏳ ticks...</div>
         <div class="letter-sequence hidden" id="ouSeq_${symbol}"></div>
       </div>
       <div class="signal-area" id="signalDisplay_${symbol}"><span class="no-signal">⏳ waiting for signal...</span></div>
     `;
     container.appendChild(card);
+    updateSequenceLabel(symbol);
+  }
+
+  function updateSequenceLabel(symbol) {
+    let label = document.querySelector(`#market_${symbol} .sequence-label`);
+    if(!label) return;
+    if(currentMarket === 'evenodd') label.innerText = 'Even / Odd (E=Even, O=Odd)';
+    else if(currentMarket === 'overunder') label.innerText = 'Over / Under (O=Over 4+, U=Under 5)';
+    else if(currentMarket === 'differs') label.innerText = 'Differs / Matches (D=Differs, M=Matches)';
+    else label.innerText = 'Digit sequence (last 50 ticks)';
+    let seqDiv = document.getElementById(`paritySeq_${symbol}`);
+    let ouDiv = document.getElementById(`ouSeq_${symbol}`);
+    if(currentMarket === 'overunder') {
+      seqDiv.classList.add('hidden');
+      ouDiv.classList.remove('hidden');
+    } else {
+      seqDiv.classList.remove('hidden');
+      ouDiv.classList.add('hidden');
+    }
   }
 
   function openMarketModal(symbol) {
     let data = marketData[symbol]; if(!data) return;
     let modal = document.getElementById('marketModal');
     let pred = getActivePrediction(symbol);
-    document.getElementById('modalTitle').innerText = `${MARKET_NAMES[symbol]} (${symbol}) - ${currentMode.toUpperCase()} Mode`;
+    document.getElementById('modalTitle').innerText = `${MARKET_NAMES[symbol]} (${symbol}) - ${currentMarket.toUpperCase()} / ${currentIndicator.toUpperCase()}`;
     let last20 = data.last50Array.slice(-20).join(', ');
-    let trends = rawTrend[symbol]||{};
+    let trends = rawTrend[symbol] || {};
     let trendSummary = Object.entries(trends).map(([d,t])=>`${d}:${t===1?'↑':(t===-1?'↓':'•')}`).join(', ');
-    let arrowPred = getArrowPrediction(symbol);
-    let majPred = getMajorityPrediction(symbol);
-    let { mostSet, secondSet, leastSet, secondLeastSet } = getRankSets(data.digitCounts);
     document.getElementById('modalBody').innerHTML = `
       <p><strong>Price:</strong> ${data.lastPriceDisplay}</p>
-      <p><strong>Active Trade Signal:</strong> ${pred ? `🔥 BUY ${pred} 🔥` : 'None'}</p>
-      <p><strong>Relaxed Arrow (≥3↑ lead, no ↓, minority ≤1↑):</strong> ${arrowPred ? `✅ would trade ${arrowPred}` : '❌ not met'}</p>
-      <p><strong>Majority condition (${getSettings().majorityThreshold}%):</strong> ${majPred ? `✅ would trade ${majPred}` : '❌ not met'}</p>
-      <p><strong>15-tick momentum arrows:</strong> ${trendSummary||'none'}</p>
-      <p><strong>Digit rankings:</strong> Most: ${[...mostSet].join(',')}, 2nd: ${[...secondSet].join(',')}, Least: ${[...leastSet].join(',')}, 2nd least: ${[...secondLeastSet].join(',')}</p>
+      <p><strong>Active Trade Signal:</strong> ${pred ? `🔥 ${pred} 🔥` : 'None'}</p>
+      <p><strong>10-tick momentum arrows:</strong> ${trendSummary||'none'}</p>
       <p><strong>Last 20 digits:</strong> ${last20}</p>
+      <p><strong>Lookahead (Digit only):</strong> ${currentMarket==='digit'?getSettings().lookaheadTicks:'N/A'}</p>
     `;
     modal.style.display = 'flex';
   }
 
   function subscribeToMarket(symbol) { if(!ws||ws.readyState!==WebSocket.OPEN||invalidSymbols.has(symbol)) return; ws.send(JSON.stringify({ ticks_history: symbol, count: 1000, end: "latest", style: "ticks" })); ws.send(JSON.stringify({ ticks: symbol, subscribe: 1 })); }
-  
+
   function handleMessage(msg) {
     if(!msg) return;
     if(msg.msg_type==='tick' && msg.tick) {
@@ -577,13 +785,13 @@
     }
     if(msg.msg_type==='authorize') {
       if(msg.error) { document.getElementById('connectionStatus').innerHTML = '❌ Auth failed'; return; }
-      document.getElementById('connectionStatus').innerHTML = '✅ Connected – loading markets (relaxed arrow)...';
+      document.getElementById('connectionStatus').innerHTML = '✅ Connected – loading markets...';
       document.getElementById('marketsContainer').innerHTML = '';
-      marketData = {}; invalidSymbols.clear(); signalExpiry = {}; activeSignalMsg = {}; lockedMarkets.clear(); rawTrend = {};
+      marketData = {}; invalidSymbols.clear(); signalExpiry = {}; activeSignalMsg = {}; lockedMarkets.clear(); rawTrend = {}; signalHistory = {}; pendingConfirmation = {};
       for(let sym of ALL_SYMBOLS) createMarketUI(sym, MARKET_NAMES[sym], false);
       let idx = 0;
       function subNext() {
-        if(idx >= ALL_SYMBOLS.length) { document.getElementById('connectionStatus').innerHTML = `✅ Streaming – ${currentMode.toUpperCase()} mode (relaxed arrow: ≥3↑ lead, no ↓, minority ≤1↑)`; return; }
+        if(idx >= ALL_SYMBOLS.length) { document.getElementById('connectionStatus').innerHTML = `✅ Streaming – ${currentMarket.toUpperCase()} / ${currentIndicator.toUpperCase()} mode`; return; }
         let sym = ALL_SYMBOLS[idx];
         if(!invalidSymbols.has(sym)) subscribeToMarket(sym);
         idx++; setTimeout(subNext, 250);
@@ -608,36 +816,36 @@
 
   function toggleMode() { document.body.classList.toggle('light'); }
   let audioCtx = null;
-  function gentleBeep() {
-    try { if(!audioCtx) audioCtx = new AudioContext(); if(audioCtx.state === 'suspended') audioCtx.resume(); let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.frequency.value = 880; gain.gain.value = 0.2; osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.2); osc.stop(audioCtx.currentTime + 0.2); } catch(e) {}
+  function setMarket(market) {
+    currentMarket = market;
+    document.querySelectorAll('.market-btn').forEach(btn => { if(btn.getAttribute('data-market') === market) btn.classList.add('active'); else btn.classList.remove('active'); });
+    document.getElementById('lookaheadGroup').style.display = market === 'digit' ? 'inline-flex' : 'none';
+    rawTrend = {}; signalExpiry = {}; activeSignalMsg = {}; lockedMarkets.clear(); pendingConfirmation = {};
+    for(let sym of ALL_SYMBOLS) { if(marketData[sym]) { updateTrends(sym); renderMarket(sym); updateSequenceLabel(sym); } }
+    document.getElementById('connectionStatus').innerHTML = `✅ Switched to ${market.toUpperCase()} market`;
   }
-
-  function setSignalMode(mode) {
-    currentMode = mode;
-    document.querySelectorAll('.global-trade-btn').forEach(btn => {
-      if(btn.getAttribute('data-mode') === mode) btn.classList.add('active');
-      else btn.classList.remove('active');
-    });
-    signalExpiry = {};
-    activeSignalMsg = {};
-    lockedMarkets.clear();
-    if(ws && ws.readyState === WebSocket.OPEN) {
-      for(let sym of ALL_SYMBOLS) if(marketData[sym]) renderMarket(sym);
-    }
-    document.getElementById('connectionStatus').innerHTML = `✅ Switched to ${mode.toUpperCase()} mode – relaxed arrow active`;
+  function setIndicator(indicator) {
+    currentIndicator = indicator;
+    document.querySelectorAll('.indicator-btn').forEach(btn => { if(btn.getAttribute('data-indicator') === indicator) btn.classList.add('active'); else btn.classList.remove('active'); });
+    signalExpiry = {}; activeSignalMsg = {}; lockedMarkets.clear();
+    for(let sym of ALL_SYMBOLS) if(marketData[sym]) renderMarket(sym);
+    document.getElementById('connectionStatus').innerHTML = `✅ Switched to ${indicator.toUpperCase()} indicator`;
   }
 
   window.connectWebSocket = connectWebSocket;
   window.toggleMode = toggleMode;
-  window.setSignalMode = setSignalMode;
+  window.setMarket = setMarket;
+  window.setIndicator = setIndicator;
   window.openMarketModal = openMarketModal;
   window.scrollToMarket = scrollToMarket;
 
-  document.querySelectorAll('.global-trade-btn').forEach(btn => btn.onclick = () => setSignalMode(btn.getAttribute('data-mode')));
+  document.querySelectorAll('.market-btn').forEach(btn => btn.onclick = () => setMarket(btn.getAttribute('data-market')));
+  document.querySelectorAll('.indicator-btn').forEach(btn => btn.onclick = () => setIndicator(btn.getAttribute('data-indicator')));
   setInterval(()=>{ for(let sym in marketData) if(marketData[sym].digitsArray.length) renderMarket(sym); }, 1000);
   const modal = document.getElementById('marketModal');
   document.querySelector('.close-modal').onclick = () => modal.style.display = 'none';
   window.onclick = e => { if(e.target === modal) modal.style.display = 'none'; };
+  document.body.addEventListener('click', () => { if(audioCtx === null) audioCtx = new AudioContext(); if(audioCtx.state === 'suspended') audioCtx.resume(); });
 </script>
 </body>
 </html>
