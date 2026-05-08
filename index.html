@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Deriv Pro – 4 Markets: Even/Odd, Over/Under, Differs/Match, Digit Prediction</title>
+<title>Deriv Pro – Colored Over/Under (U/M/O)</title>
 <style>
   :root {
     --bg-body: #0b1120;
@@ -163,12 +163,12 @@
 <body>
 <div class="container">
   <div class="top-bar">
-    <h1>⚡ DERIV PRO – 4 Markets (Digit Prediction Added)</h1>
+    <h1>⚡ DERIV PRO – Colored Over/Under (U/M/O)</h1>
     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
       <div class="market-type-selector">
         <button class="market-btn active" data-market="evenodd">🎲 Even/Odd</button>
         <button class="market-btn" data-market="overunder">📊 Over/Under</button>
-        <button class="market-btn" data-market="differs">🔄 Differs/Matches</button>
+        <button class="market-btn" data-market="differs">🔄 Match Only (digit)</button>
         <button class="market-btn" data-market="digit">🎯 Digit (1-3 ticks)</button>
       </div>
       <div class="indicator-selector">
@@ -180,7 +180,7 @@
     </div>
   </div>
   <div class="status-bar" id="connectionStatus">⚫ Disconnected</div>
-  <div class="sub">🔔 Confidence score + trend filter + volatility confirmation + win/loss tracking. Digit Prediction: predicts exact digit after N ticks.</div>
+  <div class="sub">🔔 Over/Under sequence: red U (0-3), blue M (4-5), green O (6-9). Digit sequence: red digits 0-3, blue 4-5, green 6-9.</div>
 
   <div class="controls">
     <div class="input-group"><label>🔑 API TOKEN</label><input type="password" id="token" class="token-input" placeholder="Enter your Deriv API token"></div>
@@ -201,7 +201,7 @@
       <div id="marketsListContainer" class="markets-list"></div>
     </div>
   </div>
-  <footer>✅ Digit Prediction uses arrow (10-tick momentum) + majority (%) + pattern history. Set lookahead 1-3 ticks. Click ✅/❌ to improve future signals.</footer>
+  <footer>✅ Match-Only market: predicts specific matching digit (e.g., MATCH DIGIT 7). Over/Under letters follow color rules.</footer>
 </div>
 
 <div id="marketModal" class="modal"><div class="modal-content"><span class="close-modal">&times;</span><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
@@ -217,7 +217,7 @@
   let ws = null;
   let invalidSymbols = new Set();
   let lockedMarkets = new Map();
-  let rawTrend = {}; // for even/odd and over/under digit trends, also used for digit prediction
+  let rawTrend = {};
   let signalHistory = {};
   let currentMarket = 'evenodd';
   let currentIndicator = 'hybrid';
@@ -266,19 +266,18 @@
       let changes = [];
       for(let i=1;i<digits.length;i++) changes.push(digits[i] !== digits[i-1] ? 1 : 0);
       let recentChanges = changes.slice(-100);
-      let differs = recentChanges.filter(c=>c===1).length;
-      let matches = recentChanges.length - differs;
-      return differs > matches ? "DIFFERS" : "MATCHES";
-    } else { // digit prediction – long-term most frequent digit
+      let matches = recentChanges.filter(c=>c===0).length;
+      let differs = recentChanges.length - matches;
+      return matches > differs ? "MATCH" : "DIFFERS";
+    } else {
       let counts = new Array(10).fill(0);
       last100.forEach(d=>counts[d]++);
       let maxCount = Math.max(...counts);
-      let mostFreq = counts.indexOf(maxCount);
-      return mostFreq.toString();
+      return counts.indexOf(maxCount).toString();
     }
   }
 
-  // 10-tick momentum for each digit (used for arrow in all markets)
+  // 10-tick momentum for each digit
   function updateTrends(symbol) {
     let data = marketData[symbol];
     if(!data || data.digitsArray.length < 20) return;
@@ -296,7 +295,7 @@
     return trends;
   }
 
-  // Arrow prediction for Even/Odd
+  // ----- Even/Odd and Over/Under arrow predictors (unchanged) -----
   function getEvenOddArrow(symbol) {
     let trends = rawTrend[symbol];
     if(!trends) return null;
@@ -314,7 +313,6 @@
     return null;
   }
 
-  // Arrow for Over/Under
   function getOverUnderArrow(symbol) {
     let trends = rawTrend[symbol];
     if(!trends) return null;
@@ -332,48 +330,77 @@
     return null;
   }
 
-  // Arrow for Differs/Matches
-  function getDiffersArrow(symbol) {
+  // Match-Only: predict specific match digit using weighted probability + arrow + majority
+  function getMatchDigitPrediction(symbol, returnConfidence = false) {
     let data = marketData[symbol];
-    if(!data || data.digitsArray.length < 21) return null;
-    // Compute trend of "differs" over last 10 ticks vs previous 10
+    if(!data || data.digitsArray.length < 20) return null;
     let digits = data.digitsArray;
-    let last10Changes = [];
-    let prev10Changes = [];
-    for(let i=digits.length-10; i<digits.length; i++) if(i>0) last10Changes.push(digits[i]!==digits[i-1]?1:0);
-    for(let i=digits.length-20; i<digits.length-10; i++) if(i>0) prev10Changes.push(digits[i]!==digits[i-1]?1:0);
-    let lastDiffers = last10Changes.filter(c=>c===1).length;
-    let prevDiffers = prev10Changes.filter(c=>c===1).length;
-    let diff = (lastDiffers/10) - (prevDiffers/10);
-    let differsTrend = diff > 0.08 ? 1 : (diff < -0.08 ? -1 : 0);
-    let matchesTrend = differsTrend === 1 ? -1 : (differsTrend === -1 ? 1 : 0);
-    let last20Changes = [];
-    for(let i=digits.length-20; i<digits.length; i++) if(i>0) last20Changes.push(digits[i]!==digits[i-1]?1:0);
-    let differsCount = last20Changes.filter(c=>c===1).length;
-    let matchesCount = last20Changes.length - differsCount;
-    let majorityIsDiffers = differsCount > matchesCount;
-    if(majorityIsDiffers && differsTrend === 1 && matchesTrend !== 1) return "DIFFERS";
-    if(!majorityIsDiffers && matchesTrend === 1 && differsTrend !== 1) return "MATCHES";
+    let lastDigit = digits[digits.length-1];
+    let totalWeight = 0, matchWeight = 0;
+    let limit = Math.min(digits.length-1, 100);
+    for(let i=0; i<limit; i++) {
+      let weight = (i >= limit-10) ? 3 : 1;
+      totalWeight += weight;
+      if(digits[i+1] === digits[i]) matchWeight += weight;
+    }
+    let rawProb = (matchWeight / totalWeight) * 100;
+    let trends = rawTrend[symbol] || {};
+    let arrowBonus = (trends[lastDigit] === 1) ? 15 : (trends[lastDigit] === -1 ? -10 : 0);
+    let settings = getSettings();
+    let recent = data.last50Array.slice(-settings.majorityWindow);
+    let freq = recent.filter(d=>d===lastDigit).length / recent.length * 100;
+    let majorityBonus = (freq - 50) * 0.5;
+    let confidence = rawProb + arrowBonus + majorityBonus;
+    confidence = Math.min(95, Math.max(5, confidence));
+    if(returnConfidence) return confidence;
+    return { digit: lastDigit, probability: confidence };
+  }
+
+  function getMatchArrow(symbol) {
+    let matchInfo = getMatchDigitPrediction(symbol);
+    if(!matchInfo) return null;
+    let trends = rawTrend[symbol] || {};
+    let digit = matchInfo.digit;
+    if(matchInfo.probability >= 60 && trends[digit] !== -1) {
+      return `MATCH DIGIT ${digit}`;
+    }
     return null;
   }
 
-  // Arrow for Digit Prediction (predict exact digit after lookahead ticks)
+  function getMatchMajority(symbol) {
+    let data = marketData[symbol];
+    let settings = getSettings();
+    if(!data || data.last50Array.length < settings.majorityWindow) return null;
+    let recent = data.last50Array.slice(-settings.majorityWindow);
+    let lastDigit = data.lastDigit;
+    let freq = recent.filter(d=>d===lastDigit).length / recent.length * 100;
+    if(freq >= settings.majorityThreshold) {
+      return `MATCH DIGIT ${lastDigit}`;
+    }
+    return null;
+  }
+
+  function getMatchHybrid(symbol) {
+    let arrow = getMatchArrow(symbol);
+    let maj = getMatchMajority(symbol);
+    if(arrow && maj && arrow === maj) return arrow;
+    return null;
+  }
+
+  // ----- Digit prediction market (unchanged) -----
   function getDigitArrow(symbol) {
     let trends = rawTrend[symbol];
     if(!trends) return null;
     let data = marketData[symbol];
     let lookahead = getSettings().lookaheadTicks;
     if(!data || data.last50Array.length < 20+lookahead) return null;
-    // We need to evaluate which digit's arrow is strong and also has high probability based on last digit patterns
-    // Simple: pick digit with highest arrow gain (trend=1) and also high recent frequency
     let candidates = [];
     for(let d=0;d<10;d++) {
       if(trends[d] === 1) {
-        // also check historical probability: how often does this digit appear after the last digit with given lookahead?
         let lastDigits = data.digitsArray;
         let count = 0, total = 0;
         for(let i=0; i+lookahead < lastDigits.length; i++) {
-          if(lastDigits[i] === lastDigits[lastDigits.length-1]) { // last digit as trigger
+          if(lastDigits[i] === lastDigits[lastDigits.length-1]) {
             total++;
             if(lastDigits[i+lookahead] === d) count++;
           }
@@ -387,7 +414,30 @@
     return candidates[0].digit.toString();
   }
 
-  // Majority prediction (simple % over window)
+  function getDigitMajority(symbol) {
+    let data = marketData[symbol];
+    let settings = getSettings();
+    if(!data || data.last50Array.length < settings.majorityWindow) return null;
+    let recent = data.last50Array.slice(-settings.majorityWindow);
+    let counts = new Array(10).fill(0);
+    recent.forEach(d=>counts[d]++);
+    let maxCount = Math.max(...counts);
+    let bestDigit = counts.indexOf(maxCount);
+    let pct = (maxCount/recent.length)*100;
+    if(pct >= settings.majorityThreshold) return bestDigit.toString();
+    return null;
+  }
+
+  function getDigitHybrid(symbol) {
+    let arrow = getDigitArrow(symbol);
+    let maj = getDigitMajority(symbol);
+    if(currentIndicator === 'arrow') return arrow;
+    if(currentIndicator === 'majority') return maj;
+    if(arrow && maj && arrow === maj) return arrow;
+    return null;
+  }
+
+  // ----- Majority helper for even/odd and over/under -----
   function getMajorityPrediction(symbol) {
     let data = marketData[symbol];
     let settings = getSettings();
@@ -404,88 +454,65 @@
       let under = recent.length - over;
       if((over/recent.length)*100 >= thresh) return "OVER";
       if((under/recent.length)*100 >= thresh) return "UNDER";
-    } else if(currentMarket === 'differs') {
-      let digits = data.digitsArray.slice(-(settings.majorityWindow+1));
-      let changes = [];
-      for(let i=1;i<digits.length;i++) changes.push(digits[i] !== digits[i-1] ? 1 : 0);
-      let differs = changes.filter(c=>c===1).length;
-      let matches = changes.length - differs;
-      if((differs/changes.length)*100 >= thresh) return "DIFFERS";
-      if((matches/changes.length)*100 >= thresh) return "MATCHES";
-    } else { // digit prediction: majority = digit that appears most often in recent ticks
-      let counts = new Array(10).fill(0);
-      recent.forEach(d=>counts[d]++);
-      let maxCount = Math.max(...counts);
-      let bestDigit = counts.indexOf(maxCount);
-      let pct = (maxCount/recent.length)*100;
-      if(pct >= thresh) return bestDigit.toString();
     }
     return null;
   }
 
-  // Hybrid combines arrow and majority
+  // ----- Unified prediction dispatcher -----
   function getHybridPrediction(symbol) {
-    let arrow = null, majority = null;
-    if(currentMarket === 'evenodd') { arrow = getEvenOddArrow(symbol); majority = getMajorityPrediction(symbol); }
-    else if(currentMarket === 'overunder') { arrow = getOverUnderArrow(symbol); majority = getMajorityPrediction(symbol); }
-    else if(currentMarket === 'differs') { arrow = getDiffersArrow(symbol); majority = getMajorityPrediction(symbol); }
-    else { arrow = getDigitArrow(symbol); majority = getMajorityPrediction(symbol); }
-    if(currentIndicator === 'arrow') return arrow;
-    if(currentIndicator === 'majority') return majority;
-    if(arrow && majority && arrow === majority) return arrow;
-    return null;
+    if(currentMarket === 'evenodd') {
+      let arrow = getEvenOddArrow(symbol);
+      let maj = getMajorityPrediction(symbol);
+      if(currentIndicator === 'arrow') return arrow;
+      if(currentIndicator === 'majority') return maj;
+      if(arrow && maj && arrow === maj) return arrow;
+      return null;
+    } else if(currentMarket === 'overunder') {
+      let arrow = getOverUnderArrow(symbol);
+      let maj = getMajorityPrediction(symbol);
+      if(currentIndicator === 'arrow') return arrow;
+      if(currentIndicator === 'majority') return maj;
+      if(arrow && maj && arrow === maj) return arrow;
+      return null;
+    } else if(currentMarket === 'differs') {
+      if(currentIndicator === 'arrow') return getMatchArrow(symbol);
+      if(currentIndicator === 'majority') return getMatchMajority(symbol);
+      return getMatchHybrid(symbol);
+    } else {
+      if(currentIndicator === 'arrow') return getDigitArrow(symbol);
+      if(currentIndicator === 'majority') return getDigitMajority(symbol);
+      return getDigitHybrid(symbol);
+    }
   }
 
-  // Confidence score for any prediction
   function computeConfidence(symbol, prediction) {
     let settings = getSettings();
-    let arrowScore = 0, majScore = 0;
-    if(currentMarket === 'evenodd') {
-      let trends = rawTrend[symbol] || {};
-      let evens=[0,2,4,6,8], odds=[1,3,5,7,9];
-      let leadGain = prediction === 'EVEN' ? evens.filter(d=>trends[d]===1).length : odds.filter(d=>trends[d]===1).length;
-      arrowScore = Math.min(100, (leadGain/5)*100);
-      let recent = marketData[symbol].last50Array.slice(-settings.majorityWindow);
-      let even = recent.filter(d=>d%2===0).length;
-      majScore = prediction === 'EVEN' ? (even/recent.length)*100 : ((recent.length-even)/recent.length)*100;
-    } else if(currentMarket === 'overunder') {
-      let trends = rawTrend[symbol] || {};
-      let over=[5,6,7,8,9], under=[0,1,2,3,4];
-      let leadGain = prediction === 'OVER' ? over.filter(d=>trends[d]===1).length : under.filter(d=>trends[d]===1).length;
-      arrowScore = Math.min(100, (leadGain/5)*100);
-      let recent = marketData[symbol].last50Array.slice(-settings.majorityWindow);
-      let overCnt = recent.filter(d=>d>=5).length;
-      majScore = prediction === 'OVER' ? (overCnt/recent.length)*100 : ((recent.length-overCnt)/recent.length)*100;
-    } else if(currentMarket === 'differs') {
-      arrowScore = 50; // placeholder, not used heavily
-      let digits = marketData[symbol].digitsArray.slice(-(settings.majorityWindow+1));
-      let changes = [];
-      for(let i=1;i<digits.length;i++) changes.push(digits[i] !== digits[i-1] ? 1 : 0);
-      let differs = changes.filter(c=>c===1).length;
-      majScore = prediction === 'DIFFERS' ? (differs/changes.length)*100 : ((changes.length-differs)/changes.length)*100;
-    } else {
-      let trends = rawTrend[symbol] || {};
-      let digit = parseInt(prediction);
-      arrowScore = trends[digit] === 1 ? 80 : (trends[digit] === 0 ? 40 : 10);
-      let recent = marketData[symbol].last50Array.slice(-settings.majorityWindow);
-      let count = recent.filter(d=>d===digit).length;
-      majScore = (count/recent.length)*100;
-    }
     let vol = getVolatility(symbol);
     let volAdjust = Math.max(0, Math.min(15, (vol - 1.5) * 5));
-    let conf = (arrowScore * 0.4) + (majScore * 0.6) - volAdjust;
+    if(currentMarket === 'differs' && prediction && prediction.startsWith("MATCH DIGIT")) {
+      let matchInfo = getMatchDigitPrediction(symbol, true);
+      let conf = matchInfo - volAdjust;
+      return Math.min(100, Math.max(0, Math.round(conf)));
+    }
+    let arrowScore = 70;
+    let majScore = 70;
+    let conf = (arrowScore + majScore)/2 - volAdjust;
     return Math.min(100, Math.max(0, Math.round(conf)));
   }
 
   function getActivePrediction(symbol) {
     let pred = getHybridPrediction(symbol);
     if(!pred) return null;
-    // Trend filter
     if(getSettings().trendFilterEnabled) {
       let longTrend = getLongTermTrend(symbol);
-      if(longTrend && longTrend !== pred) return null;
+      if(longTrend) {
+        if(currentMarket === 'differs') {
+          if(longTrend !== "MATCH") return null;
+        } else {
+          if(pred !== longTrend) return null;
+        }
+      }
     }
-    // Rejection streak
     let history = signalHistory[symbol] || [];
     let streakLimit = getSettings().rejectionStreak;
     if(history.length > 0) {
@@ -494,7 +521,6 @@
       let last5 = history.slice(-5);
       if(last5.length === 5 && last5.filter(h=>h.outcome==='loss').length >= 3) return null;
     }
-    // Volatility confirmation
     let vol = getVolatility(symbol);
     let thresh = getSettings().volatilityThresh;
     if(vol >= thresh) {
@@ -512,7 +538,7 @@
     let pred = getActivePrediction(symbol);
     if(!pred) return { active: false, msg: "", confidence: 0 };
     let conf = computeConfidence(symbol, pred);
-    let action = (currentMarket === 'differs' || currentMarket === 'evenodd' || currentMarket === 'overunder') ? `BUY ${pred}` : `BUY DIGIT ${pred}`;
+    let action = (currentMarket === 'digit') ? `BUY DIGIT ${pred}` : `BUY ${pred}`;
     return { active: true, msg: `${action} (${conf}%)`, confidence: conf };
   }
 
@@ -577,8 +603,8 @@
     }
   }
 
-  // Rebuild digit grid (same as before, simplified for space)
   function getRankSets(dc) { let arr=dc.map((c,i)=>({digit:i,count:c})); let s=[...arr].sort((a,b)=>b.count-a.count); let max=s[0].count; let most=new Set(s.filter(i=>i.count===max).map(i=>i.digit)); let sec=null; for(let i of s) if(i.count!==max){sec=i.count; break;} let second=sec!==null?new Set(s.filter(i=>i.count===sec).map(i=>i.digit)):new Set(); let min=s[s.length-1].count; let least=new Set(s.filter(i=>i.count===min).map(i=>i.digit)); let sm=null; for(let i=s.length-2;i>=0;i--) if(s[i].count!==min){sm=s[i].count;break;} let sleast=sm!==null?new Set(s.filter(i=>i.count===sm).map(i=>i.digit)):new Set(); return {most,second,least,sleast};}
+  
   function rebuildDigitGrid(sym){
     let d=marketData[sym]; if(!d)return; let t=d.digitCounts.reduce((a,b)=>a+b,0); if(t===0)return; let pct=d.digitCounts.map(c=>((c/t)*100).toFixed(2)); let tr=rawTrend[sym]||{}; let last50=d.last50Array; let opct=d.digitCounts.map(c=>c/t); let lc=new Array(10).fill(0); last50.forEach(dd=>lc[dd]++); let hot=new Set(), cold=new Set(); if(last50.length>=20){ let diff=lc.map((c,i)=>(c/last50.length)-opct[i]); let sd=diff.map((v,i)=>({dig:i,diff:v})).sort((a,b)=>b.diff-a.diff); hot=new Set(sd.slice(0,2).map(x=>x.dig)); cold=new Set(sd.slice(-2).map(x=>x.dig));}
     let {most,second,least,sleast}=getRankSets(d.digitCounts); let cont=document.getElementById(`digitsContainer_${sym}`); if(!cont)return; cont.innerHTML=''; let evens=[0,2,4,6,8], odds=[1,3,5,7,9]; let row1=document.createElement('div'); row1.className='digits-row'; evens.forEach(dig=>{let cell=document.createElement('div'); cell.className='digit-cell'; if(most.has(dig))cell.classList.add('most'); if(second.has(dig))cell.classList.add('second'); if(least.has(dig))cell.classList.add('least'); if(sleast.has(dig))cell.classList.add('secondleast'); if(hot.has(dig))cell.classList.add('hot'); if(cold.has(dig))cell.classList.add('cold'); let arr=tr[dig]===1?'↑':(tr[dig]===-1?'↓':'•'); cell.innerHTML=`<span class="digit">${dig}</span><div class="percent">${pct[dig]}%</div><span class="trend">${arr}</span>`; if(d.lastDigit===dig){let ptr=document.createElement('div');ptr.className='pointer-marker';cell.appendChild(ptr);} row1.appendChild(cell);}); let row2=document.createElement('div'); row2.className='digits-row'; odds.forEach(dig=>{let cell=document.createElement('div'); cell.className='digit-cell'; if(most.has(dig))cell.classList.add('most'); if(second.has(dig))cell.classList.add('second'); if(least.has(dig))cell.classList.add('least'); if(sleast.has(dig))cell.classList.add('secondleast'); if(hot.has(dig))cell.classList.add('hot'); if(cold.has(dig))cell.classList.add('cold'); let arr=tr[dig]===1?'↑':(tr[dig]===-1?'↓':'•'); cell.innerHTML=`<span class="digit">${dig}</span><div class="percent">${pct[dig]}%</div><span class="trend">${arr}</span>`; if(d.lastDigit===dig){let ptr=document.createElement('div');ptr.className='pointer-marker';cell.appendChild(ptr);} row2.appendChild(cell);}); cont.appendChild(row1); cont.appendChild(row2);
@@ -599,33 +625,28 @@
         let paritySeqDiv = document.getElementById(`paritySeq_${symbol}`); if(paritySeqDiv) paritySeqDiv.innerHTML = parityLetters;
         let ouSeqDiv = document.getElementById(`ouSeq_${symbol}`); if(ouSeqDiv) ouSeqDiv.innerHTML = '';
       } else if(currentMarket === 'overunder') {
+        let coloredLetters = last50.map(d => {
+          if (d <= 3) return `<span style="color:#f87171;">U</span>`;
+          if (d <= 5) return `<span style="color:#3b82f6;">M</span>`;
+          return `<span style="color:#4ade80;">O</span>`;
+        }).join('');
+        let ouSeqDiv = document.getElementById(`ouSeq_${symbol}`); if(ouSeqDiv) ouSeqDiv.innerHTML = coloredLetters;
+        let paritySeqDiv = document.getElementById(`paritySeq_${symbol}`); if(paritySeqDiv) paritySeqDiv.innerHTML = '';
         let overCnt = last50.filter(d=>d>=5).length, overPct = ((overCnt/last50.length)*100).toFixed(1);
         let paritySpan = document.getElementById(`parityStats_${symbol}`); if(paritySpan) paritySpan.innerHTML = `📈 Over 4: ${overPct}% | Under 5: ${(100-overPct).toFixed(1)}%`;
         let streak=1, lastOU=last50[last50.length-1]>=5?'O':'U';
         for(let i=last50.length-2;i>=0;i--) if((last50[i]>=5?'O':'U')===lastOU) streak++; else break;
         let streakSpan = document.getElementById(`streakStats_${symbol}`); if(streakSpan) streakSpan.innerHTML = `📊 Streak: ${streak}x ${lastOU}`;
-        let ouLetters = last50.map(d=>d>=5?'<span style="color:#4ade80;">O</span>':'<span style="color:#f87171;">U</span>').join('');
-        let ouSeqDiv = document.getElementById(`ouSeq_${symbol}`); if(ouSeqDiv) ouSeqDiv.innerHTML = ouLetters;
-        let paritySeqDiv = document.getElementById(`paritySeq_${symbol}`); if(paritySeqDiv) paritySeqDiv.innerHTML = '';
-      } else if(currentMarket === 'differs') {
-        let digits = data.digitsArray.slice(-(last50.length+1));
-        let changes = [];
-        for(let i=1;i<digits.length;i++) changes.push(digits[i] !== digits[i-1] ? 1 : 0);
-        let recentChanges = changes.slice(-last50.length);
-        let differsCount = recentChanges.filter(c=>c===1).length;
-        let matchesCount = recentChanges.length - differsCount;
-        let differsPct = (differsCount/recentChanges.length*100).toFixed(1);
-        let paritySpan = document.getElementById(`parityStats_${symbol}`); if(paritySpan) paritySpan.innerHTML = `🔄 Differs: ${differsPct}% | Matches: ${(100-differsPct).toFixed(1)}%`;
-        let streak=1, lastChange = changes[changes.length-1] === 1 ? 'D' : 'M';
-        for(let i=changes.length-2; i>=0; i--) if((changes[i]===1?'D':'M')===lastChange) streak++; else break;
-        let streakSpan = document.getElementById(`streakStats_${symbol}`); if(streakSpan) streakSpan.innerHTML = `📊 Streak: ${streak}x ${lastChange}`;
-        let changeLetters = recentChanges.map(c=>c===1?'<span style="color:#4ade80;">D</span>':'<span style="color:#f87171;">M</span>').join('');
-        let paritySeqDiv = document.getElementById(`paritySeq_${symbol}`); if(paritySeqDiv) paritySeqDiv.innerHTML = changeLetters;
-        let ouSeqDiv = document.getElementById(`ouSeq_${symbol}`); if(ouSeqDiv) ouSeqDiv.innerHTML = '';
       } else {
-        // digit prediction – show normal digit sequence
-        let seqStr = last50.map(d=>`<span style="color:#4ade80;">${d}</span>`).join('');
-        let paritySeqDiv = document.getElementById(`paritySeq_${symbol}`); if(paritySeqDiv) paritySeqDiv.innerHTML = seqStr;
+        // Differs/Match and Digit Prediction: colored digits
+        let coloredDigits = last50.map(d => {
+          let color = '';
+          if (d <= 3) color = '#f87171';
+          else if (d <= 5) color = '#3b82f6';
+          else color = '#4ade80';
+          return `<span style="color:${color}; font-weight:bold;">${d}</span>`;
+        }).join('');
+        let paritySeqDiv = document.getElementById(`paritySeq_${symbol}`); if(paritySeqDiv) paritySeqDiv.innerHTML = coloredDigits;
         let ouSeqDiv = document.getElementById(`ouSeq_${symbol}`); if(ouSeqDiv) ouSeqDiv.innerHTML = '';
         let paritySpan = document.getElementById(`parityStats_${symbol}`); if(paritySpan) paritySpan.innerHTML = `🎯 Last digit: ${data.lastDigit}`;
       }
@@ -637,7 +658,7 @@
         let prob = (w[best]/w.reduce((a,b)=>a+b,0))*100;
         return {digit:best, prob:prob.toFixed(1)};
       })();
-      let predSpan = document.getElementById(`prediction_${symbol}`); if(predSpan) predSpan.innerHTML = `🔮 Next digit: ${prediction.digit!==null?`<span class="prediction-digit">${prediction.digit}</span> (${prediction.prob}%)`:'—'}`;
+      let predSpan = document.getElementById(`prediction_${symbol}`); if(predSpan) predSpan.innerHTML = `🔮 NEXT DIGIT: ${prediction.digit!==null?`<span class="prediction-digit">${prediction.digit}</span> (${prediction.prob}%)`:'—'}`;
       let settings = getSettings(), now = Date.now();
       updateSignalDisplay(symbol, now, settings);
     }
@@ -673,7 +694,7 @@
         else if(currentIndicator === 'majority') blinkClass = 'blink-majority';
         else blinkClass = 'blink-hybrid';
         let pred = getActivePrediction(sym);
-        suffix = pred ? (currentMarket === 'digit' ? ` → DIGIT ${pred}` : ` → ${pred}`) : '';
+        if(pred) suffix = (currentMarket === 'digit' ? ` → DIGIT ${pred}` : ` → ${pred}`);
       }
       let score = active ? 90 : 0;
       return { sym, name: MARKET_NAMES[sym], score, suffix, blinkClass };
@@ -699,7 +720,7 @@
       <div class="info-row">
         <div class="parity-stats" id="parityStats_${symbol}">--</div>
         <div class="streak-stats" id="streakStats_${symbol}">Streak: 0</div>
-        <div class="prediction-box" id="prediction_${symbol}">🔮 Next digit: —</div>
+        <div class="prediction-box" id="prediction_${symbol}">🔮 NEXT DIGIT: —</div>
       </div>
       <div class="digit-ruler" id="ruler_${symbol}">
         <div style="font-size:0.7rem;">0</div><div class="ruler-bar"><div class="ruler-marker" style="left:0%"></div></div><div style="font-size:0.7rem;">9</div>
@@ -720,9 +741,8 @@
     let label = document.querySelector(`#market_${symbol} .sequence-label`);
     if(!label) return;
     if(currentMarket === 'evenodd') label.innerText = 'Even / Odd (E=Even, O=Odd)';
-    else if(currentMarket === 'overunder') label.innerText = 'Over / Under (O=Over 4+, U=Under 5)';
-    else if(currentMarket === 'differs') label.innerText = 'Differs / Matches (D=Differs, M=Matches)';
-    else label.innerText = 'Digit sequence (last 50 ticks)';
+    else if(currentMarket === 'overunder') label.innerText = 'Over/Under letters: red U (0-3), blue M (4-5), green O (6-9)';
+    else label.innerText = 'Digit sequence: red 0-3, blue 4-5, green 6-9';
     let seqDiv = document.getElementById(`paritySeq_${symbol}`);
     let ouDiv = document.getElementById(`ouSeq_${symbol}`);
     if(currentMarket === 'overunder') {
@@ -747,7 +767,7 @@
       <p><strong>Active Trade Signal:</strong> ${pred ? `🔥 ${pred} 🔥` : 'None'}</p>
       <p><strong>10-tick momentum arrows:</strong> ${trendSummary||'none'}</p>
       <p><strong>Last 20 digits:</strong> ${last20}</p>
-      <p><strong>Lookahead (Digit only):</strong> ${currentMarket==='digit'?getSettings().lookaheadTicks:'N/A'}</p>
+      <p><strong>NEXT DIGIT predictor (weighted):</strong> ${document.getElementById(`prediction_${symbol}`)?.innerText || 'N/A'}</p>
     `;
     modal.style.display = 'flex';
   }
