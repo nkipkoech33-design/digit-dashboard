@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Deriv Pro – Last Digit at Far Top‑Right</title>
+<title>Deriv Pro – Stable Pattern Recommendation (Long‑lasting)</title>
 <style>
   :root {
     --bg-body: #0b1120;
@@ -76,7 +76,7 @@
   .mode-toggle:hover { background: var(--btn-hover); }
   .sub { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem; border-left: 3px solid var(--btn-bg); padding-left: 0.75rem; }
   .controls { background: var(--bg-header); padding: 1rem; border-radius: 1.5rem; margin-bottom: 2rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
-  .input-group { flex: 2; min-width: 160px; }
+  .input-group { flex: 2; min-width: 140px; }
   .input-group label { display: block; font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem; }
   .token-input, .setting-input { width: 100%; background: var(--bg-body); border: 1px solid var(--border-color); padding: 0.6rem 0.8rem; border-radius: 2rem; color: var(--text-primary); font-size: 0.85rem; }
   .setting-input { width: auto; display: inline-block; margin: 0 0.3rem; text-align: center; }
@@ -137,7 +137,6 @@
     gap: 0.7rem; 
     flex-wrap: wrap; 
   }
-  /* Reduced market price */
   .live-price-big { 
     font-size: 1.2rem; 
     font-weight: 600; 
@@ -152,12 +151,11 @@
     margin: 0 0.2rem; 
   }
   .live-tick-badge { background: #0f172a; padding: 0.2rem 0.7rem; border-radius: 2rem; font-size: 0.7rem; font-weight: bold; color: #4ade80; }
-  /* Enlarged last digit badge – far right corner */
   .last-digit-badge {
     font-size: 3rem;
     font-weight: 800;
     font-family: monospace;
-    margin-left: auto;          /* pushes to far right */
+    margin-left: auto;
     background: var(--last-digit-bg);
     padding: 0.2rem 1.2rem;
     border-radius: 2rem;
@@ -234,6 +232,32 @@
   .strength-fill { height: 100%; background: var(--strength-fill); width: 0%; transition: width 0.3s; }
   .prediction-digit { font-size: 1.3rem; font-weight: bold; background: var(--bg-panel); padding: 0 0.4rem; border-radius: 0.7rem; margin-left: 0.4rem; }
   
+  .pattern-preview {
+    background: var(--bg-panel);
+    border-radius: 1rem;
+    padding: 0.5rem;
+    margin: 0.5rem 1rem;
+    font-size: 0.75rem;
+    text-align: center;
+    border-top: 1px solid var(--border-color);
+  }
+  .pattern-last4 {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 0.3rem;
+  }
+  .pattern-badge {
+    font-weight: bold;
+    padding: 0.2rem 0.5rem;
+    border-radius: 1rem;
+    font-family: monospace;
+  }
+  .pattern-rule {
+    margin-top: 0.2rem;
+    color: var(--text-secondary);
+  }
+  
   .checklist {
     display: flex;
     flex-wrap: wrap;
@@ -265,6 +289,7 @@
     .checklist { font-size: 0.65rem; gap: 0.5rem; } 
     .last-digit-badge { font-size: 2.2rem; min-width: 70px; padding: 0.1rem 0.8rem; } 
     .live-price-big { font-size: 0.9rem; }
+    .pattern-preview { font-size: 0.7rem; }
   }
   @media (max-width: 700px) { 
     .digit-cell span.digit { font-size: 1.5rem; } 
@@ -277,7 +302,7 @@
 <body>
 <div class="container">
   <div class="top-bar">
-    <h1>⚡ DERIV PRO – Last Digit at Far Corner</h1>
+    <h1>⚡ DERIV PRO – Stable Pattern Recommendation (Long‑lasting)</h1>
     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
       <div class="market-type-selector">
         <button class="market-btn active" data-market="evenodd">🎲 Even/Odd</button>
@@ -294,7 +319,7 @@
     </div>
   </div>
   <div class="status-bar" id="connectionStatus">⚫ Disconnected</div>
-  <div class="sub">🔔 <strong>Last digit badge</strong> now at the extreme top‑right corner. Large and prominent.</div>
+  <div class="sub">🔔 <strong>Stable pattern recommendation:</strong> based on last 200 parity outcomes – changes only when market behaviour shifts (lasts minutes).</div>
 
   <div class="controls">
     <div class="input-group"><label>🔑 API TOKEN</label><input type="password" id="token" class="token-input" placeholder="Enter your Deriv API token"></div>
@@ -315,12 +340,11 @@
       <div id="marketsListContainer" class="markets-list"></div>
     </div>
   </div>
-  <footer>✅ Market price small, last digit huge and flush to the top‑right corner.</footer>
+  <footer>✅ Dominant pattern is stable (last 200 ticks, min 10 occurrences, ≥70% confidence). Updates only when market structure changes.</footer>
 </div>
 <div id="marketModal" class="modal"><div class="modal-content"><span class="close-modal">&times;</span><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
 
 <script>
-  // ============ FULL ORIGINAL SCRIPT (unchanged except last digit badge position in HTML) ============
   const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,"1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
   const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Vol 10","R_25":"Vol 25","R_50":"Vol 50","R_75":"Vol 75","R_100":"Vol 100","JD10":"Jump 10","JD25":"Jump 25","JD50":"Jump 50","JD75":"Jump 75","JD100":"Jump 100" };
   const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
@@ -336,6 +360,9 @@
   let currentMarket = 'evenodd';
   let currentIndicator = 'hybrid';
   let pendingConfirmation = {};
+
+  // Store last dominant pattern to avoid flickering
+  let lastDominantPattern = {};
 
   function getSettings() {
     return {
@@ -439,12 +466,12 @@
     if(!ranks) return false;
     let { allPct } = ranks;
     if(predictedParity === "EVEN") {
-      for(let d of [1,3,5,7,9]) if(allPct[d] >= 10) return false;
+      for(let d of [1,3,5,7,9]) if(allPct[d] > 10) return false;
       let { most, secondMost } = ranks;
       let isEven = d => d%2===0;
       return isEven(most) && isEven(secondMost);
     } else if(predictedParity === "ODD") {
-      for(let d of [0,2,4,6,8]) if(allPct[d] >= 10) return false;
+      for(let d of [0,2,4,6,8]) if(allPct[d] > 10) return false;
       let { most, secondMost } = ranks;
       let isOdd = d => d%2===1;
       return isOdd(most) && isOdd(secondMost);
@@ -582,9 +609,112 @@
     return pred; 
   }
 
-  function computeConfidence(symbol, prediction) { let vol = getVolatility(symbol), volAdjust = Math.max(0, Math.min(15, (vol - 1.5) * 5)); if(currentMarket === 'differs' && prediction?.startsWith("MATCH DIGIT")) { let matchInfo = getMatchDigitPrediction(symbol, true); return Math.min(100, Math.max(0, Math.round(matchInfo - volAdjust))); } return Math.min(100, Math.max(0, Math.round(70 - volAdjust))); }
-  function getSignalMessage(symbol) { let pred = getActivePrediction(symbol); if(!pred) return { active: false, msg: "", confidence: 0 }; let conf = computeConfidence(symbol, pred); let action = (currentMarket === 'digit') ? `BUY DIGIT ${pred}` : `BUY ${pred}`; return { active: true, msg: `${action} (${conf}%)`, confidence: conf }; }
-  window.recordOutcome = function(symbol, outcome) { if(!signalHistory[symbol]) signalHistory[symbol] = []; signalHistory[symbol].push({ outcome, timestamp: Date.now() }); if(signalHistory[symbol].length > 10) signalHistory[symbol].shift(); if(getSettings().soundEnabled && audioCtx) { let osc = audioCtx.createOscillator(), gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.frequency.value = outcome === 'win' ? 1046.5 : 440; gain.gain.value = 0.15; osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime+0.3); osc.stop(audioCtx.currentTime+0.3); } renderMarket(symbol); };
+  function computeConfidence(symbol, prediction) { 
+    let vol = getVolatility(symbol), volAdjust = Math.max(0, Math.min(15, (vol - 1.5) * 5));
+    let base = 70;
+    if(currentMarket === 'differs' && prediction?.startsWith("MATCH DIGIT")) { 
+      let matchInfo = getMatchDigitPrediction(symbol, true); 
+      base = matchInfo;
+    }
+    let conf = base - volAdjust;
+    let ranks = getDigitRanksAndPct(symbol);
+    if(ranks && ranks.mostPct && ranks.leastPct) conf += Math.min(15, (ranks.mostPct - ranks.leastPct) / 5);
+    conf = Math.min(95, Math.max(5, Math.round(conf)));
+    return conf;
+  }
+
+  function getSignalMessage(symbol) { 
+    let pred = getActivePrediction(symbol); 
+    if(!pred) return { active: false, msg: "", confidence: 0 }; 
+    let conf = computeConfidence(symbol, pred); 
+    let action = (currentMarket === 'digit') ? `BUY DIGIT ${pred}` : `BUY ${pred}`; 
+    return { active: true, msg: `${action} (${conf}%)`, confidence: conf };
+  }
+
+  // ===================== STABLE PATTERN RECOMMENDATION =====================
+  function getDominantPattern(parityArray) {
+    // parityArray: array of 'E'/'O', length >= 200
+    if (parityArray.length < 50) return null;
+    let patterns = {};
+    let lengths = [2, 3, 4];
+    for (let L of lengths) {
+      for (let i = 0; i <= parityArray.length - L - 1; i++) {
+        let pat = parityArray.slice(i, i + L).join('');
+        let next = parityArray[i + L];
+        if (!patterns[pat]) patterns[pat] = { E: 0, O: 0 };
+        patterns[pat][next]++;
+      }
+    }
+    let bestScore = -1;
+    let bestPattern = null;
+    let minCount = 10;  // require at least 10 occurrences for stability
+    let minConf = 0.7;
+    for (let pat in patterns) {
+      let p = patterns[pat];
+      let total = p.E + p.O;
+      if (total < minCount) continue;
+      let probE = p.E / total;
+      let probO = p.O / total;
+      let maxProb = Math.max(probE, probO);
+      if (maxProb < minConf) continue;
+      let prediction = probE >= probO ? 'E' : 'O';
+      // score: confidence * sqrt(count) - favours high confidence and high occurrence
+      let score = maxProb * Math.sqrt(total);
+      if (score > bestScore) {
+        bestScore = score;
+        bestPattern = { pattern: pat, prediction, confidence: maxProb, count: total };
+      }
+    }
+    return bestPattern;
+  }
+
+  function updatePatternPreview(symbol) {
+    let previewDiv = document.getElementById(`patternPreview_${symbol}`);
+    if (!previewDiv) return;
+    if (currentMarket !== 'evenodd') {
+      previewDiv.innerHTML = `<div class="pattern-preview">📊 Pattern preview only available in Even/Odd mode.</div>`;
+      return;
+    }
+    let data = marketData[symbol];
+    if (!data || data.rollingArray.length < 100) {
+      previewDiv.innerHTML = `<div class="pattern-preview">⏳ Accumulating data for pattern detection (need ≥100 ticks)...</div>`;
+      return;
+    }
+    let digits = data.rollingArray.slice(-300);
+    let parity = digits.map(d => (d % 2 === 0) ? 'E' : 'O');
+    let last4 = parity.slice(-4);
+    let last4Html = last4.map(p => `<span class="pattern-badge" style="background:${p === 'E' ? '#4ade80' : '#f87171'}">${p}</span>`).join('');
+    
+    let dominant = getDominantPattern(parity);
+    let ruleHtml = '';
+    if (dominant) {
+      let predColor = dominant.prediction === 'E' ? '#4ade80' : '#f87171';
+      ruleHtml = `<div class="pattern-rule">🧠 <strong>Dominant pattern:</strong> <span style="background:var(--bg-body); padding:0.1rem 0.4rem; border-radius:0.5rem;">${dominant.pattern}</span> → <span style="color:${predColor}; font-weight:bold;">${dominant.prediction}</span> (${(dominant.confidence*100).toFixed(0)}% confidence, ${dominant.count} occurrences)<br><span style="font-size:0.65rem;">Based on last 300 ticks – stable, changes only when market shifts</span></div>`;
+    } else {
+      ruleHtml = `<div class="pattern-rule">📉 No dominant pattern yet (need ≥10 occurrences with ≥70% confidence).</div>`;
+    }
+    previewDiv.innerHTML = `<div class="pattern-preview">
+      <div class="pattern-last4">Last 4 ticks: ${last4Html}</div>
+      ${ruleHtml}
+    </div>`;
+  }
+  // ====================================================================
+
+  window.recordOutcome = function(symbol, outcome) { 
+    if(!signalHistory[symbol]) signalHistory[symbol] = []; 
+    signalHistory[symbol].push({ outcome, timestamp: Date.now() }); 
+    if(signalHistory[symbol].length > 10) signalHistory[symbol].shift(); 
+    if(getSettings().soundEnabled && audioCtx) { 
+      let osc = audioCtx.createOscillator(), gain = audioCtx.createGain(); 
+      osc.connect(gain); gain.connect(audioCtx.destination); 
+      osc.frequency.value = outcome === 'win' ? 1046.5 : 440; 
+      gain.gain.value = 0.15; 
+      osc.start(); 
+      gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime+0.3); 
+      osc.stop(audioCtx.currentTime+0.3); 
+    } 
+    renderMarket(symbol); 
+  };
 
   function processTick(symbol, priceNumeric, quoteDisplay=null) {
     if(!marketData[symbol]) {
@@ -608,11 +738,10 @@
     if(data.last50Array.length > 50) data.last50Array.shift();
     updateTrends(symbol);
     updateDigitRuler(symbol, digit);
-    
     let lastDigitSpan = document.getElementById(`lastDigit_${symbol}`);
     if(lastDigitSpan) lastDigitSpan.innerText = digit;
-    
     renderMarket(symbol);
+    updatePatternPreview(symbol);
   }
 
   function rebuildDigitGrid(sym) {
@@ -695,13 +824,10 @@
 
   function getChecklistStatus(symbol) {
     let settings = getSettings();
-    let data = marketData[symbol];
     let rolling = getRollingCounts(symbol);
     let totalTicks = rolling ? rolling.total : 0;
     let checks = {};
-
     checks.minTicks = totalTicks >= settings.windowSize;
-
     let rankOk = false;
     if (currentMarket === 'evenodd') {
       let arrow = getEvenOddArrow(symbol);
@@ -715,28 +841,22 @@
       let candidate = (currentIndicator === 'arrow') ? arrow : (currentIndicator === 'majority') ? maj : (arrow && maj && arrow === maj) ? arrow : null;
       if (candidate) rankOk = checkOverUnderRankCondition(symbol, candidate);
       else rankOk = false;
-    } else {
-      rankOk = true;
-    }
+    } else { rankOk = true; }
     checks.rankCondition = rankOk;
-
     let arrowPred = null;
     if (currentMarket === 'evenodd') arrowPred = getEvenOddArrow(symbol);
     else if (currentMarket === 'overunder') arrowPred = getOverUnderArrow(symbol);
     else if (currentMarket === 'differs') arrowPred = getMatchArrow(symbol);
     else arrowPred = getDigitArrow(symbol);
     checks.arrowOk = (arrowPred !== null);
-
     let majorityPred = null;
     if (currentMarket === 'evenodd') majorityPred = getMajorityPrediction(symbol);
     else if (currentMarket === 'overunder') majorityPred = getMajorityPrediction(symbol);
     else if (currentMarket === 'differs') majorityPred = getMatchMajority(symbol);
     else majorityPred = getDigitMajority(symbol);
     checks.majorityOk = (majorityPred !== null);
-
     let vol = getVolatility(symbol);
     checks.volatilityOk = (vol < settings.volatilityThresh);
-
     let trendOk = true;
     if (settings.trendFilterEnabled) {
       let longTrend = getLongTermTrend(symbol);
@@ -746,24 +866,19 @@
       else trendOk = true;
     }
     checks.trendOk = trendOk;
-
     let history = signalHistory[symbol] || [];
     let streakLimit = settings.rejectionStreak;
     let recentLosses = history.slice(-streakLimit).filter(h=>h.outcome==='loss').length;
     checks.rejectionOk = !(history.length >= streakLimit && recentLosses === streakLimit);
-
     let volConfirmOk = true;
     if (vol >= settings.volatilityThresh) {
       let pred = getHybridPrediction(symbol);
       if (pred && pendingConfirmation[symbol] && pendingConfirmation[symbol].prediction === pred) {
         let now = Date.now();
         volConfirmOk = (now - pendingConfirmation[symbol].firstSeen >= 3000);
-      } else {
-        volConfirmOk = false;
-      }
+      } else { volConfirmOk = false; }
     }
     checks.confirmationOk = volConfirmOk;
-
     return checks;
   }
 
@@ -798,7 +913,6 @@
     let priceSpan = document.getElementById(`livePriceBig_${symbol}`); if(priceSpan) priceSpan.innerText = data.lastPriceDisplay;
     let lastDigitSpan = document.getElementById(`lastDigit_${symbol}`);
     if(lastDigitSpan) lastDigitSpan.innerText = data.lastDigit;
-    
     let last50 = data.last50Array;
     if(last50.length>0){
       if(currentMarket === 'evenodd') {
@@ -832,6 +946,7 @@
     }
     rebuildDigitGrid(symbol);
     updateChecklistDisplay(symbol);
+    updatePatternPreview(symbol);
     updateAllMarketsList();
   }
 
@@ -897,7 +1012,7 @@
     let card = document.createElement('div'); 
     card.className = 'market-card'; 
     card.id = `market_${symbol}`; 
-    card.onclick = () => openMarketModal(symbol); 
+    card.onclick = () => openMarketModal(symbol);
     card.innerHTML = `<div class="market-header">
         <div class="market-title">
           <span>📈 ${displayName}</span>
@@ -913,14 +1028,15 @@
       <div class="ruler-labels" style="margin: -0.2rem 1rem 0.5rem 1rem;"><span>Under 5 (0-4)</span><span>Over 4 (5-9)</span></div>
       <div class="letter-sequence-wrapper"><div class="sequence-label" id="seqLabel_${symbol}">Sequence</div><div class="letter-sequence" id="paritySeq_${symbol}">⏳ ticks...</div><div class="letter-sequence hidden" id="ouSeq_${symbol}"></div></div>
       <div class="signal-area" id="signalDisplay_${symbol}"><span class="no-signal">⏳ waiting for signal...</span></div>
-      <div class="checklist" id="checklist_${symbol}"></div>`; 
+      <div class="checklist" id="checklist_${symbol}"></div>
+      <div id="patternPreview_${symbol}" class="pattern-preview">⏳ Loading pattern data...</div>`; 
     container.appendChild(card); 
     updateSequenceLabel(symbol); 
   }
   function updateSequenceLabel(symbol) { let label = document.querySelector(`#market_${symbol} .sequence-label`); if(label) label.innerText = currentMarket === 'evenodd' ? 'Even / Odd (E=Even, O=Odd)' : (currentMarket === 'overunder' ? 'Over/Under letters: red U (0-3), blue M (4-5), green O (6-9)' : 'Digit sequence: red 0-3, blue 4-5, green 6-9'); let seqDiv = document.getElementById(`paritySeq_${symbol}`); let ouDiv = document.getElementById(`ouSeq_${symbol}`); if(currentMarket === 'overunder') { seqDiv.classList.add('hidden'); ouDiv.classList.remove('hidden'); } else { seqDiv.classList.remove('hidden'); ouDiv.classList.add('hidden'); } }
   function openMarketModal(symbol) { let data = marketData[symbol]; if(!data) return; let modal = document.getElementById('marketModal'); let pred = getActivePrediction(symbol); document.getElementById('modalTitle').innerText = `${MARKET_NAMES[symbol]} (${symbol}) - ${currentMarket.toUpperCase()} / ${currentIndicator.toUpperCase()}`; let last20 = data.last50Array.slice(-20).join(', '); let trends = rawTrend[symbol] || {}; let trendSummary = Object.entries(trends).map(([d,t])=>`${d}:${t===1?'↑':(t===-1?'↓':'•')}`).join(', '); let rolling = getRollingCounts(symbol); let totalTicks = rolling ? rolling.total : 0; let checks = getChecklistStatus(symbol); let checkText = Object.entries(checks).map(([k,v])=>`${k}: ${v?'✅':'❌'}`).join(', '); document.getElementById('modalBody').innerHTML = `<p><strong>Price:</strong> ${data.lastPriceDisplay}</p><p><strong>Last digit:</strong> ${data.lastDigit}</p><p><strong>Active Signal:</strong> ${pred ? `🔥 ${pred} 🔥` : 'None'}</p><p><strong>Checklist:</strong> ${checkText}</p><p><strong>10-tick arrows:</strong> ${trendSummary||'none'}</p><p><strong>Last 20 digits:</strong> ${last20}</p><p><strong>NEXT DIGIT predictor:</strong> ${document.getElementById(`prediction_${symbol}`)?.innerText || 'N/A'}</p><p><strong>Percentages:</strong> Rolling window (last ${totalTicks} ticks) – matches Deriv official.</p>`; modal.style.display = 'flex'; }
   function subscribeToMarket(symbol) { if(!ws||ws.readyState!==WebSocket.OPEN||invalidSymbols.has(symbol)) return; ws.send(JSON.stringify({ ticks_history: symbol, count: 1000, end: "latest", style: "ticks" })); ws.send(JSON.stringify({ ticks: symbol, subscribe: 1 })); }
-  function handleMessage(msg) { if(!msg) return; if(msg.msg_type==='tick' && msg.tick) { let sym = msg.tick.symbol; if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) { if(!marketData[sym]) processTick(sym, msg.tick.quote, msg.tick.quote_display); else processTick(sym, msg.tick.quote, msg.tick.quote_display); let statusSpan = document.getElementById(`status_${sym}`); if(statusSpan && statusSpan.innerText !== '🟢 live ticks') { statusSpan.innerHTML = '🟢 live ticks'; statusSpan.className = 'market-status status-green'; } } return; } if(msg.msg_type==='history' && msg.history?.prices && msg.echo_req?.ticks_history) { let sym = msg.echo_req.ticks_history; if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) msg.history.prices.forEach(p => processTick(sym, p, null)); return; } if(msg.error && msg.error.code==='InvalidSymbol' && msg.echo_req?.ticks_history) { let sym = msg.echo_req.ticks_history; if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) { invalidSymbols.add(sym); createMarketUI(sym, MARKET_NAMES[sym], true); let statusSpan = document.getElementById(`status_${sym}`); if(statusSpan) { statusSpan.innerHTML = '🔴 BLOCKED'; statusSpan.className = 'market-status status-red'; } } return; } if(msg.msg_type==='authorize') { if(msg.error) { document.getElementById('connectionStatus').innerHTML = '❌ Auth failed'; return; } document.getElementById('connectionStatus').innerHTML = '✅ Connected – loading markets...'; document.getElementById('marketsContainer').innerHTML = ''; marketData = {}; invalidSymbols.clear(); signalExpiry = {}; activeSignalMsg = {}; lockedMarkets.clear(); rawTrend = {}; signalHistory = {}; pendingConfirmation = {}; for(let sym of ALL_SYMBOLS) createMarketUI(sym, MARKET_NAMES[sym], false); let idx = 0; function subNext() { if(idx >= ALL_SYMBOLS.length) { document.getElementById('connectionStatus').innerHTML = `✅ Streaming – ${currentMarket.toUpperCase()} / ${currentIndicator.toUpperCase()} mode`; document.getElementById('windowSizeLabel').innerText = getSettings().windowSize; return; } let sym = ALL_SYMBOLS[idx]; if(!invalidSymbols.has(sym)) subscribeToMarket(sym); idx++; setTimeout(subNext, 250); } subNext(); return; } }
+  function handleMessage(msg) { if(!msg) return; if(msg.msg_type==='tick' && msg.tick) { let sym = msg.tick.symbol; if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) { if(!marketData[sym]) processTick(sym, msg.tick.quote, msg.tick.quote_display); else processTick(sym, msg.tick.quote, msg.tick.quote_display); let statusSpan = document.getElementById(`status_${sym}`); if(statusSpan && statusSpan.innerText !== '🟢 live ticks') { statusSpan.innerHTML = '🟢 live ticks'; statusSpan.className = 'market-status status-green'; } } return; } if(msg.msg_type==='history' && msg.history?.prices && msg.echo_req?.ticks_history) { let sym = msg.echo_req.ticks_history; if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) { msg.history.prices.forEach(p => processTick(sym, p, null)); let statusSpan = document.getElementById(`status_${sym}`); if(statusSpan && statusSpan.innerText !== '🟢 live ticks') { statusSpan.innerHTML = '🟢 live ticks'; statusSpan.className = 'market-status status-green'; } } return; } if(msg.error && msg.error.code==='InvalidSymbol' && msg.echo_req?.ticks_history) { let sym = msg.echo_req.ticks_history; if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) { invalidSymbols.add(sym); createMarketUI(sym, MARKET_NAMES[sym], true); let statusSpan = document.getElementById(`status_${sym}`); if(statusSpan) { statusSpan.innerHTML = '🔴 BLOCKED'; statusSpan.className = 'market-status status-red'; } } return; } if(msg.msg_type==='authorize') { if(msg.error) { document.getElementById('connectionStatus').innerHTML = '❌ Auth failed'; return; } document.getElementById('connectionStatus').innerHTML = '✅ Connected – loading markets...'; document.getElementById('marketsContainer').innerHTML = ''; marketData = {}; invalidSymbols.clear(); signalExpiry = {}; activeSignalMsg = {}; lockedMarkets.clear(); rawTrend = {}; signalHistory = {}; pendingConfirmation = {}; for(let sym of ALL_SYMBOLS) createMarketUI(sym, MARKET_NAMES[sym], false); let idx = 0; function subNext() { if(idx >= ALL_SYMBOLS.length) { document.getElementById('connectionStatus').innerHTML = `✅ Streaming – ${currentMarket.toUpperCase()} / ${currentIndicator.toUpperCase()} mode`; document.getElementById('windowSizeLabel').innerText = getSettings().windowSize; return; } let sym = ALL_SYMBOLS[idx]; if(!invalidSymbols.has(sym)) subscribeToMarket(sym); idx++; setTimeout(subNext, 250); } subNext(); return; } }
   let pingInterval; function startPing() { if(pingInterval) clearInterval(pingInterval); pingInterval = setInterval(()=>{ if(ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify({ping:1})); }, 25000); }
   function connectWebSocket() { let token = document.getElementById('token').value.trim(); if(!token) { alert("Enter API token"); return; } if(ws && (ws.readyState===WebSocket.OPEN || ws.readyState===WebSocket.CONNECTING)) ws.close(); document.getElementById('connectionStatus').innerHTML = '⏳ Connecting...'; ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089'); ws.onopen = () => { ws.send(JSON.stringify({authorize: token})); startPing(); }; ws.onmessage = e => { try { handleMessage(JSON.parse(e.data)); } catch(err) { console.warn(err); } }; ws.onerror = () => { document.getElementById('connectionStatus').innerHTML = '⚠️ WS error'; }; ws.onclose = () => { if(pingInterval) clearInterval(pingInterval); }; }
   function toggleMode() { document.body.classList.toggle('light'); }
