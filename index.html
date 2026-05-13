@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Deriv Pro – Last Digit at Far Top‑Right</title>
+<title>Deriv Pro – Last Digit Big + Compact Boxes</title>
 <style>
   :root {
     --bg-body: #0b1120;
@@ -122,7 +122,7 @@
   .market-card:hover { filter: brightness(1.05); }
   .market-header { 
     background: var(--bg-header); 
-    padding: 0.7rem 1.2rem; 
+    padding: 0.4rem 1.2rem;  /* reduced from 0.7rem */
     display: flex; 
     justify-content: space-between; 
     align-items: center; 
@@ -172,12 +172,19 @@
   .status-red { color: #f87171; background: var(--status-red-bg); }
   .status-green { color: #4ade80; background: var(--status-green-bg); }
   
-  .digits-grid { display: flex; flex-direction: column; gap: 12px; padding: 1.2rem; background: var(--bg-body); }
+  /* Height reduction adjustments */
+  .digits-grid { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 8px;                    /* reduced from 12px */
+    padding: 0.8rem 1.2rem;      /* reduced from 1.2rem */
+    background: var(--bg-body); 
+  }
   .digits-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
   .digit-cell { 
     background: var(--bg-digit); 
     border-radius: 1rem; 
-    padding: 0.7rem 0.2rem; 
+    padding: 0.4rem 0.2rem;      /* reduced from 0.7rem */
     text-align: center; 
     position: relative; 
     border: 1px solid var(--border-color);
@@ -213,16 +220,44 @@
   .hot { box-shadow: 0 0 12px #facc15, inset 0 0 4px #facc15; border-color: #facc15; }
   .cold { opacity: 0.65; filter: grayscale(0.2); }
   
-  .info-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.8rem; padding: 0.6rem 1.2rem; background: var(--bg-body); font-size: 0.75rem; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
+  .info-row { 
+    display: flex; 
+    flex-wrap: wrap; 
+    justify-content: space-between; 
+    gap: 0.8rem; 
+    padding: 0.4rem 1.2rem;      /* reduced from 0.6rem */
+    background: var(--bg-body); 
+    font-size: 0.75rem; 
+    border-top: 1px solid var(--border-color); 
+    border-bottom: 1px solid var(--border-color); 
+  }
   .parity-stats, .streak-stats, .prediction-box { background: var(--bg-panel); padding: 0.2rem 0.6rem; border-radius: 1rem; font-family: monospace; font-weight: 600; }
-  .letter-sequence-wrapper { padding: 0.4rem 1rem; background: var(--bg-body); border-bottom: 1px solid var(--border-color); }
+  .letter-sequence-wrapper { 
+    padding: 0.2rem 1rem;          /* reduced from 0.4rem */
+    background: var(--bg-body); 
+    border-bottom: 1px solid var(--border-color); 
+  }
   .letter-sequence { font-family: monospace; font-size: 1.3rem; font-weight: bold; line-height: 1.4; letter-spacing: 2px; word-break: break-all; white-space: normal; display: block; width: 100%; text-align: center; background: var(--bg-panel); border-radius: 0.8rem; padding: 0.5rem; margin-bottom: 0.4rem; }
   .sequence-label { font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.2rem; text-align: center; }
-  .digit-ruler { background: var(--bg-panel); padding: 0.3rem 0.5rem; border-radius: 2rem; margin: 0.2rem 1rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .digit-ruler { 
+    background: var(--bg-panel); 
+    padding: 0.3rem 0.5rem; 
+    border-radius: 2rem; 
+    margin: 0.1rem 1rem;           /* reduced from 0.2rem */
+    display: flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    flex-wrap: wrap; 
+  }
   .ruler-bar { flex: 1; height: 22px; background: linear-gradient(90deg, var(--ruler-under-bg) 0%, var(--ruler-under-bg) 55.5%, var(--ruler-over-bg) 55.6%, var(--ruler-over-bg) 100%); border-radius: 12px; position: relative; min-width: 150px; }
   .ruler-marker { position: absolute; width: 10px; height: 30px; background: var(--ruler-marker); border-radius: 6px; top: -4px; transform: translateX(-50%); box-shadow: 0 0 6px currentColor; }
   .ruler-labels { display: flex; justify-content: space-between; width: 100%; font-size: 0.7rem; margin-top: 6px; font-weight: 600; }
-  .signal-area { padding: 0.8rem 1.2rem 0.5rem 1.2rem; text-align: center; background: var(--bg-body); border-bottom: 1px solid var(--border-color); }
+  .signal-area { 
+    padding: 0.5rem 1.2rem;        /* reduced from 0.8rem */
+    text-align: center; 
+    background: var(--bg-body); 
+    border-bottom: 1px solid var(--border-color); 
+  }
   .signal-flash { background: var(--signal-bg); padding: 6px 12px; border-radius: 2rem; display: inline-block; font-size: 0.85rem; font-weight: bold; }
   .signal-strong { background: var(--signal-strong-bg); color: #facc15; }
   .majority-signal { background: #0e3a4a; color: #06b6d4; border: 1px solid #06b6d4; }
@@ -240,9 +275,9 @@
     justify-content: center;
     gap: 0.8rem;
     background: var(--bg-panel);
-    padding: 0.5rem 0.8rem;
+    padding: 0.3rem 0.8rem;        /* reduced from 0.5rem */
     border-radius: 1rem;
-    margin-top: 0.5rem;
+    margin-top: 0.3rem;            /* reduced from 0.5rem */
     font-size: 0.7rem;
     font-family: monospace;
   }
@@ -277,7 +312,7 @@
 <body>
 <div class="container">
   <div class="top-bar">
-    <h1>⚡ DERIV PRO – Last Digit at Far Corner</h1>
+    <h1>⚡ DERIV PRO – Last Digit BIG + Compact Boxes</h1>
     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
       <div class="market-type-selector">
         <button class="market-btn active" data-market="evenodd">🎲 Even/Odd</button>
@@ -294,7 +329,7 @@
     </div>
   </div>
   <div class="status-bar" id="connectionStatus">⚫ Disconnected</div>
-  <div class="sub">🔔 <strong>Last digit badge</strong> now at the extreme top‑right corner. Large and prominent.</div>
+  <div class="sub">🔔 <strong>Last digit badge</strong> is huge and at the far top‑right. Box height reduced for compact view.</div>
 
   <div class="controls">
     <div class="input-group"><label>🔑 API TOKEN</label><input type="password" id="token" class="token-input" placeholder="Enter your Deriv API token"></div>
@@ -315,7 +350,7 @@
       <div id="marketsListContainer" class="markets-list"></div>
     </div>
   </div>
-  <footer>✅ Market price small, last digit huge and flush to the top‑right corner.</footer>
+  <footer>✅ Market price small, last digit huge at top‑right corner. Boxes are now more compact.</footer>
 </div>
 <div id="marketModal" class="modal"><div class="modal-content"><span class="close-modal">&times;</span><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
 
