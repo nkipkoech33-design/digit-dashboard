@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Deriv Pro – Clean UI (No Checklist, No "No saturation")</title>
+<title>TAJIRI TRADERS – Deriv Pro</title>
 <style>
   :root {
     --bg-body: #0b1120;
@@ -23,9 +23,6 @@
     --strength-fill: #4ade80;
     --btn-bg: #3b82f6;
     --btn-hover: #2563eb;
-    --ruler-under-bg: #1e3a1e;
-    --ruler-over-bg: #3b1e0a;
-    --ruler-marker: #facc15;
     --trade-active: #10b981;
     --majority-blink: #06b6d4;
     --hybrid-blink: #a855f7;
@@ -55,9 +52,6 @@
     --strength-fill: #15803d;
     --btn-bg: #2563eb;
     --btn-hover: #1d4ed8;
-    --ruler-under-bg: #bbf7d0;
-    --ruler-over-bg: #fed7aa;
-    --ruler-marker: #0f172a;
     --trade-active: #059669;
     --majority-blink: #0891b2;
     --hybrid-blink: #9333ea;
@@ -78,7 +72,6 @@
   .status-bar { background: var(--bg-header); padding: 0.4rem 1rem; border-radius: 2rem; display: inline-block; font-size: 0.75rem; margin-bottom: 0.8rem; }
   .mode-toggle { background: var(--btn-bg); border: none; padding: 0.3rem 0.8rem; border-radius: 2rem; color: white; cursor: pointer; font-weight: bold; margin-left: 0.5rem; }
   .mode-toggle:hover { background: var(--btn-hover); }
-  .sub { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem; border-left: 3px solid var(--btn-bg); padding-left: 0.75rem; }
   .controls { background: var(--bg-header); padding: 0.8rem; border-radius: 1.5rem; margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: flex-end; }
   .input-group { flex: 2; min-width: 120px; }
   .input-group label { display: block; font-size: 0.65rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.2rem; }
@@ -189,13 +182,9 @@
   .cold { opacity: 0.6; }
   
   .info-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.4rem; padding: 0.3rem 0.5rem; background: var(--bg-body); font-size: 0.65rem; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
-  .parity-stats, .streak-stats, .prediction-box { background: var(--bg-panel); padding: 0.1rem 0.3rem; border-radius: 0.8rem; }
+  .parity-stats, .streak-stats, .prediction-box, .evenodd-winrate { background: var(--bg-panel); padding: 0.1rem 0.3rem; border-radius: 0.8rem; }
   .letter-sequence-wrapper { padding: 0.2rem 0.5rem; background: var(--bg-body); border-bottom: 1px solid var(--border-color); }
   .letter-sequence { font-size: 0.9rem; padding: 0.2rem; margin-bottom: 0.1rem; }
-  .digit-ruler { padding: 0.1rem 0.3rem; border-radius: 1rem; margin: 0.1rem 0.5rem; display: flex; align-items: center; gap: 0.3rem; }
-  .ruler-bar { height: 14px; }
-  .ruler-marker { width: 8px; height: 20px; top: -3px; }
-  .ruler-labels { font-size: 0.6rem; margin-top: 2px; }
   .signal-area { padding: 0.3rem 0.5rem; text-align: center; background: var(--bg-body); border-bottom: 1px solid var(--border-color); }
   .signal-flash { padding: 3px 6px; font-size: 0.7rem; }
   .strength-meter { width: 70px; height: 5px; margin-left: 5px; }
@@ -243,7 +232,6 @@
     font-family: monospace;
   }
   
-  .rolling-note { font-size: 0.6rem; margin-top: 2px; padding: 1px 5px; }
   @media (max-width: 900px) { 
     .main-layout { flex-direction: column; } 
     .all-markets-panel { position: static; width: 100%; margin-top: 0.5rem; } 
@@ -262,7 +250,7 @@
 <body>
 <div class="container">
   <div class="top-bar">
-    <h1 style="font-size:1.2rem;">⚡ DERIV PRO – Clean UI (No Checklist)</h1>
+    <h1 style="font-size:1.4rem;">✨ WELCOME TO TAJIRI TRADERS ✨</h1>
     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
       <div class="market-type-selector">
         <button class="market-btn active" data-market="evenodd">🎲 Even/Odd</button>
@@ -279,7 +267,6 @@
     </div>
   </div>
   <div class="status-bar" id="connectionStatus">⚫ Disconnected</div>
-  <div class="sub">🔔 <strong>Multi‑timeframe progress:</strong> shows dominant digit parity for 50, 100, 200 ticks. Saturation alerts appear only when detected (no idle "No saturation"). Checklist removed – clean and fast.</div>
 
   <div class="controls">
     <div class="input-group"><label>🔑 API TOKEN</label><input type="password" id="token" class="token-input" placeholder="Enter your Deriv API token"></div>
@@ -300,12 +287,12 @@
       <div id="marketsListContainer" class="markets-list"></div>
     </div>
   </div>
-  <footer>✅ Multi‑timeframe on Even/Odd only | Saturation alerts only when detected | Checklist removed</footer>
+  <footer style="font-size:0.7rem; margin-top:0.8rem;">⚡ Live ticks | Clean UI – saturation alerts only when detected</footer>
 </div>
 <div id="marketModal" class="modal"><div class="modal-content"><span class="close-modal">&times;</span><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
 
 <script>
-  // ============ CORE SCRIPT (Checklist & "No saturation" removed) ============
+  // ============ CORE SCRIPT (Clean UI, Even/Odd win rate over full window) ============
   const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,"1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
   const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Vol 10","R_25":"Vol 25","R_50":"Vol 50","R_75":"Vol 75","R_100":"Vol 100","JD10":"Jump 10","JD25":"Jump 25","JD50":"Jump 50","JD75":"Jump 75","JD100":"Jump 100" };
   const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
@@ -337,7 +324,27 @@
 
   function lastDigitFromFormatted(str) { let digits = str.replace(/\./g,''); if(digits.length===0) return 0; return parseInt(digits.charAt(digits.length-1),10)||0; }
   function formatHistoryPrice(s, p) { let dec = DECIMAL_MAP[s] ?? 2; return p.toFixed(dec); }
-  function updateDigitRuler(symbol, lastDigit) { const ruler = document.getElementById(`ruler_${symbol}`); if(ruler) { const marker = ruler.querySelector('.ruler-marker'); if(marker) marker.style.left = `${(lastDigit/9)*100}%`; } }
+
+  // Even/Odd win rate over full rolling window (up to 1000 ticks)
+  function updateEvenOddWinRate(symbol) {
+    let data = marketData[symbol];
+    let container = document.getElementById(`evenOddWinrate_${symbol}`);
+    if (!container) return;
+    if (currentMarket !== 'evenodd') {
+      container.innerHTML = '';
+      return;
+    }
+    if (!data || data.rollingArray.length === 0) {
+      container.innerHTML = '⏳';
+      return;
+    }
+    let total = data.rollingArray.length;
+    let evens = data.rollingArray.filter(d => d % 2 === 0).length;
+    let odds = total - evens;
+    let evenPct = (evens / total) * 100;
+    let oddPct = (odds / total) * 100;
+    container.innerHTML = `<span style="color:#4ade80;">🎲 Even ${evenPct.toFixed(1)}%</span> | <span style="color:#f87171;">Odd ${oddPct.toFixed(1)}%</span>`;
+  }
 
   function getVolatility(symbol) {
     let data = marketData[symbol];
@@ -589,7 +596,7 @@
     return { active: true, msg: `${action} (${conf}%)`, confidence: conf };
   }
 
-  // ===================== MULTI‑TIMEFRAME PROGRESS =====================
+  // Multi‑timeframe progress
   function getWindowDominant(symbol, windowSize) {
     let data = marketData[symbol];
     if (!data || data.rollingArray.length < windowSize) return null;
@@ -646,9 +653,8 @@
     </div>`;
     container.innerHTML = html;
   }
-  // ====================================================================
 
-  // ===================== PATTERN PREVIEW =====================
+  // Pattern preview
   function getDominantPattern(parityArray) {
     if (parityArray.length < 50) return null;
     let patterns = {};
@@ -710,7 +716,7 @@
     previewDiv.innerHTML = `<div class="pattern-preview"><div class="pattern-last4">Last 4: ${last4Html}</div>${ruleHtml}</div>`;
   }
 
-  // ===================== SIMPLE SATURATION (NO "No saturation") =====================
+  // Simple saturation (no "No saturation" message)
   function getSimpleSaturationAlert(symbol) {
     let data = marketData[symbol];
     if (!data || data.rollingArray.length < 50) return null;
@@ -755,7 +761,6 @@
     }
     let alert = getSimpleSaturationAlert(symbol);
     if (!alert) {
-      // Completely remove the message – no clutter
       alertDiv.innerHTML = '';
       return;
     }
@@ -801,13 +806,11 @@
     data.last50Array.push(digit);
     if(data.last50Array.length > 50) data.last50Array.shift();
     updateTrends(symbol);
-    updateDigitRuler(symbol, digit);
-    let lastDigitSpan = document.getElementById(`lastDigit_${symbol}`);
-    if(lastDigitSpan) lastDigitSpan.innerText = digit;
     renderMarket(symbol);
     updatePatternPreview(symbol);
     updateSimpleSaturation(symbol);
     updateMultiTFProgress(symbol);
+    updateEvenOddWinRate(symbol);
   }
 
   function rebuildDigitGrid(sym) {
@@ -873,18 +876,6 @@
       row2.appendChild(cell);
     });
     container.appendChild(row1); container.appendChild(row2);
-    let rollingNote = document.querySelector(`#market_${sym} .rolling-note`);
-    if (!rollingNote) {
-      let rulerDiv = document.querySelector(`#market_${sym} .digit-ruler`);
-      if (rulerDiv && !rulerDiv.querySelector('.rolling-note')) {
-        let note = document.createElement('div');
-        note.className = 'rolling-note';
-        note.innerText = `🔄 rolling (last ${total} ticks)`;
-        rulerDiv.parentNode.insertBefore(note, rulerDiv.nextSibling);
-      }
-    } else {
-      rollingNote.innerText = `🔄 rolling (last ${total} ticks)`;
-    }
   }
 
   function renderMarket(symbol) {
@@ -1003,10 +994,13 @@
         <span class="last-digit-badge" id="lastDigit_${symbol}">?</span>
       </div>
       <div id="digitsContainer_${symbol}" class="digits-grid"></div>
-      <div class="info-row"><div class="parity-stats" id="parityStats_${symbol}">--</div><div class="streak-stats" id="streakStats_${symbol}">Streak: 0</div><div class="prediction-box" id="prediction_${symbol}">🔮 NEXT DIGIT: —</div></div>
-      <div class="digit-ruler" id="ruler_${symbol}"><div>0</div><div class="ruler-bar"><div class="ruler-marker" style="left:0%"></div></div><div>9</div></div>
-      <div class="ruler-labels"><span>Under 5 (0-4)</span><span>Over 4 (5-9)</span></div>
-      <div class="letter-sequence-wrapper"><div class="sequence-label" id="seqLabel_${symbol}">Sequence</div><div class="letter-sequence" id="paritySeq_${symbol}">⏳ ticks...</div><div class="letter-sequence hidden" id="ouSeq_${symbol}"></div></div>
+      <div class="info-row">
+        <div class="parity-stats" id="parityStats_${symbol}">--</div>
+        <div class="streak-stats" id="streakStats_${symbol}">Streak: 0</div>
+        <div class="evenodd-winrate" id="evenOddWinrate_${symbol}"></div>
+        <div class="prediction-box" id="prediction_${symbol}">🔮 NEXT DIGIT: —</div>
+      </div>
+      <div class="letter-sequence-wrapper"><div class="sequence-label" id="seqLabel_${symbol}">Even / Odd</div><div class="letter-sequence" id="paritySeq_${symbol}">⏳ ticks...</div><div class="letter-sequence hidden" id="ouSeq_${symbol}"></div></div>
       <div class="signal-area" id="signalDisplay_${symbol}"><span class="no-signal">⏳ waiting...</span></div>
       <div id="patternPreview_${symbol}" class="pattern-preview">⏳ Loading patterns...</div>
       <div id="saturationAlert_${symbol}" class="saturation-alert"></div>
@@ -1014,15 +1008,22 @@
     container.appendChild(card); 
     updateSequenceLabel(symbol); 
   }
-  function updateSequenceLabel(symbol) { let label = document.querySelector(`#market_${symbol} .sequence-label`); if(label) label.innerText = currentMarket === 'evenodd' ? 'Even / Odd (E=Even, O=Odd)' : (currentMarket === 'overunder' ? 'Over/Under (U/M/O)' : 'Digit sequence'); let seqDiv = document.getElementById(`paritySeq_${symbol}`); let ouDiv = document.getElementById(`ouSeq_${symbol}`); if(currentMarket === 'overunder') { seqDiv.classList.add('hidden'); ouDiv.classList.remove('hidden'); } else { seqDiv.classList.remove('hidden'); ouDiv.classList.add('hidden'); } }
+  function updateSequenceLabel(symbol) { 
+    let label = document.querySelector(`#market_${symbol} .sequence-label`); 
+    if(label) label.innerText = currentMarket === 'evenodd' ? 'Even / Odd' : (currentMarket === 'overunder' ? 'Over/Under' : 'Digit sequence'); 
+    let seqDiv = document.getElementById(`paritySeq_${symbol}`); 
+    let ouDiv = document.getElementById(`ouSeq_${symbol}`); 
+    if(currentMarket === 'overunder') { seqDiv.classList.add('hidden'); ouDiv.classList.remove('hidden'); } 
+    else { seqDiv.classList.remove('hidden'); ouDiv.classList.add('hidden'); } 
+  }
   function openMarketModal(symbol) { let data = marketData[symbol]; if(!data) return; let pred = getActivePrediction(symbol); document.getElementById('modalTitle').innerText = `${MARKET_NAMES[symbol]} (${symbol}) - ${currentMarket.toUpperCase()} / ${currentIndicator.toUpperCase()}`; let last20 = data.last50Array.slice(-20).join(', '); let trends = rawTrend[symbol] || {}; let trendSummary = Object.entries(trends).map(([d,t])=>`${d}:${t===1?'↑':(t===-1?'↓':'•')}`).join(', '); let rolling = getRollingCounts(symbol); let totalTicks = rolling ? rolling.total : 0; document.getElementById('modalBody').innerHTML = `<p><strong>Price:</strong> ${data.lastPriceDisplay}</p><p><strong>Last digit:</strong> ${data.lastDigit}</p><p><strong>Signal:</strong> ${pred ? `🔥 ${pred} 🔥` : 'None'}</p><p><strong>10-tick arrows:</strong> ${trendSummary}</p><p><strong>Last 20 digits:</strong> ${last20}</p><p><strong>NEXT DIGIT:</strong> ${document.getElementById(`prediction_${symbol}`)?.innerText || 'N/A'}</p><p>Rolling window: ${totalTicks} ticks.</p>`; modal.style.display = 'flex'; }
   function subscribeToMarket(symbol) { if(!ws||ws.readyState!==WebSocket.OPEN||invalidSymbols.has(symbol)) return; ws.send(JSON.stringify({ ticks_history: symbol, count: 1000, end: "latest", style: "ticks" })); ws.send(JSON.stringify({ ticks: symbol, subscribe: 1 })); }
-  function handleMessage(msg) { if(!msg) return; if(msg.msg_type==='tick' && msg.tick) { let sym = msg.tick.symbol; if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) { if(!marketData[sym]) processTick(sym, msg.tick.quote, msg.tick.quote_display); else processTick(sym, msg.tick.quote, msg.tick.quote_display); let statusSpan = document.getElementById(`status_${sym}`); if(statusSpan && statusSpan.innerText !== '🟢 live ticks') { statusSpan.innerHTML = '🟢 live ticks'; statusSpan.className = 'market-status status-green'; } } return; } if(msg.msg_type==='history' && msg.history?.prices && msg.echo_req?.ticks_history) { let sym = msg.echo_req.ticks_history; if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) { msg.history.prices.forEach(p => processTick(sym, p, null)); let statusSpan = document.getElementById(`status_${sym}`); if(statusSpan && statusSpan.innerText !== '🟢 live ticks') { statusSpan.innerHTML = '🟢 live ticks'; statusSpan.className = 'market-status status-green'; } } return; } if(msg.error && msg.error.code==='InvalidSymbol' && msg.echo_req?.ticks_history) { let sym = msg.echo_req.ticks_history; if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) { invalidSymbols.add(sym); createMarketUI(sym, MARKET_NAMES[sym], true); let statusSpan = document.getElementById(`status_${sym}`); if(statusSpan) { statusSpan.innerHTML = '🔴 BLOCKED'; statusSpan.className = 'market-status status-red'; } } return; } if(msg.msg_type==='authorize') { if(msg.error) { document.getElementById('connectionStatus').innerHTML = '❌ Auth failed'; return; } document.getElementById('connectionStatus').innerHTML = '✅ Connected – loading markets...'; document.getElementById('marketsContainer').innerHTML = ''; marketData = {}; invalidSymbols.clear(); signalExpiry = {}; activeSignalMsg = {}; lockedMarkets.clear(); rawTrend = {}; signalHistory = {}; pendingConfirmation = {}; for(let sym of ALL_SYMBOLS) createMarketUI(sym, MARKET_NAMES[sym], false); let idx = 0; function subNext() { if(idx >= ALL_SYMBOLS.length) { document.getElementById('connectionStatus').innerHTML = `✅ Streaming – ${currentMarket.toUpperCase()} / ${currentIndicator.toUpperCase()} mode`; document.getElementById('windowSizeLabel').innerText = getSettings().windowSize; return; } let sym = ALL_SYMBOLS[idx]; if(!invalidSymbols.has(sym)) subscribeToMarket(sym); idx++; setTimeout(subNext, 250); } subNext(); return; } }
+  function handleMessage(msg) { if(!msg) return; if(msg.msg_type==='tick' && msg.tick) { let sym = msg.tick.symbol; if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) { if(!marketData[sym]) processTick(sym, msg.tick.quote, msg.tick.quote_display); else processTick(sym, msg.tick.quote, msg.tick.quote_display); let statusSpan = document.getElementById(`status_${sym}`); if(statusSpan && statusSpan.innerText !== '🟢 live ticks') { statusSpan.innerHTML = '🟢 live ticks'; statusSpan.className = 'market-status status-green'; } } return; } if(msg.msg_type==='history' && msg.history?.prices && msg.echo_req?.ticks_history) { let sym = msg.echo_req.ticks_history; if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) { msg.history.prices.forEach(p => processTick(sym, p, null)); let statusSpan = document.getElementById(`status_${sym}`); if(statusSpan && statusSpan.innerText !== '🟢 live ticks') { statusSpan.innerHTML = '🟢 live ticks'; statusSpan.className = 'market-status status-green'; } } return; } if(msg.error && msg.error.code==='InvalidSymbol' && msg.echo_req?.ticks_history) { let sym = msg.echo_req.ticks_history; if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) { invalidSymbols.add(sym); createMarketUI(sym, MARKET_NAMES[sym], true); let statusSpan = document.getElementById(`status_${sym}`); if(statusSpan) { statusSpan.innerHTML = '🔴 BLOCKED'; statusSpan.className = 'market-status status-red'; } } return; } if(msg.msg_type==='authorize') { if(msg.error) { document.getElementById('connectionStatus').innerHTML = '❌ Auth failed'; return; } document.getElementById('connectionStatus').innerHTML = '✅ Connected – loading markets...'; document.getElementById('marketsContainer').innerHTML = ''; marketData = {}; invalidSymbols.clear(); signalExpiry = {}; activeSignalMsg = {}; lockedMarkets.clear(); rawTrend = {}; signalHistory = {}; pendingConfirmation = {}; for(let sym of ALL_SYMBOLS) createMarketUI(sym, MARKET_NAMES[sym], false); let idx = 0; function subNext() { if(idx >= ALL_SYMBOLS.length) { document.getElementById('connectionStatus').innerHTML = `✅ Streaming – ${currentMarket.toUpperCase()} / ${currentIndicator.toUpperCase()} mode`; return; } let sym = ALL_SYMBOLS[idx]; if(!invalidSymbols.has(sym)) subscribeToMarket(sym); idx++; setTimeout(subNext, 250); } subNext(); return; } }
   let pingInterval; function startPing() { if(pingInterval) clearInterval(pingInterval); pingInterval = setInterval(()=>{ if(ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify({ping:1})); }, 25000); }
   function connectWebSocket() { let token = document.getElementById('token').value.trim(); if(!token) { alert("Enter API token"); return; } if(ws && (ws.readyState===WebSocket.OPEN || ws.readyState===WebSocket.CONNECTING)) ws.close(); document.getElementById('connectionStatus').innerHTML = '⏳ Connecting...'; ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089'); ws.onopen = () => { ws.send(JSON.stringify({authorize: token})); startPing(); }; ws.onmessage = e => { try { handleMessage(JSON.parse(e.data)); } catch(err) { console.warn(err); } }; ws.onerror = () => { document.getElementById('connectionStatus').innerHTML = '⚠️ WS error'; }; ws.onclose = () => { if(pingInterval) clearInterval(pingInterval); }; }
   function toggleMode() { document.body.classList.toggle('light'); }
   let audioCtx = null;
-  function setMarket(market) { currentMarket = market; document.querySelectorAll('.market-btn').forEach(btn => { if(btn.getAttribute('data-market') === market) btn.classList.add('active'); else btn.classList.remove('active'); }); document.getElementById('lookaheadGroup').style.display = market === 'digit' ? 'inline-flex' : 'none'; rawTrend = {}; signalExpiry = {}; activeSignalMsg = {}; lockedMarkets.clear(); pendingConfirmation = {}; for(let sym of ALL_SYMBOLS) { if(marketData[sym]) { updateTrends(sym); renderMarket(sym); updateSequenceLabel(sym); } } document.getElementById('connectionStatus').innerHTML = `✅ Switched to ${market.toUpperCase()} market`; }
+  function setMarket(market) { currentMarket = market; document.querySelectorAll('.market-btn').forEach(btn => { if(btn.getAttribute('data-market') === market) btn.classList.add('active'); else btn.classList.remove('active'); }); document.getElementById('lookaheadGroup').style.display = market === 'digit' ? 'inline-flex' : 'none'; rawTrend = {}; signalExpiry = {}; activeSignalMsg = {}; lockedMarkets.clear(); pendingConfirmation = {}; for(let sym of ALL_SYMBOLS) { if(marketData[sym]) { updateTrends(sym); renderMarket(sym); updateSequenceLabel(sym); updateEvenOddWinRate(sym); } } document.getElementById('connectionStatus').innerHTML = `✅ Switched to ${market.toUpperCase()} market`; }
   function setIndicator(indicator) { currentIndicator = indicator; document.querySelectorAll('.indicator-btn').forEach(btn => { if(btn.getAttribute('data-indicator') === indicator) btn.classList.add('active'); else btn.classList.remove('active'); }); signalExpiry = {}; activeSignalMsg = {}; lockedMarkets.clear(); for(let sym of ALL_SYMBOLS) if(marketData[sym]) renderMarket(sym); document.getElementById('connectionStatus').innerHTML = `✅ Switched to ${indicator.toUpperCase()} indicator`; }
   window.connectWebSocket = connectWebSocket; window.toggleMode = toggleMode; window.setMarket = setMarket; window.setIndicator = setIndicator; window.openMarketModal = openMarketModal; window.scrollToMarket = scrollToMarket;
   document.querySelectorAll('.market-btn').forEach(btn => btn.onclick = () => setMarket(btn.getAttribute('data-market')));
