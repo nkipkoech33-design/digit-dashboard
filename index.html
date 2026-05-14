@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Deriv Pro – Stable Pattern Recommendation (Long‑lasting)</title>
+<title>Deriv Pro – Multi‑TF Progress (Softer Colors)</title>
 <style>
   :root {
     --bg-body: #0b1120;
@@ -30,10 +30,14 @@
     --majority-blink: #06b6d4;
     --hybrid-blink: #a855f7;
     --percent-accent: #facc15;
-    --digit-size: 2rem;
+    --digit-size: 1.6rem;
     --check-good: #4ade80;
     --check-bad: #f87171;
     --last-digit-bg: #0f172a;
+    --saturation-warning: #b45309;
+    --saturation-critical: #991b1b;
+    --reversal-strong-bg: #0f3b2c;
+    --reversal-strong-text: #a3e635;
   }
   body.light {
     --bg-body: #f8fafc;
@@ -63,50 +67,52 @@
     --check-good: #15803d;
     --check-bad: #b91c1c;
     --last-digit-bg: #e2e8f0;
+    --saturation-warning: #f59e0b;
+    --saturation-critical: #dc2626;
+    --reversal-strong-bg: #bbf7d0;
+    --reversal-strong-text: #166534;
   }
   * { box-sizing: border-box; transition: background 0.2s, color 0.2s; }
-  body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg-body); color: var(--text-primary); margin: 0; padding: 1rem; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg-body); color: var(--text-primary); margin: 0; padding: 1rem; font-size: 14px; }
   .container { max-width: 1800px; margin: 0 auto; }
   .top-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
   .market-type-selector, .indicator-selector { display: flex; gap: 0.5rem; background: var(--bg-header); padding: 0.3rem 0.8rem; border-radius: 2rem; margin-right: 0.5rem; flex-wrap: wrap; }
   .market-btn, .indicator-btn { background: none; border: none; font-size: 0.85rem; padding: 0.3rem 0.8rem; border-radius: 1.5rem; cursor: pointer; opacity: 0.6; font-weight: bold; color: var(--text-primary); }
   .market-btn.active, .indicator-btn.active { opacity: 1; background: var(--trade-active); box-shadow: 0 0 4px currentColor; }
-  .status-bar { background: var(--bg-header); padding: 0.5rem 1rem; border-radius: 2rem; display: inline-block; font-size: 0.8rem; margin-bottom: 1rem; }
-  .mode-toggle { background: var(--btn-bg); border: none; padding: 0.4rem 1rem; border-radius: 2rem; color: white; cursor: pointer; font-weight: bold; margin-left: 0.5rem; }
+  .status-bar { background: var(--bg-header); padding: 0.4rem 1rem; border-radius: 2rem; display: inline-block; font-size: 0.75rem; margin-bottom: 0.8rem; }
+  .mode-toggle { background: var(--btn-bg); border: none; padding: 0.3rem 0.8rem; border-radius: 2rem; color: white; cursor: pointer; font-weight: bold; margin-left: 0.5rem; }
   .mode-toggle:hover { background: var(--btn-hover); }
-  .sub { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem; border-left: 3px solid var(--btn-bg); padding-left: 0.75rem; }
-  .controls { background: var(--bg-header); padding: 1rem; border-radius: 1.5rem; margin-bottom: 2rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
-  .input-group { flex: 2; min-width: 140px; }
-  .input-group label { display: block; font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem; }
-  .token-input, .setting-input { width: 100%; background: var(--bg-body); border: 1px solid var(--border-color); padding: 0.6rem 0.8rem; border-radius: 2rem; color: var(--text-primary); font-size: 0.85rem; }
-  .setting-input { width: auto; display: inline-block; margin: 0 0.3rem; text-align: center; }
-  .connect-btn { background: var(--btn-bg); border: none; padding: 0.6rem 1.5rem; border-radius: 2rem; font-weight: bold; color: white; cursor: pointer; }
+  .sub { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem; border-left: 3px solid var(--btn-bg); padding-left: 0.75rem; }
+  .controls { background: var(--bg-header); padding: 0.8rem; border-radius: 1.5rem; margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: flex-end; }
+  .input-group { flex: 2; min-width: 120px; }
+  .input-group label { display: block; font-size: 0.65rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.2rem; }
+  .token-input, .setting-input { width: 100%; background: var(--bg-body); border: 1px solid var(--border-color); padding: 0.4rem 0.6rem; border-radius: 2rem; color: var(--text-primary); font-size: 0.8rem; }
+  .setting-input { width: auto; display: inline-block; margin: 0 0.2rem; text-align: center; }
+  .connect-btn { background: var(--btn-bg); border: none; padding: 0.4rem 1rem; border-radius: 2rem; font-weight: bold; color: white; cursor: pointer; font-size: 0.8rem; }
   .connect-btn:hover { background: var(--btn-hover); }
 
-  .main-layout { display: flex; gap: 1.5rem; align-items: flex-start; }
+  .main-layout { display: flex; gap: 1rem; align-items: flex-start; }
   .market-grid-container { flex: 3; min-width: 0; }
-  .market-grid { display: flex; flex-direction: column; gap: 1.5rem; }
+  .market-grid { display: flex; flex-direction: column; gap: 1rem; }
   .all-markets-panel {
     flex: 1;
     background: var(--bg-header);
     border-radius: 1rem;
-    padding: 0.6rem 0.8rem;
+    padding: 0.5rem;
     border-left: 4px solid #facc15;
     position: sticky;
     top: 1rem;
     align-self: flex-start;
-    box-shadow: -2px 0 8px rgba(0,0,0,0.2);
   }
-  .all-markets-panel h3 { font-size: 0.9rem; margin: 0 0 0.5rem 0; padding-left: 0.3rem; }
-  .markets-list { display: flex; flex-direction: column; gap: 0.4rem; }
+  .all-markets-panel h3 { font-size: 0.8rem; margin: 0 0 0.3rem 0; padding-left: 0.3rem; }
+  .markets-list { display: flex; flex-direction: column; gap: 0.3rem; }
   .market-list-item {
     background: var(--bg-panel);
-    padding: 0.3rem 0.6rem;
+    padding: 0.2rem 0.5rem;
     border-radius: 0.8rem;
     font-weight: bold;
     cursor: pointer;
-    transition: 0.1s;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     white-space: nowrap;
     overflow-x: auto;
   }
@@ -117,198 +123,164 @@
   .market-list-item.blink-arrow { animation: blinkYellow 1s infinite; }
   .market-list-item.blink-majority { animation: blinkCyan 1s infinite; }
   .market-list-item.blink-hybrid { animation: blinkPurple 1s infinite; }
-  .highlight-market { box-shadow: 0 0 0 3px #facc15, 0 0 0 6px rgba(250, 204, 21, 0.3); transition: box-shadow 0.3s; }
-  .market-card { background: var(--bg-card); border-radius: 1.25rem; border: 2px solid var(--border-color); overflow: hidden; transition: border 0.1s; cursor: pointer; }
+  .highlight-market { box-shadow: 0 0 0 2px #facc15, 0 0 0 4px rgba(250, 204, 21, 0.3); transition: box-shadow 0.3s; }
+  .market-card { background: var(--bg-card); border-radius: 1rem; border: 1px solid var(--border-color); overflow: hidden; cursor: pointer; }
   .market-card:hover { filter: brightness(1.05); }
   .market-header { 
     background: var(--bg-header); 
-    padding: 0.7rem 1.2rem; 
+    padding: 0.3rem 0.8rem; 
     display: flex; 
     justify-content: space-between; 
     align-items: center; 
-    gap: 0.5rem; 
+    gap: 0.3rem; 
     flex-wrap: wrap; 
   }
-  .market-title { 
-    font-size: 1rem; 
-    font-weight: 700; 
-    display: flex; 
-    align-items: center; 
-    gap: 0.7rem; 
-    flex-wrap: wrap; 
-  }
-  .live-price-big { 
-    font-size: 1.2rem; 
-    font-weight: 600; 
-    font-family: 'Courier New', monospace; 
-    background: var(--bg-body); 
-    padding: 0.1rem 0.5rem; 
-    border-radius: 1rem; 
-    color: var(--price-color); 
-    letter-spacing: 0px; 
-    box-shadow: 0 0 6px rgba(250, 204, 21, 0.2); 
-    display: inline-block; 
-    margin: 0 0.2rem; 
-  }
-  .live-tick-badge { background: #0f172a; padding: 0.2rem 0.7rem; border-radius: 2rem; font-size: 0.7rem; font-weight: bold; color: #4ade80; }
+  .market-title { font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .live-price-big { font-size: 0.9rem; font-weight: 600; font-family: monospace; background: var(--bg-body); padding: 0.05rem 0.4rem; border-radius: 0.8rem; color: var(--price-color); display: inline-block; margin: 0 0.1rem; }
+  .live-tick-badge { background: #0f172a; padding: 0.1rem 0.5rem; border-radius: 2rem; font-size: 0.6rem; font-weight: bold; color: #4ade80; }
   .last-digit-badge {
-    font-size: 3rem;
+    font-size: 2rem;
     font-weight: 800;
     font-family: monospace;
     margin-left: auto;
     background: var(--last-digit-bg);
-    padding: 0.2rem 1.2rem;
-    border-radius: 2rem;
+    padding: 0.1rem 0.8rem;
+    border-radius: 1.5rem;
     color: var(--price-color);
-    border: 2px solid var(--price-color);
+    border: 1px solid var(--price-color);
     line-height: 1;
-    letter-spacing: 2px;
-    min-width: 90px;
+    letter-spacing: 1px;
+    min-width: 60px;
     text-align: center;
   }
-  .market-status { font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 2rem; }
+  .market-status { font-size: 0.6rem; padding: 0.1rem 0.4rem; border-radius: 2rem; }
   .status-red { color: #f87171; background: var(--status-red-bg); }
   .status-green { color: #4ade80; background: var(--status-green-bg); }
   
-  .digits-grid { display: flex; flex-direction: column; gap: 12px; padding: 1.2rem; background: var(--bg-body); }
-  .digits-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .digits-grid { display: flex; flex-direction: column; gap: 4px; padding: 0.5rem; background: var(--bg-body); }
+  .digits-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
   .digit-cell { 
     background: var(--bg-digit); 
-    border-radius: 1rem; 
-    padding: 0.7rem 0.2rem; 
+    border-radius: 0.7rem; 
+    padding: 0.2rem 0.1rem; 
     text-align: center; 
     position: relative; 
     border: 1px solid var(--border-color);
-    transition: transform 0.1s ease, box-shadow 0.2s;
   }
-  .digit-cell:hover { transform: scale(1.01); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
   .digit-cell span.digit { 
-    font-size: var(--digit-size, 2rem);
+    font-size: var(--digit-size, 1.6rem);
     font-weight: 800; 
     display: block; 
-    line-height: 1.2;
-    letter-spacing: 1px;
-    color: var(--text-primary);
+    line-height: 1.1;
   }
   .digit-cell .percent { 
-    font-size: 0.95rem; 
+    font-size: 0.7rem; 
     font-weight: 800; 
     color: var(--percent-accent);
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0,0,0,0.2);
     display: inline-block;
-    padding: 0.15rem 0.6rem;
-    border-radius: 40px;
-    margin-top: 6px;
-    letter-spacing: 0.5px;
+    padding: 0.05rem 0.3rem;
+    border-radius: 20px;
+    margin-top: 2px;
   }
-  body.light .digit-cell .percent { background: rgba(0, 0, 0, 0.05); color: #b45309; }
-  .digit-cell .trend { font-size: 0.85rem; margin-left: 4px; font-weight: bold; color: var(--text-secondary); display: inline-block; }
-  .pointer-marker { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); width: 32px; height: 5px; background: #ffcc00; border-radius: 6px; box-shadow: 0 0 8px #ffaa44; }
+  .digit-cell .trend { font-size: 0.7rem; margin-left: 2px; }
+  .pointer-marker { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 20px; height: 3px; background: #ffcc00; border-radius: 3px; }
   .most { background: linear-gradient(145deg, #15803d, #0f5a2e); border-color: #4ade80; }
   .second { background: linear-gradient(145deg, #1e40af, #152e7a); border-color: #60a5fa; }
   .least { background: linear-gradient(145deg, #b91c1c, #7f1414); border-color: #f87171; }
   .secondleast { background: linear-gradient(145deg, #c2410c, #7a2b0a); border-color: #fb923c; }
-  .hot { box-shadow: 0 0 12px #facc15, inset 0 0 4px #facc15; border-color: #facc15; }
-  .cold { opacity: 0.65; filter: grayscale(0.2); }
+  .hot { box-shadow: 0 0 6px #facc15; border-color: #facc15; }
+  .cold { opacity: 0.6; }
   
-  .info-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.8rem; padding: 0.6rem 1.2rem; background: var(--bg-body); font-size: 0.75rem; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
-  .parity-stats, .streak-stats, .prediction-box { background: var(--bg-panel); padding: 0.2rem 0.6rem; border-radius: 1rem; font-family: monospace; font-weight: 600; }
-  .letter-sequence-wrapper { padding: 0.4rem 1rem; background: var(--bg-body); border-bottom: 1px solid var(--border-color); }
-  .letter-sequence { font-family: monospace; font-size: 1.3rem; font-weight: bold; line-height: 1.4; letter-spacing: 2px; word-break: break-all; white-space: normal; display: block; width: 100%; text-align: center; background: var(--bg-panel); border-radius: 0.8rem; padding: 0.5rem; margin-bottom: 0.4rem; }
-  .sequence-label { font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.2rem; text-align: center; }
-  .digit-ruler { background: var(--bg-panel); padding: 0.3rem 0.5rem; border-radius: 2rem; margin: 0.2rem 1rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-  .ruler-bar { flex: 1; height: 22px; background: linear-gradient(90deg, var(--ruler-under-bg) 0%, var(--ruler-under-bg) 55.5%, var(--ruler-over-bg) 55.6%, var(--ruler-over-bg) 100%); border-radius: 12px; position: relative; min-width: 150px; }
-  .ruler-marker { position: absolute; width: 10px; height: 30px; background: var(--ruler-marker); border-radius: 6px; top: -4px; transform: translateX(-50%); box-shadow: 0 0 6px currentColor; }
-  .ruler-labels { display: flex; justify-content: space-between; width: 100%; font-size: 0.7rem; margin-top: 6px; font-weight: 600; }
-  .signal-area { padding: 0.8rem 1.2rem 0.5rem 1.2rem; text-align: center; background: var(--bg-body); border-bottom: 1px solid var(--border-color); }
-  .signal-flash { background: var(--signal-bg); padding: 6px 12px; border-radius: 2rem; display: inline-block; font-size: 0.85rem; font-weight: bold; }
-  .signal-strong { background: var(--signal-strong-bg); color: #facc15; }
-  .majority-signal { background: #0e3a4a; color: #06b6d4; border: 1px solid #06b6d4; }
-  .hybrid-signal { background: #2e1a4a; color: #a855f7; border: 1px solid #a855f7; }
-  .vote-buttons { margin-top: 6px; display: inline-flex; gap: 8px; }
-  .vote-btn { background: var(--bg-panel); border: none; border-radius: 1rem; padding: 2px 8px; cursor: pointer; font-size: 0.7rem; font-weight: bold; }
-  .vote-btn:hover { opacity: 0.8; transform: scale(0.96); }
-  .strength-meter { width: 100px; height: 7px; background: var(--strength-meter-bg); border-radius: 4px; display: inline-block; margin-left: 10px; overflow: hidden; vertical-align: middle; }
-  .strength-fill { height: 100%; background: var(--strength-fill); width: 0%; transition: width 0.3s; }
-  .prediction-digit { font-size: 1.3rem; font-weight: bold; background: var(--bg-panel); padding: 0 0.4rem; border-radius: 0.7rem; margin-left: 0.4rem; }
+  .info-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.4rem; padding: 0.3rem 0.5rem; background: var(--bg-body); font-size: 0.65rem; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
+  .parity-stats, .streak-stats, .prediction-box { background: var(--bg-panel); padding: 0.1rem 0.3rem; border-radius: 0.8rem; }
+  .letter-sequence-wrapper { padding: 0.2rem 0.5rem; background: var(--bg-body); border-bottom: 1px solid var(--border-color); }
+  .letter-sequence { font-size: 0.9rem; padding: 0.2rem; margin-bottom: 0.1rem; }
+  .digit-ruler { padding: 0.1rem 0.3rem; border-radius: 1rem; margin: 0.1rem 0.5rem; display: flex; align-items: center; gap: 0.3rem; }
+  .ruler-bar { height: 14px; }
+  .ruler-marker { width: 8px; height: 20px; top: -3px; }
+  .ruler-labels { font-size: 0.6rem; margin-top: 2px; }
+  .signal-area { padding: 0.3rem 0.5rem; text-align: center; background: var(--bg-body); border-bottom: 1px solid var(--border-color); }
+  .signal-flash { padding: 3px 6px; font-size: 0.7rem; }
+  .strength-meter { width: 70px; height: 5px; margin-left: 5px; }
+  .vote-btn { padding: 1px 4px; font-size: 0.6rem; }
+  .prediction-digit { font-size: 1rem; padding: 0 0.2rem; }
   
-  .pattern-preview {
+  .pattern-preview, .saturation-alert, .multi-tf-progress {
     background: var(--bg-panel);
-    border-radius: 1rem;
-    padding: 0.5rem;
-    margin: 0.5rem 1rem;
-    font-size: 0.75rem;
+    border-radius: 0.7rem;
+    padding: 0.3rem;
+    margin: 0.3rem 0.5rem;
+    font-size: 0.7rem;
     text-align: center;
     border-top: 1px solid var(--border-color);
   }
-  .pattern-last4 {
-    display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-bottom: 0.3rem;
-  }
-  .pattern-badge {
+  .saturation-alert.warning { background: var(--saturation-warning); color: black; }
+  .saturation-alert.critical { background: var(--saturation-critical); color: white; font-weight: bold; }
+  .multi-tf-progress.strong { 
+    background: var(--reversal-strong-bg); 
+    color: var(--reversal-strong-text);
     font-weight: bold;
-    padding: 0.2rem 0.5rem;
-    border-radius: 1rem;
-    font-family: monospace;
   }
-  .pattern-rule {
-    margin-top: 0.2rem;
-    color: var(--text-secondary);
-  }
+  .pattern-last4 { display: flex; justify-content: center; gap: 0.3rem; margin-bottom: 0.2rem; }
+  .pattern-badge { padding: 0.1rem 0.3rem; border-radius: 0.8rem; font-size: 0.7rem; }
+  .pattern-rule { margin-top: 0.1rem; }
   
-  .checklist {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.8rem;
-    background: var(--bg-panel);
-    padding: 0.5rem 0.8rem;
-    border-radius: 1rem;
-    margin-top: 0.5rem;
+  .tf-list {
+    text-align: left;
     font-size: 0.7rem;
+    line-height: 1.3;
+    margin: 0.2rem 0;
+  }
+  .tf-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.1rem 0.2rem;
+  }
+  .tf-label {
+    font-weight: bold;
+  }
+  .tf-parity {
+    font-weight: bold;
+  }
+  .tf-percent {
     font-family: monospace;
   }
-  .checklist-item { display: inline-flex; align-items: center; gap: 0.3rem; }
-  .checklist-good { color: var(--check-good); font-weight: bold; }
-  .checklist-bad { color: var(--check-bad); font-weight: bold; }
   
-  footer { margin-top: 2rem; font-size: 0.7rem; text-align: center; color: var(--text-secondary); }
+  .checklist { padding: 0.3rem 0.5rem; border-radius: 0.8rem; margin-top: 0.3rem; gap: 0.5rem; font-size: 0.65rem; }
+  .checklist-item { gap: 0.2rem; }
+  
+  footer { margin-top: 1rem; font-size: 0.65rem; }
   .hidden { display: none; }
   .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); justify-content: center; align-items: center; }
-  .modal-content { background: var(--bg-card); border-radius: 1.5rem; padding: 1.5rem; width: 90%; max-width: 500px; border: 1px solid var(--border-color); max-height: 80vh; overflow-y: auto; }
-  .close-modal { float: right; font-size: 1.5rem; font-weight: bold; cursor: pointer; color: var(--text-secondary); }
-  .rolling-note { font-size: 0.7rem; text-align: center; margin-top: 4px; color: var(--text-secondary); background: var(--bg-panel); display: inline-block; padding: 2px 10px; border-radius: 20px; }
+  .modal-content { background: var(--bg-card); border-radius: 1rem; padding: 1rem; width: 90%; max-width: 500px; border: 1px solid var(--border-color); max-height: 80vh; overflow-y: auto; }
+  .close-modal { float: right; font-size: 1.2rem; cursor: pointer; }
+  .rolling-note { font-size: 0.6rem; margin-top: 2px; padding: 1px 5px; }
   @media (max-width: 900px) { 
     .main-layout { flex-direction: column; } 
-    .all-markets-panel { position: static; width: 100%; margin-top: 1rem; } 
-    :root { --digit-size: 1.6rem; } 
-    .digit-cell .percent { font-size: 0.8rem; } 
-    .digit-cell { padding: 0.5rem 0.1rem; } 
-    .checklist { font-size: 0.65rem; gap: 0.5rem; } 
-    .last-digit-badge { font-size: 2.2rem; min-width: 70px; padding: 0.1rem 0.8rem; } 
-    .live-price-big { font-size: 0.9rem; }
-    .pattern-preview { font-size: 0.7rem; }
+    .all-markets-panel { position: static; width: 100%; margin-top: 0.5rem; } 
+    :root { --digit-size: 1.3rem; } 
+    .last-digit-badge { font-size: 1.5rem; min-width: 50px; padding: 0.05rem 0.5rem; }
+    .digit-cell .percent { font-size: 0.6rem; }
+    .live-price-big { font-size: 0.8rem; }
+    .tf-line { font-size: 0.65rem; }
   }
   @media (max-width: 700px) { 
-    .digit-cell span.digit { font-size: 1.5rem; } 
-    .live-price-big { font-size: 0.8rem; } 
-    .letter-sequence { font-size: 1rem; } 
-    .last-digit-badge { font-size: 1.8rem; min-width: 60px; padding: 0.05rem 0.5rem; }
+    .last-digit-badge { font-size: 1.2rem; min-width: 40px; }
+    .digit-cell span.digit { font-size: 1.1rem; }
   }
 </style>
 </head>
 <body>
 <div class="container">
   <div class="top-bar">
-    <h1>⚡ DERIV PRO – Stable Pattern Recommendation (Long‑lasting)</h1>
+    <h1 style="font-size:1.2rem;">⚡ DERIV PRO – Multi‑TF Progress (Softer Colors)</h1>
     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
       <div class="market-type-selector">
         <button class="market-btn active" data-market="evenodd">🎲 Even/Odd</button>
         <button class="market-btn" data-market="overunder">📊 Over/Under</button>
-        <button class="market-btn" data-market="differs">🔄 Match Only (digit)</button>
-        <button class="market-btn" data-market="digit">🎯 Digit (1-3 ticks)</button>
+        <button class="market-btn" data-market="differs">🔄 Match Only</button>
+        <button class="market-btn" data-market="digit">🎯 Digit</button>
       </div>
       <div class="indicator-selector">
         <button class="indicator-btn" data-indicator="arrow">⬆️ Arrow</button>
@@ -319,32 +291,33 @@
     </div>
   </div>
   <div class="status-bar" id="connectionStatus">⚫ Disconnected</div>
-  <div class="sub">🔔 <strong>Stable pattern recommendation:</strong> based on last 200 parity outcomes – changes only when market behaviour shifts (lasts minutes).</div>
+  <div class="sub">🔔 <strong>Multi‑timeframe progress:</strong> shows dominant digit parity for 50, 100, 200 ticks in a compact list. Softer colors for readability.</div>
 
   <div class="controls">
     <div class="input-group"><label>🔑 API TOKEN</label><input type="password" id="token" class="token-input" placeholder="Enter your Deriv API token"></div>
-    <div class="input-group"><label>🔊 Sound</label><select id="soundEnabled" class="setting-input" style="width:70px"><option value="true">ON</option><option value="false">OFF</option></select></div>
-    <div class="input-group"><label>📊 Window Size</label><input type="number" id="windowSize" class="setting-input" value="1000" style="width:80px"></div>
-    <div class="input-group"><label>🎯 Majority %</label><input type="number" id="majorityThreshold" class="setting-input" value="65" style="width:70px"></div>
-    <div class="input-group"><label>📈 Trend Filter</label><select id="trendFilter" class="setting-input"><option value="true">ON</option><option value="false">OFF</option></select></div>
-    <div class="input-group"><label>📊 Volatility Thresh</label><input type="number" id="volatilityThresh" class="setting-input" value="2.5" step="0.1" style="width:70px"></div>
-    <div class="input-group"><label>🚫 Rejection Streak</label><input type="number" id="rejectionStreak" class="setting-input" value="2" style="width:70px"></div>
-    <div class="input-group" id="lookaheadGroup" style="display:none;"><label>⏩ Lookahead (ticks)</label><select id="lookaheadTicks" class="setting-input"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+    <div class="input-group"><label>🔊 Sound</label><select id="soundEnabled" class="setting-input" style="width:60px"><option value="true">ON</option><option value="false">OFF</option></select></div>
+    <div class="input-group"><label>📊 Window Size</label><input type="number" id="windowSize" class="setting-input" value="1000" style="width:70px"></div>
+    <div class="input-group"><label>🎯 Majority %</label><input type="number" id="majorityThreshold" class="setting-input" value="65" style="width:60px"></div>
+    <div class="input-group"><label>📈 Trend Filter</label><select id="trendFilter" class="setting-input" style="width:60px"><option value="true">ON</option><option value="false">OFF</option></select></div>
+    <div class="input-group"><label>📊 Volatility Thresh</label><input type="number" id="volatilityThresh" class="setting-input" value="2.5" step="0.1" style="width:60px"></div>
+    <div class="input-group"><label>🚫 Rejection Streak</label><input type="number" id="rejectionStreak" class="setting-input" value="2" style="width:60px"></div>
+    <div class="input-group" id="lookaheadGroup" style="display:none;"><label>⏩ Lookahead</label><select id="lookaheadTicks"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
     <button onclick="connectWebSocket()" class="connect-btn">🚀 CONNECT</button>
   </div>
 
   <div class="main-layout">
     <div class="market-grid-container"><div id="marketsContainer" class="market-grid"></div></div>
     <div id="allMarketsPanel" class="all-markets-panel">
-      <h3>📋 ALL MARKETS (click to jump)</h3>
+      <h3>📋 ALL MARKETS</h3>
       <div id="marketsListContainer" class="markets-list"></div>
     </div>
   </div>
-  <footer>✅ Dominant pattern is stable (last 200 ticks, min 10 occurrences, ≥70% confidence). Updates only when market structure changes.</footer>
+  <footer>✅ Multi‑timeframe shows each window on a separate line: >50t  ODD  72%</footer>
 </div>
 <div id="marketModal" class="modal"><div class="modal-content"><span class="close-modal">&times;</span><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
 
 <script>
+  // ============ CORE SCRIPT (same as previous) ============
   const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,"1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
   const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Vol 10","R_25":"Vol 25","R_50":"Vol 50","R_75":"Vol 75","R_100":"Vol 100","JD10":"Jump 10","JD25":"Jump 25","JD50":"Jump 50","JD75":"Jump 75","JD100":"Jump 100" };
   const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
@@ -360,9 +333,6 @@
   let currentMarket = 'evenodd';
   let currentIndicator = 'hybrid';
   let pendingConfirmation = {};
-
-  // Store last dominant pattern to avoid flickering
-  let lastDominantPattern = {};
 
   function getSettings() {
     return {
@@ -631,9 +601,67 @@
     return { active: true, msg: `${action} (${conf}%)`, confidence: conf };
   }
 
-  // ===================== STABLE PATTERN RECOMMENDATION =====================
+  // ===================== MULTI‑TIMEFRAME PROGRESS =====================
+  function getWindowDominant(symbol, windowSize) {
+    let data = marketData[symbol];
+    if (!data || data.rollingArray.length < windowSize) return null;
+    let arr = data.rollingArray.slice(-windowSize);
+    let digitCounts = new Array(10).fill(0);
+    for (let d of arr) digitCounts[d]++;
+    let total = arr.length;
+    let maxCount = Math.max(...digitCounts);
+    let dominantDigit = digitCounts.indexOf(maxCount);
+    let pct = (maxCount / total) * 100;
+    let streak = 0;
+    for (let i = data.rollingArray.length - 1; i >= 0; i--) {
+      if (data.rollingArray[i] === dominantDigit) streak++;
+      else break;
+    }
+    let saturation = (pct > 28) || (pct > 25 && streak >= 3);
+    return { digit: dominantDigit, parity: (dominantDigit % 2 === 0) ? "EVEN" : "ODD", percentage: pct, streak, saturation };
+  }
+
+  function updateMultiTFProgress(symbol) {
+    let container = document.getElementById(`multiTFProgress_${symbol}`);
+    if (!container) return;
+    if (currentMarket !== 'evenodd') {
+      container.innerHTML = `<div class="multi-tf-progress">📊 Multi‑TF progress only for Even/Odd</div>`;
+      return;
+    }
+    let windows = [50, 100, 200];
+    let lines = [];
+    let allSame = true;
+    let firstParity = null;
+    for (let w of windows) {
+      let info = getWindowDominant(symbol, w);
+      if (!info) {
+        lines.push(`<div class="tf-line"><span class="tf-label">>${w}t</span><span class="tf-parity">—</span><span class="tf-percent">—</span></div>`);
+        allSame = false;
+        continue;
+      }
+      let parityColor = info.parity === 'EVEN' ? '#4ade80' : '#f87171';
+      let warningIcon = info.saturation ? ' ⚠️' : '';
+      lines.push(`<div class="tf-line">
+        <span class="tf-label">>${w}t</span>
+        <span class="tf-parity" style="color:${parityColor};">${info.parity}${warningIcon}</span>
+        <span class="tf-percent">${info.percentage.toFixed(1)}%</span>
+      </div>`);
+      if (firstParity === null) firstParity = info.parity;
+      else if (info.parity !== firstParity) allSame = false;
+    }
+    let strongSignal = allSame && firstParity !== null;
+    let reversalText = strongSignal ? `<div style="margin-top:0.2rem; background:rgba(0,0,0,0.2); border-radius:0.5rem; padding:0.1rem;">🔥 STRONG REVERSAL SIGNAL → ${firstParity}</div>` : '';
+    let html = `<div class="multi-tf-progress ${strongSignal ? 'strong' : ''}">
+      <div style="font-weight:bold;">📊 Dominant parity by window</div>
+      <div class="tf-list">${lines.join('')}</div>
+      ${reversalText}
+    </div>`;
+    container.innerHTML = html;
+  }
+  // ====================================================================
+
+  // ===================== PATTERN PREVIEW & SIMPLE SATURATION =====================
   function getDominantPattern(parityArray) {
-    // parityArray: array of 'E'/'O', length >= 200
     if (parityArray.length < 50) return null;
     let patterns = {};
     let lengths = [2, 3, 4];
@@ -647,7 +675,7 @@
     }
     let bestScore = -1;
     let bestPattern = null;
-    let minCount = 10;  // require at least 10 occurrences for stability
+    let minCount = 10;
     let minConf = 0.7;
     for (let pat in patterns) {
       let p = patterns[pat];
@@ -658,7 +686,6 @@
       let maxProb = Math.max(probE, probO);
       if (maxProb < minConf) continue;
       let prediction = probE >= probO ? 'E' : 'O';
-      // score: confidence * sqrt(count) - favours high confidence and high occurrence
       let score = maxProb * Math.sqrt(total);
       if (score > bestScore) {
         bestScore = score;
@@ -668,37 +695,84 @@
     return bestPattern;
   }
 
+  function getSimpleSaturationAlert(symbol) {
+    let data = marketData[symbol];
+    if (!data || data.rollingArray.length < 50) return null;
+    let rolling = getRollingCounts(symbol);
+    if (!rolling) return null;
+    let windowSize = Math.min(100, rolling.total);
+    let arr = data.rollingArray.slice(-windowSize);
+    let digitCounts = new Array(10).fill(0);
+    for (let d of arr) digitCounts[d]++;
+    let total = arr.length;
+    let percentages = digitCounts.map(c => (c / total) * 100);
+    let maxPct = Math.max(...percentages);
+    let saturatedDigit = percentages.indexOf(maxPct);
+    let streak = 0;
+    for (let i = data.rollingArray.length - 1; i >= 0; i--) {
+      if (data.rollingArray[i] === saturatedDigit) streak++;
+      else break;
+    }
+    let alertLevel = null;
+    let reason = "";
+    if (maxPct > 30) {
+      alertLevel = "critical";
+      reason = `Digit ${saturatedDigit} at ${maxPct.toFixed(1)}% (extreme)`;
+    } else if (maxPct > 25 && streak >= 3) {
+      alertLevel = "warning";
+      reason = `Digit ${saturatedDigit} at ${maxPct.toFixed(1)}% streak ${streak}`;
+    } else if (maxPct > 28) {
+      alertLevel = "warning";
+      reason = `Digit ${saturatedDigit} at ${maxPct.toFixed(1)}% (very high)`;
+    } else return null;
+    let reversalPred = (saturatedDigit % 2 === 0) ? "ODD" : "EVEN";
+    let conf = Math.min(90, 60 + (maxPct - 25) * 1.5);
+    return { digit: saturatedDigit, percentage: maxPct, streak, alertLevel, reason, reversalPred, confidence: Math.round(conf) };
+  }
+
   function updatePatternPreview(symbol) {
     let previewDiv = document.getElementById(`patternPreview_${symbol}`);
     if (!previewDiv) return;
     if (currentMarket !== 'evenodd') {
-      previewDiv.innerHTML = `<div class="pattern-preview">📊 Pattern preview only available in Even/Odd mode.</div>`;
+      previewDiv.innerHTML = `<div class="pattern-preview">📊 Pattern preview only in Even/Odd mode.</div>`;
       return;
     }
     let data = marketData[symbol];
     if (!data || data.rollingArray.length < 100) {
-      previewDiv.innerHTML = `<div class="pattern-preview">⏳ Accumulating data for pattern detection (need ≥100 ticks)...</div>`;
+      previewDiv.innerHTML = `<div class="pattern-preview">⏳ Accumulating data...</div>`;
       return;
     }
     let digits = data.rollingArray.slice(-300);
     let parity = digits.map(d => (d % 2 === 0) ? 'E' : 'O');
     let last4 = parity.slice(-4);
     let last4Html = last4.map(p => `<span class="pattern-badge" style="background:${p === 'E' ? '#4ade80' : '#f87171'}">${p}</span>`).join('');
-    
     let dominant = getDominantPattern(parity);
     let ruleHtml = '';
     if (dominant) {
       let predColor = dominant.prediction === 'E' ? '#4ade80' : '#f87171';
-      ruleHtml = `<div class="pattern-rule">🧠 <strong>Dominant pattern:</strong> <span style="background:var(--bg-body); padding:0.1rem 0.4rem; border-radius:0.5rem;">${dominant.pattern}</span> → <span style="color:${predColor}; font-weight:bold;">${dominant.prediction}</span> (${(dominant.confidence*100).toFixed(0)}% confidence, ${dominant.count} occurrences)<br><span style="font-size:0.65rem;">Based on last 300 ticks – stable, changes only when market shifts</span></div>`;
+      ruleHtml = `<div class="pattern-rule">🧠 <strong>Dominant pattern:</strong> <span style="background:var(--bg-body); padding:0.1rem 0.3rem; border-radius:0.3rem;">${dominant.pattern}</span> → <span style="color:${predColor};">${dominant.prediction}</span> (${(dominant.confidence*100).toFixed(0)}%, ${dominant.count} occ)</div>`;
     } else {
-      ruleHtml = `<div class="pattern-rule">📉 No dominant pattern yet (need ≥10 occurrences with ≥70% confidence).</div>`;
+      ruleHtml = `<div class="pattern-rule">📉 No dominant pattern yet.</div>`;
     }
-    previewDiv.innerHTML = `<div class="pattern-preview">
-      <div class="pattern-last4">Last 4 ticks: ${last4Html}</div>
-      ${ruleHtml}
-    </div>`;
+    previewDiv.innerHTML = `<div class="pattern-preview"><div class="pattern-last4">Last 4: ${last4Html}</div>${ruleHtml}</div>`;
   }
-  // ====================================================================
+
+  function updateSimpleSaturation(symbol) {
+    let alertDiv = document.getElementById(`saturationAlert_${symbol}`);
+    if (!alertDiv) return;
+    if (currentMarket !== 'evenodd') {
+      alertDiv.innerHTML = `<div class="saturation-alert">📊 Saturation only in Even/Odd.</div>`;
+      return;
+    }
+    let alert = getSimpleSaturationAlert(symbol);
+    if (!alert) {
+      alertDiv.innerHTML = `<div class="saturation-alert">✅ No saturation.</div>`;
+      return;
+    }
+    let cls = alert.alertLevel === 'critical' ? 'critical' : 'warning';
+    let predColor = alert.reversalPred === 'EVEN' ? '#4ade80' : '#f87171';
+    alertDiv.innerHTML = `<div class="saturation-alert ${cls}">⚠️ ${alert.reason}<br>🔄 Reversal: <span style="color:${predColor};">${alert.reversalPred}</span> (${alert.confidence}%)</div>`;
+  }
 
   window.recordOutcome = function(symbol, outcome) { 
     if(!signalHistory[symbol]) signalHistory[symbol] = []; 
@@ -742,6 +816,8 @@
     if(lastDigitSpan) lastDigitSpan.innerText = digit;
     renderMarket(symbol);
     updatePatternPreview(symbol);
+    updateSimpleSaturation(symbol);
+    updateMultiTFProgress(symbol);
   }
 
   function rebuildDigitGrid(sym) {
@@ -774,7 +850,6 @@
     let sm = null;
     for (let i = s.length - 2; i >= 0; i--) if (s[i].count !== min) { sm = s[i].count; break; }
     let sleast = sm !== null ? new Set(s.filter(i => i.count === sm).map(i => i.digit)) : new Set();
-
     let container = document.getElementById(`digitsContainer_${sym}`);
     if (!container) return;
     container.innerHTML = '';
@@ -947,6 +1022,8 @@
     rebuildDigitGrid(symbol);
     updateChecklistDisplay(symbol);
     updatePatternPreview(symbol);
+    updateSimpleSaturation(symbol);
+    updateMultiTFProgress(symbol);
     updateAllMarketsList();
   }
 
@@ -1024,17 +1101,19 @@
       </div>
       <div id="digitsContainer_${symbol}" class="digits-grid"></div>
       <div class="info-row"><div class="parity-stats" id="parityStats_${symbol}">--</div><div class="streak-stats" id="streakStats_${symbol}">Streak: 0</div><div class="prediction-box" id="prediction_${symbol}">🔮 NEXT DIGIT: —</div></div>
-      <div class="digit-ruler" id="ruler_${symbol}"><div style="font-size:0.7rem;">0</div><div class="ruler-bar"><div class="ruler-marker" style="left:0%"></div></div><div style="font-size:0.7rem;">9</div></div>
-      <div class="ruler-labels" style="margin: -0.2rem 1rem 0.5rem 1rem;"><span>Under 5 (0-4)</span><span>Over 4 (5-9)</span></div>
+      <div class="digit-ruler" id="ruler_${symbol}"><div>0</div><div class="ruler-bar"><div class="ruler-marker" style="left:0%"></div></div><div>9</div></div>
+      <div class="ruler-labels"><span>Under 5 (0-4)</span><span>Over 4 (5-9)</span></div>
       <div class="letter-sequence-wrapper"><div class="sequence-label" id="seqLabel_${symbol}">Sequence</div><div class="letter-sequence" id="paritySeq_${symbol}">⏳ ticks...</div><div class="letter-sequence hidden" id="ouSeq_${symbol}"></div></div>
-      <div class="signal-area" id="signalDisplay_${symbol}"><span class="no-signal">⏳ waiting for signal...</span></div>
+      <div class="signal-area" id="signalDisplay_${symbol}"><span class="no-signal">⏳ waiting...</span></div>
       <div class="checklist" id="checklist_${symbol}"></div>
-      <div id="patternPreview_${symbol}" class="pattern-preview">⏳ Loading pattern data...</div>`; 
+      <div id="patternPreview_${symbol}" class="pattern-preview">⏳ Loading patterns...</div>
+      <div id="saturationAlert_${symbol}" class="saturation-alert">⏳ Monitoring...</div>
+      <div id="multiTFProgress_${symbol}" class="multi-tf-progress">⏳ Analysing timeframes...</div>`; 
     container.appendChild(card); 
     updateSequenceLabel(symbol); 
   }
-  function updateSequenceLabel(symbol) { let label = document.querySelector(`#market_${symbol} .sequence-label`); if(label) label.innerText = currentMarket === 'evenodd' ? 'Even / Odd (E=Even, O=Odd)' : (currentMarket === 'overunder' ? 'Over/Under letters: red U (0-3), blue M (4-5), green O (6-9)' : 'Digit sequence: red 0-3, blue 4-5, green 6-9'); let seqDiv = document.getElementById(`paritySeq_${symbol}`); let ouDiv = document.getElementById(`ouSeq_${symbol}`); if(currentMarket === 'overunder') { seqDiv.classList.add('hidden'); ouDiv.classList.remove('hidden'); } else { seqDiv.classList.remove('hidden'); ouDiv.classList.add('hidden'); } }
-  function openMarketModal(symbol) { let data = marketData[symbol]; if(!data) return; let modal = document.getElementById('marketModal'); let pred = getActivePrediction(symbol); document.getElementById('modalTitle').innerText = `${MARKET_NAMES[symbol]} (${symbol}) - ${currentMarket.toUpperCase()} / ${currentIndicator.toUpperCase()}`; let last20 = data.last50Array.slice(-20).join(', '); let trends = rawTrend[symbol] || {}; let trendSummary = Object.entries(trends).map(([d,t])=>`${d}:${t===1?'↑':(t===-1?'↓':'•')}`).join(', '); let rolling = getRollingCounts(symbol); let totalTicks = rolling ? rolling.total : 0; let checks = getChecklistStatus(symbol); let checkText = Object.entries(checks).map(([k,v])=>`${k}: ${v?'✅':'❌'}`).join(', '); document.getElementById('modalBody').innerHTML = `<p><strong>Price:</strong> ${data.lastPriceDisplay}</p><p><strong>Last digit:</strong> ${data.lastDigit}</p><p><strong>Active Signal:</strong> ${pred ? `🔥 ${pred} 🔥` : 'None'}</p><p><strong>Checklist:</strong> ${checkText}</p><p><strong>10-tick arrows:</strong> ${trendSummary||'none'}</p><p><strong>Last 20 digits:</strong> ${last20}</p><p><strong>NEXT DIGIT predictor:</strong> ${document.getElementById(`prediction_${symbol}`)?.innerText || 'N/A'}</p><p><strong>Percentages:</strong> Rolling window (last ${totalTicks} ticks) – matches Deriv official.</p>`; modal.style.display = 'flex'; }
+  function updateSequenceLabel(symbol) { let label = document.querySelector(`#market_${symbol} .sequence-label`); if(label) label.innerText = currentMarket === 'evenodd' ? 'Even / Odd (E=Even, O=Odd)' : (currentMarket === 'overunder' ? 'Over/Under (U/M/O)' : 'Digit sequence'); let seqDiv = document.getElementById(`paritySeq_${symbol}`); let ouDiv = document.getElementById(`ouSeq_${symbol}`); if(currentMarket === 'overunder') { seqDiv.classList.add('hidden'); ouDiv.classList.remove('hidden'); } else { seqDiv.classList.remove('hidden'); ouDiv.classList.add('hidden'); } }
+  function openMarketModal(symbol) { let data = marketData[symbol]; if(!data) return; let pred = getActivePrediction(symbol); document.getElementById('modalTitle').innerText = `${MARKET_NAMES[symbol]} (${symbol}) - ${currentMarket.toUpperCase()} / ${currentIndicator.toUpperCase()}`; let last20 = data.last50Array.slice(-20).join(', '); let trends = rawTrend[symbol] || {}; let trendSummary = Object.entries(trends).map(([d,t])=>`${d}:${t===1?'↑':(t===-1?'↓':'•')}`).join(', '); let rolling = getRollingCounts(symbol); let totalTicks = rolling ? rolling.total : 0; let checks = getChecklistStatus(symbol); let checkText = Object.entries(checks).map(([k,v])=>`${k}: ${v?'✅':'❌'}`).join(', '); document.getElementById('modalBody').innerHTML = `<p><strong>Price:</strong> ${data.lastPriceDisplay}</p><p><strong>Last digit:</strong> ${data.lastDigit}</p><p><strong>Signal:</strong> ${pred ? `🔥 ${pred} 🔥` : 'None'}</p><p>${checkText}</p><p><strong>10-tick arrows:</strong> ${trendSummary}</p><p><strong>Last 20 digits:</strong> ${last20}</p><p><strong>NEXT DIGIT:</strong> ${document.getElementById(`prediction_${symbol}`)?.innerText || 'N/A'}</p><p>Rolling window: ${totalTicks} ticks.</p>`; modal.style.display = 'flex'; }
   function subscribeToMarket(symbol) { if(!ws||ws.readyState!==WebSocket.OPEN||invalidSymbols.has(symbol)) return; ws.send(JSON.stringify({ ticks_history: symbol, count: 1000, end: "latest", style: "ticks" })); ws.send(JSON.stringify({ ticks: symbol, subscribe: 1 })); }
   function handleMessage(msg) { if(!msg) return; if(msg.msg_type==='tick' && msg.tick) { let sym = msg.tick.symbol; if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) { if(!marketData[sym]) processTick(sym, msg.tick.quote, msg.tick.quote_display); else processTick(sym, msg.tick.quote, msg.tick.quote_display); let statusSpan = document.getElementById(`status_${sym}`); if(statusSpan && statusSpan.innerText !== '🟢 live ticks') { statusSpan.innerHTML = '🟢 live ticks'; statusSpan.className = 'market-status status-green'; } } return; } if(msg.msg_type==='history' && msg.history?.prices && msg.echo_req?.ticks_history) { let sym = msg.echo_req.ticks_history; if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) { msg.history.prices.forEach(p => processTick(sym, p, null)); let statusSpan = document.getElementById(`status_${sym}`); if(statusSpan && statusSpan.innerText !== '🟢 live ticks') { statusSpan.innerHTML = '🟢 live ticks'; statusSpan.className = 'market-status status-green'; } } return; } if(msg.error && msg.error.code==='InvalidSymbol' && msg.echo_req?.ticks_history) { let sym = msg.echo_req.ticks_history; if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) { invalidSymbols.add(sym); createMarketUI(sym, MARKET_NAMES[sym], true); let statusSpan = document.getElementById(`status_${sym}`); if(statusSpan) { statusSpan.innerHTML = '🔴 BLOCKED'; statusSpan.className = 'market-status status-red'; } } return; } if(msg.msg_type==='authorize') { if(msg.error) { document.getElementById('connectionStatus').innerHTML = '❌ Auth failed'; return; } document.getElementById('connectionStatus').innerHTML = '✅ Connected – loading markets...'; document.getElementById('marketsContainer').innerHTML = ''; marketData = {}; invalidSymbols.clear(); signalExpiry = {}; activeSignalMsg = {}; lockedMarkets.clear(); rawTrend = {}; signalHistory = {}; pendingConfirmation = {}; for(let sym of ALL_SYMBOLS) createMarketUI(sym, MARKET_NAMES[sym], false); let idx = 0; function subNext() { if(idx >= ALL_SYMBOLS.length) { document.getElementById('connectionStatus').innerHTML = `✅ Streaming – ${currentMarket.toUpperCase()} / ${currentIndicator.toUpperCase()} mode`; document.getElementById('windowSizeLabel').innerText = getSettings().windowSize; return; } let sym = ALL_SYMBOLS[idx]; if(!invalidSymbols.has(sym)) subscribeToMarket(sym); idx++; setTimeout(subNext, 250); } subNext(); return; } }
   let pingInterval; function startPing() { if(pingInterval) clearInterval(pingInterval); pingInterval = setInterval(()=>{ if(ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify({ping:1})); }, 25000); }
