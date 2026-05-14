@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>TAJIRI TRADERS – Slim + Digit Grid</title>
+<title>TAJIRI TRADERS – Enlarged UI</title>
 <style>
   :root {
     --bg-body: #0b1120;
@@ -27,7 +27,7 @@
     --majority-blink: #06b6d4;
     --hybrid-blink: #a855f7;
     --percent-accent: #facc15;
-    --digit-size: 1.2rem;
+    --digit-size: 1.8rem;
     --last-digit-bg: #0f172a;
     --saturation-warning: #b45309;
     --saturation-critical: #991b1b;
@@ -63,110 +63,126 @@
     --reversal-strong-text: #166534;
   }
   * { box-sizing: border-box; transition: background 0.2s, color 0.2s; }
-  body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg-body); color: var(--text-primary); margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-  .app-container { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  body { 
+    font-family: 'Segoe UI', Roboto, sans-serif; 
+    background: var(--bg-body); 
+    color: var(--text-primary); 
+    margin: 0; 
+    padding: 0; 
+    height: 100vh; 
+    display: flex; 
+    flex-direction: column; 
+    overflow: hidden;
+  }
+  .app-container { 
+    display: flex; 
+    flex-direction: column; 
+    height: 100vh; 
+    overflow: hidden;
+    margin-top: 120px;  /* Push down to avoid being hidden under external header */
+  }
   
-  /* Slim top bar */
+  /* Slim top bar - slightly larger */
   .top-slim-bar {
     background: var(--bg-header);
     border-bottom: 1px solid var(--border-color);
-    padding: 0.5rem 1rem;
+    padding: 0.8rem 1.2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.8rem;
     flex-shrink: 0;
     z-index: 100;
   }
   .logo-area h1 {
-    font-size: 1.2rem;
+    font-size: 1.5rem;
     margin: 0;
   }
   .right-controls {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.8rem;
     flex-wrap: wrap;
   }
   .token-group {
     display: flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.5rem;
     background: var(--bg-panel);
-    padding: 0.2rem 0.5rem;
+    padding: 0.3rem 0.8rem;
     border-radius: 2rem;
   }
   .token-group input {
     background: var(--bg-body);
     border: none;
-    padding: 0.2rem 0.5rem;
-    border-radius: 1rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 1.5rem;
     color: var(--text-primary);
-    font-size: 0.7rem;
-    width: 130px;
+    font-size: 0.85rem;
+    width: 150px;
   }
   .connect-btn {
     background: var(--btn-bg);
     border: none;
-    padding: 0.2rem 0.8rem;
+    padding: 0.3rem 1rem;
     border-radius: 2rem;
     font-weight: bold;
     color: white;
     cursor: pointer;
-    font-size: 0.7rem;
+    font-size: 0.85rem;
   }
   .settings-icon {
     background: var(--bg-panel);
     border: none;
-    font-size: 1.2rem;
+    font-size: 1.3rem;
     cursor: pointer;
     border-radius: 2rem;
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     display: flex;
     align-items: center;
     justify-content: center;
   }
   .status-badge {
     background: var(--bg-panel);
-    padding: 0.2rem 0.6rem;
+    padding: 0.3rem 0.8rem;
     border-radius: 2rem;
-    font-size: 0.65rem;
+    font-size: 0.8rem;
   }
   .mode-toggle-small {
     background: var(--btn-bg);
     border: none;
-    padding: 0.2rem 0.6rem;
+    padding: 0.3rem 0.8rem;
     border-radius: 2rem;
     color: white;
     cursor: pointer;
-    font-size: 0.7rem;
+    font-size: 0.85rem;
   }
   
-  /* Selector row */
+  /* Selector row - larger */
   .selector-row {
     background: var(--bg-header);
-    padding: 0.3rem 1rem;
+    padding: 0.5rem 1.2rem;
     display: flex;
-    gap: 1rem;
+    gap: 1.2rem;
     flex-wrap: wrap;
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
   }
   .market-type-selector, .indicator-selector {
     display: flex;
-    gap: 0.3rem;
+    gap: 0.5rem;
     background: var(--bg-panel);
-    padding: 0.2rem 0.5rem;
-    border-radius: 2rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 2.5rem;
   }
   .market-btn, .indicator-btn {
     background: none;
     border: none;
-    font-size: 0.7rem;
-    padding: 0.2rem 0.6rem;
-    border-radius: 1.5rem;
+    font-size: 0.9rem;
+    padding: 0.3rem 0.9rem;
+    border-radius: 2rem;
     cursor: pointer;
     opacity: 0.6;
     font-weight: bold;
@@ -182,45 +198,45 @@
     flex: 1;
     display: flex;
     overflow: hidden;
-    padding: 0.5rem;
-    gap: 0.5rem;
+    padding: 1rem;
+    gap: 1rem;
   }
   .market-cards-container {
     flex: 3;
     overflow-y: auto;
-    padding-right: 0.3rem;
+    padding-right: 0.5rem;
   }
   .market-grid {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 1rem;
   }
   .all-markets-container {
     flex: 1;
     background: var(--bg-header);
-    border-radius: 1rem;
-    padding: 0.5rem;
-    border-left: 3px solid #facc15;
+    border-radius: 1.2rem;
+    padding: 0.8rem;
+    border-left: 4px solid #facc15;
     overflow-y: auto;
     align-self: flex-start;
     max-height: 100%;
   }
   .all-markets-container h3 {
-    font-size: 0.75rem;
-    margin: 0 0 0.3rem 0;
+    font-size: 0.9rem;
+    margin: 0 0 0.5rem 0;
   }
   .markets-list {
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 0.5rem;
   }
   .market-list-item {
     background: var(--bg-panel);
-    padding: 0.2rem 0.4rem;
-    border-radius: 0.8rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 1rem;
     font-weight: bold;
     cursor: pointer;
-    font-size: 0.7rem;
+    font-size: 0.85rem;
     white-space: nowrap;
   }
   @keyframes blinkYellow { 0% { background: var(--bg-panel); } 50% { background: #facc15; color: #0f172a; } 100% { background: var(--bg-panel); } }
@@ -230,142 +246,189 @@
   .blink-majority { animation: blinkCyan 1s infinite; }
   .blink-hybrid { animation: blinkPurple 1s infinite; }
   
-  /* Market card */
+  /* Market card - larger everything */
   .market-card {
     background: var(--bg-card);
-    border-radius: 0.8rem;
+    border-radius: 1rem;
     border: 1px solid var(--border-color);
     overflow: hidden;
     cursor: pointer;
   }
   .market-header {
     background: var(--bg-header);
-    padding: 0.2rem 0.5rem;
+    padding: 0.5rem 1rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 0.2rem;
+    gap: 0.5rem;
     flex-wrap: wrap;
   }
   .market-title {
-    font-size: 0.75rem;
+    font-size: 1rem;
     font-weight: 700;
     display: flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.5rem;
   }
   .live-price-big {
-    font-size: 0.75rem;
+    font-size: 1rem;
     background: var(--bg-body);
-    padding: 0.05rem 0.3rem;
-    border-radius: 0.8rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 1rem;
     color: var(--price-color);
   }
   .last-digit-badge {
-    font-size: 1.2rem;
+    font-size: 2rem;  /* Enlarged */
     font-weight: 800;
     background: var(--last-digit-bg);
-    padding: 0.05rem 0.5rem;
-    border-radius: 1rem;
-    min-width: 40px;
+    padding: 0.2rem 0.8rem;
+    border-radius: 1.2rem;
+    min-width: 70px;
     text-align: center;
   }
-  .market-status { font-size: 0.55rem; padding: 0.05rem 0.3rem; border-radius: 1rem; }
+  .market-status { font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 1rem; }
   .status-red { color: #f87171; background: var(--status-red-bg); }
   .status-green { color: #4ade80; background: var(--status-green-bg); }
   
-  /* DIGIT GRID - fully restored */
+  /* DIGIT GRID - larger cells, more spacing */
   .digits-grid {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 0.5rem;
+    gap: 8px;
+    padding: 0.8rem;
     background: var(--bg-body);
   }
   .digits-row {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 6px;
+    gap: 10px;
   }
   .digit-cell {
     background: var(--bg-digit);
-    border-radius: 0.7rem;
-    padding: 0.2rem 0.1rem;
+    border-radius: 0.9rem;
+    padding: 0.4rem 0.2rem;
     text-align: center;
     position: relative;
     border: 1px solid var(--border-color);
   }
   .digit-cell span.digit {
-    font-size: var(--digit-size, 1.2rem);
+    font-size: var(--digit-size, 1.8rem);
     font-weight: 800;
     display: block;
-    line-height: 1.2;
+    line-height: 1.3;
   }
   .digit-cell .percent {
-    font-size: 0.6rem;
+    font-size: 0.8rem;
     font-weight: 800;
     color: var(--percent-accent);
     background: rgba(0,0,0,0.2);
     display: inline-block;
-    padding: 0.05rem 0.2rem;
+    padding: 0.1rem 0.4rem;
     border-radius: 20px;
-    margin-top: 2px;
+    margin-top: 4px;
   }
   .digit-cell .trend {
-    font-size: 0.6rem;
-    margin-left: 2px;
+    font-size: 0.8rem;
+    margin-left: 4px;
   }
   .pointer-marker {
     position: absolute;
-    bottom: 2px;
+    bottom: 4px;
     left: 50%;
     transform: translateX(-50%);
-    width: 20px;
-    height: 3px;
+    width: 24px;
+    height: 4px;
     background: #ffcc00;
-    border-radius: 3px;
+    border-radius: 4px;
   }
   .most { background: linear-gradient(145deg, #15803d, #0f5a2e); border-color: #4ade80; }
   .second { background: linear-gradient(145deg, #1e40af, #152e7a); border-color: #60a5fa; }
   .least { background: linear-gradient(145deg, #b91c1c, #7f1414); border-color: #f87171; }
   .secondleast { background: linear-gradient(145deg, #c2410c, #7a2b0a); border-color: #fb923c; }
-  .hot { box-shadow: 0 0 6px #facc15; border-color: #facc15; }
+  .hot { box-shadow: 0 0 8px #facc15; border-color: #facc15; }
   .cold { opacity: 0.6; }
   
-  /* Other elements */
-  .info-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.3rem; padding: 0.2rem 0.3rem; background: var(--bg-body); font-size: 0.6rem; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
-  .parity-stats, .streak-stats, .prediction-box, .evenodd-winrate { background: var(--bg-panel); padding: 0.05rem 0.3rem; border-radius: 0.8rem; }
-  .letter-sequence-wrapper { padding: 0.1rem 0.3rem; background: var(--bg-body); border-bottom: 1px solid var(--border-color); }
-  .letter-sequence { font-size: 0.7rem; padding: 0.1rem; }
-  .signal-area { padding: 0.2rem 0.3rem; text-align: center; background: var(--bg-body); border-bottom: 1px solid var(--border-color); }
-  .signal-flash { padding: 3px 5px; font-size: 0.65rem; }
-  .strength-meter { width: 50px; height: 4px; margin-left: 5px; display: inline-block; background: var(--strength-meter-bg); }
-  .strength-fill { height: 100%; background: var(--strength-fill); }
-  .vote-btn { padding: 1px 3px; font-size: 0.55rem; margin: 0 2px; }
+  /* Info row - larger */
+  .info-row { 
+    display: flex; 
+    flex-wrap: wrap; 
+    justify-content: space-between; 
+    gap: 0.5rem; 
+    padding: 0.5rem 0.8rem; 
+    background: var(--bg-body); 
+    font-size: 0.8rem; 
+    border-top: 1px solid var(--border-color); 
+    border-bottom: 1px solid var(--border-color); 
+  }
+  .parity-stats, .streak-stats, .prediction-box, .evenodd-winrate { 
+    background: var(--bg-panel); 
+    padding: 0.2rem 0.5rem; 
+    border-radius: 1rem; 
+  }
+  /* Sequence letters - larger, spaced out */
+  .letter-sequence-wrapper { 
+    padding: 0.3rem 0.8rem; 
+    background: var(--bg-body); 
+    border-bottom: 1px solid var(--border-color); 
+  }
+  .letter-sequence { 
+    font-size: 1.2rem; 
+    padding: 0.2rem; 
+    letter-spacing: 4px;  /* spread out E/O or digits */
+    word-break: break-all;
+    line-height: 1.4;
+  }
+  .signal-area { 
+    padding: 0.4rem 0.8rem; 
+    text-align: center; 
+    background: var(--bg-body); 
+    border-bottom: 1px solid var(--border-color); 
+  }
+  .signal-flash { 
+    padding: 5px 8px; 
+    font-size: 0.85rem; 
+  }
+  .strength-meter { 
+    width: 70px; 
+    height: 6px; 
+    margin-left: 8px; 
+    display: inline-block; 
+    background: var(--strength-meter-bg); 
+  }
+  .strength-fill { 
+    height: 100%; 
+    background: var(--strength-fill); 
+  }
+  .vote-btn { 
+    padding: 2px 6px; 
+    font-size: 0.7rem; 
+    margin: 0 3px; 
+  }
   .pattern-preview, .saturation-alert, .multi-tf-progress {
     background: var(--bg-panel);
-    border-radius: 0.5rem;
-    padding: 0.2rem;
-    margin: 0.2rem 0.3rem;
-    font-size: 0.6rem;
+    border-radius: 0.8rem;
+    padding: 0.4rem;
+    margin: 0.3rem 0.5rem;
+    font-size: 0.75rem;
     text-align: center;
     border-top: 1px solid var(--border-color);
   }
   .saturation-alert.warning { background: var(--saturation-warning); color: black; }
   .saturation-alert.critical { background: var(--saturation-critical); color: white; }
   .multi-tf-progress.strong { background: var(--reversal-strong-bg); color: var(--reversal-strong-text); }
-  .tf-list { text-align: left; font-size: 0.6rem; }
-  .tf-line { display: flex; justify-content: space-between; padding: 0.05rem 0.1rem; }
+  .tf-list { text-align: left; font-size: 0.7rem; }
+  .tf-line { display: flex; justify-content: space-between; padding: 0.1rem 0.2rem; }
   .hidden { display: none; }
   .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; }
-  .modal-content { background: var(--bg-card); border-radius: 1rem; padding: 1rem; max-width: 400px; width: 90%; }
-  .close-modal { float: right; cursor: pointer; }
-  .settings-panel { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
+  .modal-content { background: var(--bg-card); border-radius: 1rem; padding: 1.5rem; max-width: 500px; width: 90%; }
+  .close-modal { float: right; cursor: pointer; font-size: 1.2rem; }
+  .settings-panel { display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1rem; }
   .setting-row { display: flex; justify-content: space-between; align-items: center; }
   @media (max-width: 800px) {
     .main-scroll-area { flex-direction: column; }
-    .all-markets-container { max-height: 200px; }
-    .token-group input { width: 100px; }
+    .all-markets-container { max-height: 250px; }
+    .token-group input { width: 110px; }
+    .letter-sequence { font-size: 1rem; letter-spacing: 2px; }
   }
 </style>
 </head>
@@ -375,7 +438,7 @@
     <div class="logo-area"><h1>✨ TAJIRI TRADERS ✨</h1></div>
     <div class="right-controls">
       <div class="token-group">
-        <input type="password" id="token" placeholder="API Token" style="width:120px">
+        <input type="password" id="token" placeholder="API Token" style="width:140px">
         <button onclick="connectWebSocket()" class="connect-btn">🚀 CONNECT</button>
       </div>
       <div class="status-badge" id="connectionStatus">⚫ Off</div>
@@ -424,7 +487,7 @@
 </div>
 
 <script>
-  // ============ FULL FUNCTIONALITY WITH DIGIT GRID RESTORED ============
+  // ============ FULL FUNCTIONALITY (unchanged logic, only UI enlarged) ============
   const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,"1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
   const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Vol 10","R_25":"Vol 25","R_50":"Vol 50","R_75":"Vol 75","R_100":"Vol 100","JD10":"Jump 10","JD25":"Jump 25","JD50":"Jump 50","JD75":"Jump 75","JD100":"Jump 100" };
   const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
@@ -852,7 +915,7 @@
     updateEvenOddWinRate(symbol);
   }
 
-  // ========== DIGIT GRID - FULLY RESTORED ==========
+  // DIGIT GRID - FULLY RESTORED AND ENLARGED
   function rebuildDigitGrid(sym) {
     let rolling = getRollingCounts(sym);
     if(!rolling || rolling.total===0) return;
@@ -945,7 +1008,7 @@
       let settings = getSettings();
       updateSignalDisplay(symbol, Date.now(), settings);
     }
-    rebuildDigitGrid(symbol);  // <-- digit grid rebuilt here
+    rebuildDigitGrid(symbol);
     updatePatternPreview(symbol);
     updateSimpleSaturation(symbol);
     updateMultiTFProgress(symbol);
