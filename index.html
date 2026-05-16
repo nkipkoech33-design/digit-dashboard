@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<title>TAJIRI TRADERS – Full Multi‑TF + Pattern Sync</title>
+<title>TAJIRI TRADERS – Full Features + Signal Notifications</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -118,7 +118,7 @@
   }
   .market-btn.active, .indicator-btn.active { opacity: 1; background: var(--trade-active); }
 
-  /* MAIN SCROLL AREA – uses all space */
+  /* MAIN SCROLL AREA */
   .main-scroll-area {
     flex: 1;
     display: flex;
@@ -165,15 +165,16 @@
   .blink-majority { animation: blinkCyan 1s infinite; }
   .blink-hybrid { animation: blinkPurple 1s infinite; }
 
-  /* MARKET CARD – stretched full width, flexible height */
+  /* MARKET CARD – FIXED SIZE */
   .market-card {
     background: var(--bg-card);
     border-radius: 0.8rem;
     border: 1px solid var(--border-color);
     cursor: pointer;
     width: 100%;
+    height: 130mm;
+    max-height: 130mm;
     min-height: 130mm;
-    height: auto;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -217,10 +218,11 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    overflow-y: auto;
+    gap: 0.2rem;
   }
 
-  /* DIGITS GRID with colors */
+  /* DIGITS GRID */
   .digits-grid {
     display: flex;
     flex-direction: column;
@@ -257,16 +259,20 @@
     border-radius: 12px;
   }
   .digit-cell .trend { font-size: 0.65rem; margin-left: 2px; }
+  
   .pointer-marker {
     position: absolute;
-    bottom: 2px;
+    bottom: 0px;
     left: 50%;
     transform: translateX(-50%);
-    width: 20px;
-    height: 3px;
-    background: #ffcc00;
-    border-radius: 2px;
+    width: 30px;
+    height: 6px;
+    background: #ffaa00;
+    border-radius: 3px;
+    box-shadow: 0 0 6px #ffcc00;
+    z-index: 2;
   }
+  
   .most { background: linear-gradient(145deg, #15803d, #0f5a2e); border-color: #4ade80; }
   .second { background: linear-gradient(145deg, #1e40af, #152e7a); border-color: #60a5fa; }
   .least { background: linear-gradient(145deg, #b91c1c, #7f1414); border-color: #f87171; }
@@ -292,7 +298,6 @@
     border-radius: 0.8rem;
   }
 
-  /* ONE-LINE TICK LETTERS – full width scrollable */
   .letter-sequence-wrapper {
     padding: 0.2rem 0.5rem;
     background: var(--bg-body);
@@ -344,7 +349,7 @@
   @media (max-width: 800px) {
     .main-scroll-area { flex-direction: column; }
     .all-markets-container { max-height: 180px; flex: none; width: 100%; }
-    .market-card { min-height: auto; }
+    .market-card { height: auto; min-height: 130mm; }
     .top-slim-bar { flex-direction: column; align-items: stretch; }
     .right-controls { justify-content: space-between; }
   }
@@ -407,7 +412,7 @@
 </div>
 
 <script>
-  // ================== FULL TRADING ENGINE WITH MULTI‑TF & PATTERN WIN RATE ==================
+  // ================== FULL ENGINE + SOUND + DESKTOP NOTIFICATIONS ==================
   const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,"1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
   const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Vol 10","R_25":"Vol 25","R_50":"Vol 50","R_75":"Vol 75","R_100":"Vol 100","JD10":"Jump 10","JD25":"Jump 25","JD50":"Jump 50","JD75":"Jump 75","JD100":"Jump 100" };
   const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
@@ -430,7 +435,6 @@
   function lastDigitFromFormatted(str) { let digits = str.replace(/\./g,''); if(digits.length===0) return 0; return parseInt(digits.charAt(digits.length-1),10)||0; }
   function formatHistoryPrice(s, p) { let dec = DECIMAL_MAP[s] ?? 2; return p.toFixed(dec); }
 
-  // ---------- TREND & ROLLING ----------
   function updateTrends(symbol) {
     let data = marketData[symbol];
     if(!data || data.rollingArray.length < 20) return;
@@ -471,7 +475,6 @@
     return { most, secondMost, least, secondLeast, mostPct, allPct: pct };
   }
 
-  // ---------- MARKET CONDITIONS ----------
   function checkEvenOddRankCondition(symbol, predictedParity) {
     let ranks = getDigitRanksAndPct(symbol);
     if(!ranks) return false;
@@ -496,7 +499,6 @@
     else return over.includes(most) && over.includes(secondMost) && under.includes(least) && under.includes(secondLeast);
   }
 
-  // ---------- ARROW, MAJORITY, HYBRID PREDICTIONS ----------
   function getEvenOddArrow(symbol) {
     let trends = rawTrend[symbol]; if(!trends) return null;
     let data = marketData[symbol]; if(!data || data.last50Array.length < 20) return null;
@@ -546,12 +548,8 @@
       let arrow = getOverUnderArrow(symbol), maj = getMajorityPrediction(symbol);
       let cand = currentIndicator==='arrow' ? arrow : (currentIndicator==='majority' ? maj : (arrow && maj && arrow===maj ? arrow : null));
       return (cand && checkOverUnderRankCondition(symbol, cand)) ? cand : null;
-    } else if(currentMarket === 'differs') {
-      // simplified for demo – keeps functional
-      return null;
-    } else {
-      return null;
     }
+    return null;
   }
 
   function getLongTermTrend(symbol) { return null; }
@@ -584,7 +582,44 @@
     return { active: true, msg: `${action} (${conf}%)`, confidence: conf };
   }
 
-  // ---------- MULTI‑TIMEFRAME (50, 100, 200 ticks) ----------
+  // ----- NOTIFICATION & SOUND -----
+  function playSignalSound() {
+    if (!audioCtx || getSettings().soundEnabled === false) return;
+    try {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.value = 880;
+      gain.gain.value = 0.2;
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
+      osc.stop(audioCtx.currentTime + 0.3);
+    } catch(e) { console.warn(e); }
+  }
+
+  function sendDesktopNotification(symbol, message) {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "granted") {
+      new Notification("📈 TAJIRI TRADERS Signal", {
+        body: `${MARKET_NAMES[symbol]}: ${message}`,
+        icon: "https://www.deriv.com/favicon.ico",
+        silent: false,
+      });
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then(perm => {
+        if (perm === "granted") sendDesktopNotification(symbol, message);
+      });
+    }
+  }
+
+  function requestNotificationPermission() {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }
+
+  // ----- UI / CORE FUNCTIONS -----
   function getWindowDominant(symbol, win) {
     let data = marketData[symbol];
     if(!data || data.rollingArray.length < win) return null;
@@ -615,7 +650,6 @@
     div.innerHTML = `<div class="multi-tf-progress"><div>📊 Dominant parity</div>${lines.join('')}${strong}</div>`;
   }
 
-  // ---------- PATTERN PREVIEW WITH WIN RATE / CONFIDENCE ----------
   function getDominantPattern(parityArr) {
     if(parityArr.length < 50) return null;
     let patterns = {};
@@ -655,7 +689,6 @@
     div.innerHTML = `<div class="pattern-preview"><div>Last 4: ${last4}</div>${rule}</div>`;
   }
 
-  // ---------- DIGIT GRID WITH COLORS ----------
   function rebuildDigitGrid(sym) {
     let rolling = getRollingCounts(sym);
     if(!rolling) return;
@@ -719,7 +752,6 @@
     container.appendChild(row1); container.appendChild(row2);
   }
 
-  // ---------- RENDER MARKET ----------
   function renderMarket(symbol) {
     let data = marketData[symbol]; if(!data || data.rollingArray.length===0) return;
     let priceSpan = document.getElementById(`livePriceBig_${symbol}`); if(priceSpan) priceSpan.innerText = data.lastPriceDisplay;
@@ -758,6 +790,9 @@
         activeSignalMsg[symbol] = sig.msg;
         lockedMarkets.set(symbol, { expiry: signalExpiry[symbol], prediction: getActivePrediction(symbol) });
         div.innerHTML = `<div class="signal-flash">🎯 ${sig.msg} <div class="strength-meter"><div class="strength-fill" style="width:${sig.confidence}%"></div></div><div><button class="vote-btn" onclick="window.recordOutcome('${symbol}','win')">✅ Win</button><button class="vote-btn" onclick="window.recordOutcome('${symbol}','loss')">❌ Loss</button></div></div>`;
+        // NEW: sound + desktop notification for fresh signal
+        playSignalSound();
+        sendDesktopNotification(symbol, sig.msg);
       } else if(active) {
         let rem = Math.max(0, Math.floor((signalExpiry[symbol]-now)/1000));
         div.innerHTML = `<div class="signal-flash">🎯 ${activeSignalMsg[symbol]} (${rem}s)</div>`;
@@ -841,7 +876,7 @@
     renderMarket(symbol);
   };
 
-  // ---------- WEBSOCKET CONNECTION ----------
+  // ----- WEBSOCKET CONNECTION -----
   function connectWebSocket() {
     let token = document.getElementById('token').value.trim();
     if(!token) { alert("Enter API token"); return; }
@@ -895,7 +930,11 @@
   document.getElementById('settingsBtn').onclick = () => modal.style.display = 'flex';
   document.getElementById('closeModal').onclick = () => modal.style.display = 'none';
   window.onclick = e => { if(e.target === modal) modal.style.display = 'none'; };
-  document.body.addEventListener('click', () => { if(audioCtx === null) audioCtx = new AudioContext(); if(audioCtx.state === 'suspended') audioCtx.resume(); });
+  document.body.addEventListener('click', () => { 
+    if(audioCtx === null) audioCtx = new AudioContext(); 
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    requestNotificationPermission();
+  });
   setInterval(()=>{ for(let s in marketData) if(marketData[s]?.rollingArray?.length) renderMarket(s); }, 1500);
 </script>
 </body>
