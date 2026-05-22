@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<title>TAJIRI TRADERS – Enhanced Responsive Signals</title>
+<title>TAJIRI TRADERS – Consensus Signal (All Factors)</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -23,6 +23,7 @@
     --trade-active: #10b981;
     --majority-blink: #06b6d4;
     --hybrid-blink: #a855f7;
+    --consensus-blink: #f97316;
     --percent-accent: #facc15;
     --last-digit-bg: #0f172a;
     --reversal-strong-bg: #0f3b2c;
@@ -51,6 +52,7 @@
     --trade-active: #059669;
     --majority-blink: #0891b2;
     --hybrid-blink: #9333ea;
+    --consensus-blink: #ea580c;
     --percent-accent: #b45309;
     --last-digit-bg: #e2e8f0;
     --reversal-strong-bg: #bbf7d0;
@@ -143,11 +145,11 @@
     height: 100%;
     padding-right: 0.3rem;
   }
+  /* SINGLE COLUMN – one card per row */
   .market-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 1rem;
-    align-items: start;
   }
 
   .all-markets-container {
@@ -170,9 +172,11 @@
   @keyframes blinkYellow { 0% { background: var(--bg-panel); } 50% { background: #facc15; color: #0f172a; } 100% { background: var(--bg-panel); } }
   @keyframes blinkCyan { 0% { background: var(--bg-panel); } 50% { background: var(--majority-blink); color: white; } 100% { background: var(--bg-panel); } }
   @keyframes blinkPurple { 0% { background: var(--bg-panel); } 50% { background: var(--hybrid-blink); color: white; } 100% { background: var(--bg-panel); } }
+  @keyframes blinkOrange { 0% { background: var(--bg-panel); } 50% { background: var(--consensus-blink); color: white; } 100% { background: var(--bg-panel); } }
   .blink-arrow { animation: blinkYellow 1s infinite; }
   .blink-majority { animation: blinkCyan 1s infinite; }
   .blink-hybrid { animation: blinkPurple 1s infinite; }
+  .blink-consensus { animation: blinkOrange 1s infinite; }
 
   .market-card {
     background: var(--bg-card);
@@ -407,13 +411,9 @@
   .enhancer-group { border-top: 1px solid var(--border-color); margin-top: 0.5rem; padding-top: 0.5rem; }
   .enhancer-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 0.9rem; }
 
-  @media (max-width: 1000px) {
-    .market-grid { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
-  }
   @media (max-width: 800px) {
     .main-scroll-area { flex-direction: column; }
     .all-markets-container { flex: none; width: 100%; max-height: 200px; }
-    .market-grid { grid-template-columns: 1fr; }
   }
   @media (max-width: 480px) {
     .digits-row { gap: 4px; }
@@ -446,7 +446,8 @@
     <div class="indicator-selector">
       <button class="indicator-btn" data-indicator="arrow">⬆️ Arrow</button>
       <button class="indicator-btn" data-indicator="majority">📈 Majority</button>
-      <button class="indicator-btn active" data-indicator="hybrid">🔮 Hybrid</button>
+      <button class="indicator-btn" data-indicator="hybrid">🔮 Hybrid</button>
+      <button class="indicator-btn" data-indicator="consensus">⚖️ Consensus</button>
     </div>
   </div>
 
@@ -498,18 +499,18 @@
 </div>
 
 <script>
-  // ================== ENHANCED RESPONSIVE SIGNALS ==================
+  // ================== CONSENSUS ENGINE: Arrow + Majority + Batch Expectation ==================
   const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,"1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
   const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Vol 10","R_25":"Vol 25","R_50":"Vol 50","R_75":"Vol 75","R_100":"Vol 100","JD10":"Jump 10","JD25":"Jump 25","JD50":"Jump 50","JD75":"Jump 75","JD100":"Jump 100" };
   const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
   const SIGNAL_LOCK_DURATION = 60000;
   let marketData = {}, signalExpiry = {}, activeSignalMsg = {}, lockedMarkets = new Map(), rawTrend = {}, signalHistory = {}, pendingConfirmation = {};
-  let currentMarket = 'evenodd', currentIndicator = 'hybrid', ws = null, invalidSymbols = new Set();
+  let currentMarket = 'evenodd', currentIndicator = 'consensus', ws = null, invalidSymbols = new Set();
 
   function getSettings() {
     return {
       soundEnabled: document.getElementById('soundEnabled').value === 'true',
-      majorityWindow: 10,            // REDUCED from 20 to 10 for faster response
+      majorityWindow: 10,
       majorityThreshold: parseInt(document.getElementById('majorityThreshold').value) || 65,
       trendFilterEnabled: document.getElementById('trendFilter').value === 'true',
       volatilityThresh: parseFloat(document.getElementById('volatilityThresh').value) || 2.5,
@@ -521,19 +522,16 @@
   function lastDigitFromFormatted(str) { let digits = str.replace(/\./g,''); if(digits.length===0) return 0; return parseInt(digits.charAt(digits.length-1),10)||0; }
   function formatHistoryPrice(s, p) { let dec = DECIMAL_MAP[s] ?? 2; return p.toFixed(dec); }
 
-  // ---------- IMPROVED BATCH EXPECTATION: uses last 3 batches ----------
+  // ---------- BATCH EXPECTATION (for consensus) ----------
   let batchCache = new Map();
-  function computeBatchDominanceStable(symbol, marketType) {
+  function getBatchExpectation(symbol, marketType) {
     const data = marketData[symbol];
-    if(!data || !data.rollingArray || data.rollingArray.length < 50) return { batches: [], nextExpectation: "⏳ need 50+ ticks", changed: false };
+    if(!data || !data.rollingArray || data.rollingArray.length < 150) return null;
     let arr = data.rollingArray.slice();
-    let maxBatches = 20, batchSize = 50, totalNeeded = maxBatches * batchSize;
-    let startIdx = Math.max(0, arr.length - totalNeeded);
-    let sliced = arr.slice(startIdx);
+    let batchSize = 50;
     let batches = [];
-    for(let i = 0; i + batchSize <= sliced.length && batches.length < maxBatches; i += batchSize) {
-      let batch = sliced.slice(i, i+batchSize);
-      if(batch.length !== batchSize) continue;
+    for(let i = 0; i + batchSize <= arr.length && batches.length < 20; i += batchSize) {
+      let batch = arr.slice(i, i+batchSize);
       if(marketType === 'evenodd') {
         let evens = batch.filter(d => d%2===0).length;
         let odds = batchSize - evens;
@@ -546,36 +544,25 @@
         if(over > under) batches.push('O');
         else if(under > over) batches.push('U');
         else batches.push('=');
-      } else { batches.push('?'); }
+      } else return null;
     }
-    // ENHANCED: look at last 3 batches, if at least 2 are same, expect opposite
-    let nextExpect = "—";
     let len = batches.length;
-    if(len >= 3) {
-      let last3 = batches.slice(-3);
-      let counts = last3.reduce((acc,val)=>{ acc[val]=(acc[val]||0)+1; return acc; }, {});
-      let dominant = null;
-      for(let key in counts) if(counts[key] >= 2 && key !== '=') dominant = key;
-      if(dominant === 'E') nextExpect = "🔮 NEXT 50 TICKS: Expect ODD wave";
-      else if(dominant === 'O') nextExpect = marketType === 'evenodd' ? "🔮 NEXT 50 TICKS: Expect EVEN wave" : "🔮 NEXT 50 TICKS: Expect UNDER wave";
-      else if(dominant === 'U') nextExpect = "🔮 NEXT 50 TICKS: Expect OVER wave";
-      else nextExpect = "⚖️ NEXT 50 TICKS: Mixed signals / Wait";
-    } else if(len > 0) {
-      let last = batches[len-1];
-      if(last === 'E') nextExpect = "🔮 NEXT 50 TICKS: Expect ODD wave";
-      else if(last === 'O') nextExpect = marketType === 'evenodd' ? "🔮 NEXT 50 TICKS: Expect EVEN wave" : "🔮 NEXT 50 TICKS: Expect UNDER wave";
-      else if(last === 'U') nextExpect = "🔮 NEXT 50 TICKS: Expect OVER wave";
-      else if(last === '=') nextExpect = "⚖️ NEXT 50 TICKS: Balanced / No clear edge";
-    } else nextExpect = "📊 waiting for a full batch...";
-    
-    let cached = batchCache.get(symbol);
-    let changed = false;
-    if(!cached || cached.batches.length !== batches.length || JSON.stringify(cached.batches) !== JSON.stringify(batches)) {
-      changed = true;
-      batchCache.set(symbol, { batches, nextExpectation: nextExpect, lastBatchCount: batches.length });
-    } else { nextExpect = cached.nextExpectation; }
-    return { batches, nextExpectation: nextExpect, changed };
+    if(len < 3) return null;
+    let last3 = batches.slice(-3);
+    let counts = last3.reduce((acc,val)=>{ acc[val]=(acc[val]||0)+1; return acc; }, {});
+    let dominant = null;
+    for(let key in counts) if(counts[key] >= 2 && key !== '=') dominant = key;
+    if(!dominant) return null;
+    if(marketType === 'evenodd') {
+      if(dominant === 'E') return "ODD";
+      if(dominant === 'O') return "EVEN";
+    } else {
+      if(dominant === 'O') return "UNDER";
+      if(dominant === 'U') return "OVER";
+    }
+    return null;
   }
+
   function updateBatchAnalysis(symbol) {
     const container = document.getElementById(`batchContainer_${symbol}`);
     if(!container) return;
@@ -584,11 +571,47 @@
       container.innerHTML = `<div class="batch-analysis">📊 Batch analysis only for Even/Odd & Over/Under</div>`;
       return;
     }
-    let { batches, nextExpectation } = computeBatchDominanceStable(symbol, marketType);
-    if(batches.length === 0) {
-      container.innerHTML = `<div class="batch-analysis">⏳ Collecting 1000 ticks (20x50 cycles)...</div>`;
-      return;
+    let batches = [];
+    const data = marketData[symbol];
+    if(data && data.rollingArray && data.rollingArray.length >= 50) {
+      let arr = data.rollingArray.slice();
+      let batchSize = 50;
+      for(let i = 0; i + batchSize <= arr.length && batches.length < 20; i += batchSize) {
+        let batch = arr.slice(i, i+batchSize);
+        if(marketType === 'evenodd') {
+          let evens = batch.filter(d => d%2===0).length;
+          let odds = batchSize - evens;
+          if(evens > odds) batches.push('E');
+          else if(odds > evens) batches.push('O');
+          else batches.push('=');
+        } else {
+          let over = batch.filter(d => d >= 5).length;
+          let under = batchSize - over;
+          if(over > under) batches.push('O');
+          else if(under > over) batches.push('U');
+          else batches.push('=');
+        }
+      }
     }
+    let nextExpect = "—";
+    let len = batches.length;
+    if(len >= 3) {
+      let last3 = batches.slice(-3);
+      let counts = last3.reduce((acc,val)=>{ acc[val]=(acc[val]||0)+1; return acc; }, {});
+      let dominant = null;
+      for(let key in counts) if(counts[key] >= 2 && key !== '=') dominant = key;
+      if(dominant === 'E') nextExpect = "🔮 NEXT 50 TICKS: Expect ODD";
+      else if(dominant === 'O') nextExpect = marketType === 'evenodd' ? "🔮 NEXT 50 TICKS: Expect EVEN" : "🔮 NEXT 50 TICKS: Expect UNDER";
+      else if(dominant === 'U') nextExpect = "🔮 NEXT 50 TICKS: Expect OVER";
+      else nextExpect = "⚖️ Mixed / No clear edge";
+    } else if(len > 0) {
+      let last = batches[len-1];
+      if(last === 'E') nextExpect = "🔮 NEXT 50 TICKS: Expect ODD";
+      else if(last === 'O') nextExpect = marketType === 'evenodd' ? "🔮 NEXT 50 TICKS: Expect EVEN" : "🔮 NEXT 50 TICKS: Expect UNDER";
+      else if(last === 'U') nextExpect = "🔮 NEXT 50 TICKS: Expect OVER";
+      else if(last === '=') nextExpect = "⚖️ Balanced";
+    } else nextExpect = "⏳ need 50+ ticks";
+    
     let gridHtml = `<div class="batch-analysis"><div class="batch-title">📦 20x50 TICK CYCLES (old → new)</div><div class="batch-grid">`;
     batches.forEach(b => {
       let cls = '';
@@ -596,7 +619,7 @@
       else { if(b === 'O') cls = 'over'; else if(b === 'U') cls = 'under'; else cls = 'equal'; }
       gridHtml += `<div class="batch-cell ${cls}">${b}</div>`;
     });
-    gridHtml += `</div><div class="batch-expect">${nextExpectation}</div></div>`;
+    gridHtml += `</div><div class="batch-expect">${nextExpect}</div></div>`;
     container.innerHTML = gridHtml;
   }
 
@@ -615,7 +638,7 @@
     return data.last50Array.map(d => d%2===0 ? '<span style="color:#4ade80;">E</span>' : '<span style="color:#f87171;">O</span>').join('');
   }
 
-  // --- ENHANCED ARROW INDICATOR (threshold 2 instead of 3) ---
+  // --- Core indicators (Arrow, Majority) ---
   function updateTrends(symbol) {
     let data = marketData[symbol];
     if(!data || data.rollingArray.length < 20) return;
@@ -676,7 +699,6 @@
     if(predictedOu === "UNDER") return under.includes(most) && under.includes(secondMost) && over.includes(least) && over.includes(secondLeast);
     else return over.includes(most) && over.includes(secondMost) && under.includes(least) && under.includes(secondLeast);
   }
-  // ARROW: now requires at least 2 gaining digits (was 3)
   function getEvenOddArrow(symbol) {
     let trends = rawTrend[symbol]; if(!trends) return null;
     let data = marketData[symbol]; if(!data || data.last50Array.length < 20) return null;
@@ -701,7 +723,6 @@
     if(!majorityOver && underGain>=2 && overGain===0) return "UNDER";
     return null;
   }
-  // MAJORITY uses 10-tick window (set in getSettings)
   function getMajorityPrediction(symbol) {
     let data = marketData[symbol], settings = getSettings();
     if(!data || data.last50Array.length < settings.majorityWindow) return null;
@@ -717,23 +738,38 @@
     }
     return null;
   }
+  
+  // --- Consensus: requires Arrow, Majority, and Batch Expectation to agree ---
+  function getConsensusPrediction(symbol) {
+    if(currentMarket !== 'evenodd' && currentMarket !== 'overunder') return null;
+    let marketType = currentMarket === 'evenodd' ? 'evenodd' : 'overunder';
+    let arrow = (currentMarket === 'evenodd') ? getEvenOddArrow(symbol) : getOverUnderArrow(symbol);
+    let majority = getMajorityPrediction(symbol);
+    let batch = getBatchExpectation(symbol, marketType);
+    if(!arrow || !majority || !batch) return null;
+    if(arrow === majority && majority === batch) return arrow;
+    return null;
+  }
+  
+  // --- Hybrid (arrow+majority) and individual indicators ---
   function getHybridPrediction(symbol) {
     if(currentMarket === 'evenodd') {
       let arrow = getEvenOddArrow(symbol), maj = getMajorityPrediction(symbol);
-      let cand = currentIndicator==='arrow' ? arrow : (currentIndicator==='majority' ? maj : (arrow && maj && arrow===maj ? arrow : null));
+      let cand = (arrow && maj && arrow===maj) ? arrow : null;
       return (cand && checkEvenOddRankCondition(symbol, cand)) ? cand : null;
     } else if(currentMarket === 'overunder') {
       let arrow = getOverUnderArrow(symbol), maj = getMajorityPrediction(symbol);
-      let cand = currentIndicator==='arrow' ? arrow : (currentIndicator==='majority' ? maj : (arrow && maj && arrow===maj ? arrow : null));
+      let cand = (arrow && maj && arrow===maj) ? arrow : null;
       return (cand && checkOverUnderRankCondition(symbol, cand)) ? cand : null;
     }
     return null;
   }
+  
   function getLongTermTrend(symbol) { return null; }
   function getVolatility(symbol) { return 0; }
   function computeConfidence(symbol, pred) { return 70; }
   
-  // --- Enhancement hooks (unchanged, optional) ---
+  // --- Enhancement hooks (optional, unchanged) ---
   let enhLastSignalTimes = new Map();
   let enhConsecutiveLosses = new Map();
   let enhTickTimestamps = new Map();
@@ -796,7 +832,6 @@
     let std = Math.sqrt(variance);
     return std > 0.5;
   }
-  // MULTI-TIMEFRAME: using 25,50,100 ticks for faster response
   function checkMultiTF(symbol) {
     if(currentMarket !== 'evenodd') return true;
     let wins = [25,50,100];
@@ -836,7 +871,7 @@
     let probs = trans.get(lastTwo);
     let maxIdx = probs.indexOf(Math.max(...probs));
     let markovPred = maxIdx % 2 === 0 ? 'EVEN' : 'ODD';
-    let hybrid = getHybridPrediction(symbol);
+    let hybrid = (currentIndicator === 'consensus') ? getConsensusPrediction(symbol) : (currentIndicator === 'hybrid' ? getHybridPrediction(symbol) : (currentIndicator === 'arrow' ? (currentMarket==='evenodd'?getEvenOddArrow(symbol):getOverUnderArrow(symbol)) : getMajorityPrediction(symbol)));
     if(!hybrid) return true;
     return hybrid === markovPred;
   }
@@ -852,8 +887,8 @@
     if(!symbol.includes('10') && !symbol.includes('25')) return true;
     let pair = symbol.includes('10') ? '1HZ10V' : '1HZ25V';
     let other = symbol === '1HZ10V' ? '1HZ25V' : '1HZ10V';
-    let predThis = getHybridPrediction(symbol);
-    let predOther = getHybridPrediction(other);
+    let predThis = (currentIndicator === 'consensus') ? getConsensusPrediction(symbol) : (currentIndicator === 'hybrid' ? getHybridPrediction(symbol) : (currentIndicator === 'arrow' ? (currentMarket==='evenodd'?getEvenOddArrow(symbol):getOverUnderArrow(symbol)) : getMajorityPrediction(symbol)));
+    let predOther = (currentIndicator === 'consensus') ? getConsensusPrediction(other) : (currentIndicator === 'hybrid' ? getHybridPrediction(other) : (currentIndicator === 'arrow' ? (currentMarket==='evenodd'?getEvenOddArrow(other):getOverUnderArrow(other)) : getMajorityPrediction(other)));
     if(!predThis || !predOther) return true;
     return predThis === predOther;
   }
@@ -899,7 +934,7 @@
     }
     if(run >= 6) {
       let last = letters[letters.length-1];
-      let hybrid = getHybridPrediction(symbol);
+      let hybrid = (currentIndicator === 'consensus') ? getConsensusPrediction(symbol) : (currentIndicator === 'hybrid' ? getHybridPrediction(symbol) : (currentIndicator === 'arrow' ? (currentMarket==='evenodd'?getEvenOddArrow(symbol):getOverUnderArrow(symbol)) : getMajorityPrediction(symbol)));
       if(last === 'O' && hybrid === 'OVER') return false;
       if(last === 'U' && hybrid === 'UNDER') return false;
     }
@@ -919,8 +954,7 @@
     return parseInt(document.getElementById('majorityThreshold').value) || 65;
   }
   
-  // Override majority threshold in the original getMajorityPrediction
-  const originalGetMajority = getMajorityPrediction;
+  // Override majority threshold
   window.getMajorityPrediction = function(symbol) {
     let data = marketData[symbol], settings = getSettings();
     if(!data || data.last50Array.length < settings.majorityWindow) return null;
@@ -938,8 +972,16 @@
     return null;
   };
   
+  function getBasePrediction(symbol) {
+    if(currentIndicator === 'arrow') return currentMarket === 'evenodd' ? getEvenOddArrow(symbol) : getOverUnderArrow(symbol);
+    if(currentIndicator === 'majority') return getMajorityPrediction(symbol);
+    if(currentIndicator === 'hybrid') return getHybridPrediction(symbol);
+    if(currentIndicator === 'consensus') return getConsensusPrediction(symbol);
+    return null;
+  }
+  
   function enhancedGetActivePrediction(symbol) {
-    let basePred = getHybridPrediction(symbol);
+    let basePred = getBasePrediction(symbol);
     if(!basePred) return null;
     let enh = getEnhancements();
     if(enh.adaptiveConfidence && !checkAdaptiveConfidence(symbol)) return null;
@@ -999,7 +1041,7 @@
   
   window.getActivePrediction = enhancedGetActivePrediction;
   
-  // --- UI and WebSocket (unchanged) ---
+  // --- UI functions (unchanged except single column) ---
   function rebuildDigitGrid(sym) {
     let rolling = getRollingCounts(sym); if(!rolling) return;
     let { counts, total } = rolling; let pct = counts.map(c => (c/total*100).toFixed(1)); let tr = rawTrend[sym] || {};
@@ -1107,7 +1149,7 @@
   function updateMultiTFProgress(symbol) {
     let div = document.getElementById(`multiTFProgress_${symbol}`); if(!div) return;
     if(currentMarket !== 'evenodd') { div.innerHTML = `<div class="multi-tf-progress">📊 Only Even/Odd</div>`; return; }
-    let wins = [25,50,100]; // faster multi-timeframe
+    let wins = [25,50,100];
     let lines = []; let first = null, allSame = true;
     for(let w of wins) {
       let info = getWindowDominant(symbol, w);
@@ -1179,7 +1221,7 @@
     let items = ALL_SYMBOLS.map(sym => {
       let lock = lockedMarkets.get(sym);
       let active = !!lock;
-      let cls = active ? (currentIndicator==='arrow'?'blink-arrow':(currentIndicator==='majority'?'blink-majority':'blink-hybrid')) : '';
+      let cls = active ? (currentIndicator==='arrow'?'blink-arrow':(currentIndicator==='majority'?'blink-majority':(currentIndicator==='hybrid'?'blink-hybrid':'blink-consensus'))) : '';
       let suffix = ''; if(active && lock && lock.prediction) suffix = ` → ${lock.prediction}`;
       return `<div class="market-list-item ${cls}" data-symbol="${sym}">${MARKET_NAMES[sym]}${suffix}</div>`;
     }).join('');
