@@ -34,6 +34,8 @@
     --batch-over: #10b981;
     --batch-under: #ef4444;
     --enhance-bg: #1e293b;
+    /* Adjust this value if external navbar height changes */
+    --external-nav-height: 70px;
   }
 
   body.light {
@@ -71,12 +73,21 @@
     color: var(--text-primary);
     height: 100vh;
     overflow: hidden;
+    /* No padding on body itself – we use a spacer div */
+  }
+
+  /* Spacer to avoid external navbar hiding the header */
+  .top-spacer {
+    height: var(--external-nav-height);
+    width: 100%;
+    background: transparent;
+    flex-shrink: 0;
   }
 
   .app-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: calc(100vh - var(--external-nav-height));
     overflow: hidden;
   }
 
@@ -422,6 +433,9 @@
 </style>
 </head>
 <body>
+<!-- SPACER: prevents external navbar from hiding the Tajiri header -->
+<div class="top-spacer"></div>
+
 <div class="app-container">
   <div class="top-slim-bar">
     <div class="logo-area"><h1>✨ TAJIRI TRADERS ✨</h1></div>
