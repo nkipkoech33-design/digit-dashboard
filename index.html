@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<title>TAJIRI TRADERS – Full Screen, Consensus Signal</title>
+<title>TAJIRI TRADERS – Full Card View (Pattern Removed)</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -34,7 +34,6 @@
     --batch-over: #10b981;
     --batch-under: #ef4444;
     --enhance-bg: #1e293b;
-    /* Adjust this value if your external navbar height differs */
     --external-nav-height: 70px;
   }
 
@@ -73,7 +72,6 @@
     color: var(--text-primary);
     height: 100vh;
     overflow: hidden;
-    /* Push content down to avoid external navbar, but use full remaining height */
     padding-top: var(--external-nav-height);
   }
 
@@ -149,7 +147,6 @@
     height: 100%;
     padding-right: 0.3rem;
   }
-  /* SINGLE COLUMN – one card per row, full width */
   .market-grid {
     display: flex;
     flex-direction: column;
@@ -235,7 +232,7 @@
     flex-direction: column;
     overflow-y: auto;
     gap: 0.2rem;
-    /* No max-height restriction – it will grow with content, but parent .market-cards-container handles scrolling */
+    /* No max-height – it will grow naturally; parent .market-cards-container handles scrolling */
   }
 
   .digits-grid {
@@ -344,7 +341,7 @@
   .strength-fill { height: 100%; background: var(--strength-fill); }
   .vote-btn { padding: 1px 4px; font-size: 0.6rem; margin: 0 2px; background: var(--btn-bg); border: none; color: white; border-radius: 1rem; cursor: pointer; }
 
-  .pattern-preview, .multi-tf-progress {
+  .multi-tf-progress {
     background: var(--bg-panel);
     border-radius: 0.6rem;
     padding: 0.2rem;
@@ -503,7 +500,7 @@
 </div>
 
 <script>
-  // ================== CONSENSUS ENGINE: Arrow + Majority + Batch Expectation ==================
+  // ================== CONSENSUS ENGINE (Arrow + Majority + Batch Expectation) ==================
   const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,"1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
   const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Vol 10","R_25":"Vol 25","R_50":"Vol 50","R_75":"Vol 75","R_100":"Vol 100","JD10":"Jump 10","JD25":"Jump 25","JD50":"Jump 50","JD75":"Jump 75","JD100":"Jump 100" };
   const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
@@ -773,7 +770,7 @@
   function getVolatility(symbol) { return 0; }
   function computeConfidence(symbol, pred) { return 70; }
   
-  // --- Enhancement hooks (optional, unchanged) ---
+  // --- Enhancement hooks (optional) ---
   let enhLastSignalTimes = new Map();
   let enhConsecutiveLosses = new Map();
   let enhTickTimestamps = new Map();
@@ -1045,7 +1042,7 @@
   
   window.getActivePrediction = enhancedGetActivePrediction;
   
-  // --- UI functions (unchanged) ---
+  // --- UI functions (Pattern preview removed) ---
   function rebuildDigitGrid(sym) {
     let rolling = getRollingCounts(sym); if(!rolling) return;
     let { counts, total } = rolling; let pct = counts.map(c => (c/total*100).toFixed(1)); let tr = rawTrend[sym] || {};
@@ -1109,47 +1106,11 @@
       div.innerHTML = `<div class="signal-flash">🎯 ${activeSignalMsg[symbol]} (${rem}s)</div>`;
     } else { div.innerHTML = `<span class="no-signal">⚡ waiting...</span>`; }
     rebuildDigitGrid(symbol);
-    updatePatternPreview(symbol);
     updateMultiTFProgress(symbol);
     updateBatchAnalysis(symbol);
     updateAllMarketsList();
   }
   
-  function updatePatternPreview(symbol) {
-    let div = document.getElementById(`patternPreview_${symbol}`); if(!div) return;
-    if(currentMarket !== 'evenodd') { div.innerHTML = `<div class="pattern-preview">📊 Only Even/Odd</div>`; return; }
-    let data = marketData[symbol]; if(!data || data.rollingArray.length < 100) { div.innerHTML = `<div class="pattern-preview">⏳ Loading pattern...</div>`; return; }
-    let parity = data.rollingArray.slice(-300).map(d=>d%2===0?'E':'O');
-    let last4 = parity.slice(-4).map(p=>`<span style="background:${p==='E'?'#4ade80':'#f87171'}">${p}</span>`).join('');
-    let dom = getDominantPattern(parity);
-    let rule = dom ? `<div>🧠 ${dom.pattern} → <span style="color:${dom.prediction==='E'?'#4ade80':'#f87171'}">${dom.prediction}</span> (${(dom.confidence*100).toFixed(0)}% win rate)</div>` : '<div>📉 No dominant pattern</div>';
-    div.innerHTML = `<div class="pattern-preview"><div>Last 4: ${last4}</div>${rule}</div>`;
-  }
-  function getDominantPattern(parityArr) {
-    if(parityArr.length < 50) return null;
-    let patterns = {};
-    for(let L of [2,3,4]) {
-      for(let i=0; i<=parityArr.length-L-1; i++) {
-        let pat = parityArr.slice(i,i+L).join('');
-        let next = parityArr[i+L];
-        if(!patterns[pat]) patterns[pat] = {E:0,O:0};
-        patterns[pat][next]++;
-      }
-    }
-    let best = null, bestScore = -1;
-    for(let pat in patterns) {
-      let p = patterns[pat];
-      let total = p.E + p.O;
-      if(total < 10) continue;
-      let probE = p.E/total, probO = p.O/total;
-      let maxProb = Math.max(probE, probO);
-      if(maxProb < 0.7) continue;
-      let pred = probE >= probO ? 'E' : 'O';
-      let score = maxProb * Math.sqrt(total);
-      if(score > bestScore) { bestScore = score; best = { pattern: pat, prediction: pred, confidence: maxProb, count: total }; }
-    }
-    return best;
-  }
   function updateMultiTFProgress(symbol) {
     let div = document.getElementById(`multiTFProgress_${symbol}`); if(!div) return;
     if(currentMarket !== 'evenodd') { div.innerHTML = `<div class="multi-tf-progress">📊 Only Even/Odd</div>`; return; }
@@ -1209,7 +1170,6 @@
         <div class="info-row"><div class="parity-stats" id="parityStats_${symbol}">--</div><div class="streak-stats" id="streakStats_${symbol}">Streak: 0</div><div class="prediction-box" id="prediction_${symbol}">🔮 NEXT DIGIT: —</div></div>
         <div class="letter-sequence-wrapper"><div class="letter-sequence" id="paritySeq_${symbol}">⏳ ticks...</div><div class="letter-sequence hidden" id="ouSeq_${symbol}"></div></div>
         <div class="signal-area" id="signalDisplay_${symbol}"><span class="no-signal">⚡ waiting...</span></div>
-        <div id="patternPreview_${symbol}" class="pattern-preview">⏳ pattern sync</div>
         <div id="multiTFProgress_${symbol}" class="multi-tf-progress">⏳ multi‑TF</div>
         <div id="batchContainer_${symbol}" class="batch-analysis">⏳ loading batch cycles...</div>
       </div>`;
