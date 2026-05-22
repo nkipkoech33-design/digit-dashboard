@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<title>TAJIRI TRADERS – Fullscreen Layout (No Bottom Waste)</title>
+<title>TAJIRI TRADERS – Current Market State (Batch Analysis)</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -34,7 +34,7 @@
     --batch-over: #10b981;
     --batch-under: #ef4444;
     --enhance-bg: #1e293b;
-    --external-nav-height: 70px;  /* Adjust if your external navbar height differs */
+    --external-nav-height: 70px;
   }
 
   body.light {
@@ -76,7 +76,6 @@
     padding: 0;
   }
 
-  /* Spacer to prevent external navbar from covering the header */
   .top-spacer {
     height: var(--external-nav-height);
     width: 100%;
@@ -240,7 +239,6 @@
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
-    /* No max-height – grows naturally within scrollable parent */
   }
 
   .digits-grid {
@@ -431,7 +429,6 @@
 </style>
 </head>
 <body>
-<!-- SPACER: prevents external navbar from hiding the header -->
 <div class="top-spacer"></div>
 
 <div class="app-container">
@@ -511,7 +508,7 @@
 </div>
 
 <script>
-  // ================== CONSENSUS ENGINE (Arrow + Majority + Batch Expectation) ==================
+  // ================== CONSENSUS ENGINE + CURRENT MARKET STATE (BATCH) ==================
   const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,"1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
   const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Vol 10","R_25":"Vol 25","R_50":"Vol 50","R_75":"Vol 75","R_100":"Vol 100","JD10":"Jump 10","JD25":"Jump 25","JD50":"Jump 50","JD75":"Jump 75","JD100":"Jump 100" };
   const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
@@ -534,45 +531,37 @@
   function lastDigitFromFormatted(str) { let digits = str.replace(/\./g,''); if(digits.length===0) return 0; return parseInt(digits.charAt(digits.length-1),10)||0; }
   function formatHistoryPrice(s, p) { let dec = DECIMAL_MAP[s] ?? 2; return p.toFixed(dec); }
 
-  // ---------- BATCH EXPECTATION (for consensus) ----------
+  // ---------- CURRENT MARKET STATE BASED ON LAST COMPLETED BATCH ----------
   let batchCache = new Map();
-  function getBatchExpectation(symbol, marketType) {
+  function getCurrentMarketState(symbol, marketType) {
     const data = marketData[symbol];
-    if(!data || !data.rollingArray || data.rollingArray.length < 150) return null;
+    if(!data || !data.rollingArray || data.rollingArray.length < 50) return { state: "⏳ need 50+ ticks", cls: "" };
     let arr = data.rollingArray.slice();
     let batchSize = 50;
-    let batches = [];
-    for(let i = 0; i + batchSize <= arr.length && batches.length < 20; i += batchSize) {
-      let batch = arr.slice(i, i+batchSize);
-      if(marketType === 'evenodd') {
-        let evens = batch.filter(d => d%2===0).length;
-        let odds = batchSize - evens;
-        if(evens > odds) batches.push('E');
-        else if(odds > evens) batches.push('O');
-        else batches.push('=');
-      } else if(marketType === 'overunder') {
-        let over = batch.filter(d => d >= 5).length;
-        let under = batchSize - over;
-        if(over > under) batches.push('O');
-        else if(under > over) batches.push('U');
-        else batches.push('=');
-      } else return null;
+    // Get the most recent complete batch (the one that just finished)
+    let lastBatch = null;
+    for(let i = arr.length - batchSize; i >= 0; i -= batchSize) {
+      if(i + batchSize <= arr.length) {
+        lastBatch = arr.slice(i, i+batchSize);
+        break;
+      }
     }
-    let len = batches.length;
-    if(len < 3) return null;
-    let last3 = batches.slice(-3);
-    let counts = last3.reduce((acc,val)=>{ acc[val]=(acc[val]||0)+1; return acc; }, {});
-    let dominant = null;
-    for(let key in counts) if(counts[key] >= 2 && key !== '=') dominant = key;
-    if(!dominant) return null;
+    if(!lastBatch) return { state: "⏳ waiting for batch...", cls: "" };
+    
     if(marketType === 'evenodd') {
-      if(dominant === 'E') return "ODD";
-      if(dominant === 'O') return "EVEN";
-    } else {
-      if(dominant === 'O') return "UNDER";
-      if(dominant === 'U') return "OVER";
+      let evens = lastBatch.filter(d => d%2===0).length;
+      let odds = batchSize - evens;
+      if(evens > odds) return { state: "🎲 EVEN MARKET", cls: "even" };
+      if(odds > evens) return { state: "🎲 ODD MARKET", cls: "odd" };
+      return { state: "⏸️ NO DIRECTION / WAIT", cls: "equal" };
+    } else if(marketType === 'overunder') {
+      let over = lastBatch.filter(d => d >= 5).length;
+      let under = batchSize - over;
+      if(over > under) return { state: "📈 OVER MARKET", cls: "over" };
+      if(under > over) return { state: "📉 UNDER MARKET", cls: "under" };
+      return { state: "⏸️ NO DIRECTION / WAIT", cls: "equal" };
     }
-    return null;
+    return { state: "—", cls: "" };
   }
 
   function updateBatchAnalysis(symbol) {
@@ -583,6 +572,7 @@
       container.innerHTML = `<div class="batch-analysis">📊 Batch analysis only for Even/Odd & Over/Under</div>`;
       return;
     }
+    // Build the batch grid (history)
     let batches = [];
     const data = marketData[symbol];
     if(data && data.rollingArray && data.rollingArray.length >= 50) {
@@ -605,33 +595,25 @@
         }
       }
     }
-    let nextExpect = "—";
-    let len = batches.length;
-    if(len >= 3) {
-      let last3 = batches.slice(-3);
-      let counts = last3.reduce((acc,val)=>{ acc[val]=(acc[val]||0)+1; return acc; }, {});
-      let dominant = null;
-      for(let key in counts) if(counts[key] >= 2 && key !== '=') dominant = key;
-      if(dominant === 'E') nextExpect = "🔮 NEXT 50 TICKS: Expect ODD";
-      else if(dominant === 'O') nextExpect = marketType === 'evenodd' ? "🔮 NEXT 50 TICKS: Expect EVEN" : "🔮 NEXT 50 TICKS: Expect UNDER";
-      else if(dominant === 'U') nextExpect = "🔮 NEXT 50 TICKS: Expect OVER";
-      else nextExpect = "⚖️ Mixed / No clear edge";
-    } else if(len > 0) {
-      let last = batches[len-1];
-      if(last === 'E') nextExpect = "🔮 NEXT 50 TICKS: Expect ODD";
-      else if(last === 'O') nextExpect = marketType === 'evenodd' ? "🔮 NEXT 50 TICKS: Expect EVEN" : "🔮 NEXT 50 TICKS: Expect UNDER";
-      else if(last === 'U') nextExpect = "🔮 NEXT 50 TICKS: Expect OVER";
-      else if(last === '=') nextExpect = "⚖️ Balanced";
-    } else nextExpect = "⏳ need 50+ ticks";
+    let currentStateObj = getCurrentMarketState(symbol, marketType);
+    let stateText = currentStateObj.state;
+    let stateClass = currentStateObj.cls;
     
     let gridHtml = `<div class="batch-analysis"><div class="batch-title">📦 20x50 TICK CYCLES (old → new)</div><div class="batch-grid">`;
     batches.forEach(b => {
       let cls = '';
-      if(marketType === 'evenodd') { if(b === 'E') cls = 'even'; else if(b === 'O') cls = 'odd'; else cls = 'equal'; }
-      else { if(b === 'O') cls = 'over'; else if(b === 'U') cls = 'under'; else cls = 'equal'; }
+      if(marketType === 'evenodd') {
+        if(b === 'E') cls = 'even';
+        else if(b === 'O') cls = 'odd';
+        else cls = 'equal';
+      } else {
+        if(b === 'O') cls = 'over';
+        else if(b === 'U') cls = 'under';
+        else cls = 'equal';
+      }
       gridHtml += `<div class="batch-cell ${cls}">${b}</div>`;
     });
-    gridHtml += `</div><div class="batch-expect">${nextExpect}</div></div>`;
+    gridHtml += `</div><div class="batch-expect" style="background: var(--bg-panel); margin-top:6px; border-radius:12px; padding:4px 6px; text-align:center; font-weight:bold;">📌 CURRENT MARKET: <span style="color:${stateClass==='even'?'#10b981':stateClass==='odd'?'#ef4444':stateClass==='over'?'#10b981':stateClass==='under'?'#ef4444':'#facc15'}">${stateText}</span></div></div>`;
     container.innerHTML = gridHtml;
   }
 
@@ -757,9 +739,50 @@
     let marketType = currentMarket === 'evenodd' ? 'evenodd' : 'overunder';
     let arrow = (currentMarket === 'evenodd') ? getEvenOddArrow(symbol) : getOverUnderArrow(symbol);
     let majority = getMajorityPrediction(symbol);
+    // For consensus we still use the batch expectation (alternation) – unchanged
     let batch = getBatchExpectation(symbol, marketType);
     if(!arrow || !majority || !batch) return null;
     if(arrow === majority && majority === batch) return arrow;
+    return null;
+  }
+  
+  // Batch expectation (alternation) for consensus – kept as before
+  function getBatchExpectation(symbol, marketType) {
+    const data = marketData[symbol];
+    if(!data || !data.rollingArray || data.rollingArray.length < 150) return null;
+    let arr = data.rollingArray.slice();
+    let batchSize = 50;
+    let batches = [];
+    for(let i = 0; i + batchSize <= arr.length && batches.length < 20; i += batchSize) {
+      let batch = arr.slice(i, i+batchSize);
+      if(marketType === 'evenodd') {
+        let evens = batch.filter(d => d%2===0).length;
+        let odds = batchSize - evens;
+        if(evens > odds) batches.push('E');
+        else if(odds > evens) batches.push('O');
+        else batches.push('=');
+      } else if(marketType === 'overunder') {
+        let over = batch.filter(d => d >= 5).length;
+        let under = batchSize - over;
+        if(over > under) batches.push('O');
+        else if(under > over) batches.push('U');
+        else batches.push('=');
+      } else return null;
+    }
+    let len = batches.length;
+    if(len < 3) return null;
+    let last3 = batches.slice(-3);
+    let counts = last3.reduce((acc,val)=>{ acc[val]=(acc[val]||0)+1; return acc; }, {});
+    let dominant = null;
+    for(let key in counts) if(counts[key] >= 2 && key !== '=') dominant = key;
+    if(!dominant) return null;
+    if(marketType === 'evenodd') {
+      if(dominant === 'E') return "ODD";
+      if(dominant === 'O') return "EVEN";
+    } else {
+      if(dominant === 'O') return "UNDER";
+      if(dominant === 'U') return "OVER";
+    }
     return null;
   }
   
@@ -1053,7 +1076,7 @@
   
   window.getActivePrediction = enhancedGetActivePrediction;
   
-  // --- UI functions (Pattern preview removed) ---
+  // --- UI functions ---
   function rebuildDigitGrid(sym) {
     let rolling = getRollingCounts(sym); if(!rolling) return;
     let { counts, total } = rolling; let pct = counts.map(c => (c/total*100).toFixed(1)); let tr = rawTrend[sym] || {};
