@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<title>TAJIRI TRADERS – Full Card View (Pattern Removed)</title>
+<title>TAJIRI TRADERS – Fullscreen Layout (No Bottom Waste)</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -34,7 +34,7 @@
     --batch-over: #10b981;
     --batch-under: #ef4444;
     --enhance-bg: #1e293b;
-    --external-nav-height: 70px;
+    --external-nav-height: 70px;  /* Adjust if your external navbar height differs */
   }
 
   body.light {
@@ -72,7 +72,16 @@
     color: var(--text-primary);
     height: 100vh;
     overflow: hidden;
-    padding-top: var(--external-nav-height);
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Spacer to prevent external navbar from covering the header */
+  .top-spacer {
+    height: var(--external-nav-height);
+    width: 100%;
+    background: transparent;
+    flex-shrink: 0;
   }
 
   .app-container {
@@ -230,9 +239,8 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
     gap: 0.2rem;
-    /* No max-height – it will grow naturally; parent .market-cards-container handles scrolling */
+    /* No max-height – grows naturally within scrollable parent */
   }
 
   .digits-grid {
@@ -423,6 +431,9 @@
 </style>
 </head>
 <body>
+<!-- SPACER: prevents external navbar from hiding the header -->
+<div class="top-spacer"></div>
+
 <div class="app-container">
   <div class="top-slim-bar">
     <div class="logo-area"><h1>✨ TAJIRI TRADERS ✨</h1></div>
