@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<title>TAJIRI TRADERS – Consensus Signal (All Factors)</title>
+<title>TAJIRI TRADERS – Full Screen, Consensus Signal</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -34,7 +34,7 @@
     --batch-over: #10b981;
     --batch-under: #ef4444;
     --enhance-bg: #1e293b;
-    /* Adjust this value if external navbar height changes */
+    /* Adjust this value if your external navbar height differs */
     --external-nav-height: 70px;
   }
 
@@ -73,15 +73,8 @@
     color: var(--text-primary);
     height: 100vh;
     overflow: hidden;
-    /* No padding on body itself – we use a spacer div */
-  }
-
-  /* Spacer to avoid external navbar hiding the header */
-  .top-spacer {
-    height: var(--external-nav-height);
-    width: 100%;
-    background: transparent;
-    flex-shrink: 0;
+    /* Push content down to avoid external navbar, but use full remaining height */
+    padding-top: var(--external-nav-height);
   }
 
   .app-container {
@@ -156,7 +149,7 @@
     height: 100%;
     padding-right: 0.3rem;
   }
-  /* SINGLE COLUMN – one card per row */
+  /* SINGLE COLUMN – one card per row, full width */
   .market-grid {
     display: flex;
     flex-direction: column;
@@ -242,7 +235,7 @@
     flex-direction: column;
     overflow-y: auto;
     gap: 0.2rem;
-    max-height: 70vh;
+    /* No max-height restriction – it will grow with content, but parent .market-cards-container handles scrolling */
   }
 
   .digits-grid {
@@ -433,9 +426,6 @@
 </style>
 </head>
 <body>
-<!-- SPACER: prevents external navbar from hiding the Tajiri header -->
-<div class="top-spacer"></div>
-
 <div class="app-container">
   <div class="top-slim-bar">
     <div class="logo-area"><h1>✨ TAJIRI TRADERS ✨</h1></div>
@@ -461,7 +451,7 @@
       <button class="indicator-btn" data-indicator="arrow">⬆️ Arrow</button>
       <button class="indicator-btn" data-indicator="majority">📈 Majority</button>
       <button class="indicator-btn" data-indicator="hybrid">🔮 Hybrid</button>
-      <button class="indicator-btn" data-indicator="consensus">⚖️ Consensus</button>
+      <button class="indicator-btn active" data-indicator="consensus">⚖️ Consensus</button>
     </div>
   </div>
 
@@ -1055,7 +1045,7 @@
   
   window.getActivePrediction = enhancedGetActivePrediction;
   
-  // --- UI functions (unchanged except single column) ---
+  // --- UI functions (unchanged) ---
   function rebuildDigitGrid(sym) {
     let rolling = getRollingCounts(sym); if(!rolling) return;
     let { counts, total } = rolling; let pct = counts.map(c => (c/total*100).toFixed(1)); let tr = rawTrend[sym] || {};
