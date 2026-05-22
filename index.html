@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<title>TAJIRI TRADERS – Current Market State (Batch Analysis)</title>
+<title>TAJIRI TRADERS – Adjustable Thresholds + Signal Timers</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -174,8 +174,18 @@
   .markets-list { display: flex; flex-direction: column; gap: 0.4rem; }
   .market-list-item {
     background: var(--bg-panel); padding: 0.25rem 0.5rem; border-radius: 0.8rem;
-    font-weight: bold; cursor: pointer; font-size: 0.8rem; white-space: nowrap;
+    font-weight: bold; cursor: pointer; font-size: 0.8rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    white-space: nowrap;
     overflow-x: auto;
+  }
+  .market-list-item .signal-timer {
+    font-size: 0.7rem;
+    opacity: 0.8;
+    margin-left: 0.5rem;
+    font-weight: normal;
   }
 
   @keyframes blinkYellow { 0% { background: var(--bg-panel); } 50% { background: #facc15; color: #0f172a; } 100% { background: var(--bg-panel); } }
@@ -411,12 +421,24 @@
   .hidden { display: none; }
 
   .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; }
-  .modal-content { background: var(--bg-card); border-radius: 1rem; padding: 1rem; max-width: 450px; width: 90%; max-height: 80vh; overflow-y: auto; }
+  .modal-content { background: var(--bg-card); border-radius: 1rem; padding: 1rem; max-width: 480px; width: 90%; max-height: 80vh; overflow-y: auto; }
   .close-modal { float: right; cursor: pointer; font-size: 1.2rem; }
   .settings-panel { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
   .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
   .enhancer-group { border-top: 1px solid var(--border-color); margin-top: 0.5rem; padding-top: 0.5rem; }
   .enhancer-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 0.9rem; }
+  input[type="range"] { width: 120px; }
+
+  .test-panel {
+    background: var(--bg-panel);
+    margin: 0.2rem 0.4rem;
+    padding: 0.2rem;
+    border-radius: 0.4rem;
+    font-size: 0.65rem;
+    text-align: left;
+    display: none;
+  }
+  .test-panel.visible { display: block; }
 
   @media (max-width: 800px) {
     .main-scroll-area { flex-direction: column; }
@@ -471,7 +493,7 @@
   </div>
 </div>
 
-<!-- Settings Modal -->
+<!-- Settings Modal (with adjustable thresholds) -->
 <div id="settingsModal" class="modal">
   <div class="modal-content"><span class="close-modal" id="closeModal">&times;</span><h3>Advanced Settings</h3>
     <div class="settings-panel">
@@ -481,11 +503,19 @@
       <div class="setting-row"><label>📈 Trend Filter</label><select id="trendFilter"><option value="true">ON</option><option value="false">OFF</option></select></div>
       <div class="setting-row"><label>📊 Volatility Thresh</label><input type="number" id="volatilityThresh" value="2.5" step="0.1" style="width:60px"></div>
       <div class="setting-row"><label>🚫 Rejection Streak</label><input type="number" id="rejectionStreak" value="2" style="width:60px"></div>
+      <div class="setting-row"><label>🟢 Green Bar % (Most)</label>
+        <input type="range" id="greenThreshold" min="5" max="20" step="0.5" value="11.0" style="width:100px">
+        <input type="number" id="greenThresholdNum" step="0.5" value="11.0" style="width:50px">
+      </div>
+      <div class="setting-row"><label>🔵 Blue Bar % (Second)</label>
+        <input type="range" id="blueThreshold" min="5" max="20" step="0.5" value="10.5" style="width:100px">
+        <input type="number" id="blueThresholdNum" step="0.5" value="10.5" style="width:50px">
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Enhancements Modal -->
+<!-- Enhancements Modal (optional) -->
 <div id="enhanceModal" class="modal">
   <div class="modal-content"><span class="close-modal" id="closeEnhanceModal">&times;</span><h3>⚡ Signal Reliability Enhancers</h3>
     <div class="enhancer-group">
@@ -503,18 +533,23 @@
       <div class="setting-row"><label>📏 Signal Strength Meter (min 65)</label><input type="checkbox" id="enh_strengthMeter"></div>
       <div class="setting-row"><label>🔄 Extra Confirmation from Last 50‑Tick Sequence</label><input type="checkbox" id="enh_seqConfirm"></div>
     </div>
-    <div style="font-size:0.7rem; margin-top:0.8rem; opacity:0.7;">✅ All enhancements are optional. When disabled, no change to original signals.</div>
+    <div style="margin-top:0.8rem;">
+      <button id="toggleTestPanelsBtn" style="background:var(--btn-bg); border:none; color:white; padding:0.2rem 0.5rem; border-radius:0.5rem; cursor:pointer;">🔧 Show/Hide Test Panels</button>
+    </div>
+    <div style="font-size:0.7rem; margin-top:0.8rem; opacity:0.7;">✅ Test panels show why a signal is or isn't triggered. Open browser console (F12) for detailed logs.</div>
   </div>
 </div>
 
 <script>
-  // ================== CONSENSUS ENGINE + CURRENT MARKET STATE (BATCH) ==================
+  // ================== ADJUSTABLE THRESHOLDS CONSENSUS + SIGNAL TIMERS ==================
+  console.log("Script loaded");
   const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,"1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
   const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Vol 10","R_25":"Vol 25","R_50":"Vol 50","R_75":"Vol 75","R_100":"Vol 100","JD10":"Jump 10","JD25":"Jump 25","JD50":"Jump 50","JD75":"Jump 75","JD100":"Jump 100" };
   const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
   const SIGNAL_LOCK_DURATION = 60000;
   let marketData = {}, signalExpiry = {}, activeSignalMsg = {}, lockedMarkets = new Map(), rawTrend = {}, signalHistory = {}, pendingConfirmation = {};
   let currentMarket = 'evenodd', currentIndicator = 'consensus', ws = null, invalidSymbols = new Set();
+  let testPanelsVisible = false;
 
   function getSettings() {
     return {
@@ -524,21 +559,41 @@
       trendFilterEnabled: document.getElementById('trendFilter').value === 'true',
       volatilityThresh: parseFloat(document.getElementById('volatilityThresh').value) || 2.5,
       rejectionStreak: parseInt(document.getElementById('rejectionStreak').value) || 2,
-      windowSize: parseInt(document.getElementById('windowSize').value) || 1000
+      windowSize: parseInt(document.getElementById('windowSize').value) || 1000,
+      greenThreshold: parseFloat(document.getElementById('greenThreshold').value) || 11.0,
+      blueThreshold: parseFloat(document.getElementById('blueThreshold').value) || 10.5
     };
+  }
+
+  // Sync sliders with number inputs
+  function initThresholdControls() {
+    const greenRange = document.getElementById('greenThreshold');
+    const greenNum = document.getElementById('greenThresholdNum');
+    const blueRange = document.getElementById('blueThreshold');
+    const blueNum = document.getElementById('blueThresholdNum');
+    if(greenRange && greenNum) {
+      greenRange.oninput = () => { greenNum.value = greenRange.value; renderAllMarkets(); };
+      greenNum.oninput = () => { greenRange.value = greenNum.value; renderAllMarkets(); };
+    }
+    if(blueRange && blueNum) {
+      blueRange.oninput = () => { blueNum.value = blueRange.value; renderAllMarkets(); };
+      blueNum.oninput = () => { blueRange.value = blueNum.value; renderAllMarkets(); };
+    }
+  }
+
+  function renderAllMarkets() {
+    for(let s in marketData) if(marketData[s]?.rollingArray?.length) renderMarket(s);
   }
 
   function lastDigitFromFormatted(str) { let digits = str.replace(/\./g,''); if(digits.length===0) return 0; return parseInt(digits.charAt(digits.length-1),10)||0; }
   function formatHistoryPrice(s, p) { let dec = DECIMAL_MAP[s] ?? 2; return p.toFixed(dec); }
 
-  // ---------- CURRENT MARKET STATE BASED ON LAST COMPLETED BATCH ----------
-  let batchCache = new Map();
+  // --- BATCH ANALYSIS (current market state) ---
   function getCurrentMarketState(symbol, marketType) {
     const data = marketData[symbol];
-    if(!data || !data.rollingArray || data.rollingArray.length < 50) return { state: "⏳ need 50+ ticks", cls: "" };
+    if(!data || !data.rollingArray || data.rollingArray.length < 50) return null;
     let arr = data.rollingArray.slice();
     let batchSize = 50;
-    // Get the most recent complete batch (the one that just finished)
     let lastBatch = null;
     for(let i = arr.length - batchSize; i >= 0; i -= batchSize) {
       if(i + batchSize <= arr.length) {
@@ -546,22 +601,21 @@
         break;
       }
     }
-    if(!lastBatch) return { state: "⏳ waiting for batch...", cls: "" };
-    
+    if(!lastBatch) return null;
     if(marketType === 'evenodd') {
       let evens = lastBatch.filter(d => d%2===0).length;
       let odds = batchSize - evens;
-      if(evens > odds) return { state: "🎲 EVEN MARKET", cls: "even" };
-      if(odds > evens) return { state: "🎲 ODD MARKET", cls: "odd" };
-      return { state: "⏸️ NO DIRECTION / WAIT", cls: "equal" };
+      if(evens > odds) return "EVEN";
+      if(odds > evens) return "ODD";
+      return null;
     } else if(marketType === 'overunder') {
       let over = lastBatch.filter(d => d >= 5).length;
       let under = batchSize - over;
-      if(over > under) return { state: "📈 OVER MARKET", cls: "over" };
-      if(under > over) return { state: "📉 UNDER MARKET", cls: "under" };
-      return { state: "⏸️ NO DIRECTION / WAIT", cls: "equal" };
+      if(over > under) return "OVER";
+      if(under > over) return "UNDER";
+      return null;
     }
-    return { state: "—", cls: "" };
+    return null;
   }
 
   function updateBatchAnalysis(symbol) {
@@ -572,7 +626,6 @@
       container.innerHTML = `<div class="batch-analysis">📊 Batch analysis only for Even/Odd & Over/Under</div>`;
       return;
     }
-    // Build the batch grid (history)
     let batches = [];
     const data = marketData[symbol];
     if(data && data.rollingArray && data.rollingArray.length >= 50) {
@@ -595,9 +648,18 @@
         }
       }
     }
-    let currentStateObj = getCurrentMarketState(symbol, marketType);
-    let stateText = currentStateObj.state;
-    let stateClass = currentStateObj.cls;
+    let currentState = getCurrentMarketState(symbol, marketType);
+    let stateText = "—";
+    let stateClass = "";
+    if(currentMarket === 'evenodd') {
+      if(currentState === "EVEN") { stateText = "🎲 EVEN MARKET"; stateClass = "even"; }
+      else if(currentState === "ODD") { stateText = "🎲 ODD MARKET"; stateClass = "odd"; }
+      else { stateText = "⏸️ NO DIRECTION / WAIT"; stateClass = "equal"; }
+    } else if(currentMarket === 'overunder') {
+      if(currentState === "OVER") { stateText = "📈 OVER MARKET"; stateClass = "over"; }
+      else if(currentState === "UNDER") { stateText = "📉 UNDER MARKET"; stateClass = "under"; }
+      else { stateText = "⏸️ NO DIRECTION / WAIT"; stateClass = "equal"; }
+    }
     
     let gridHtml = `<div class="batch-analysis"><div class="batch-title">📦 20x50 TICK CYCLES (old → new)</div><div class="batch-grid">`;
     batches.forEach(b => {
@@ -668,8 +730,10 @@
     let secondMost = sorted[1]?.digit ?? most;
     let least = sorted[sorted.length-1].digit;
     let secondLeast = sorted[sorted.length-2]?.digit ?? least;
-    return { most, secondMost, least, secondLeast, mostPct, allPct: pct };
+    let secondPct = sorted[1]?.pct || 0;
+    return { most, secondMost, least, secondLeast, mostPct, secondPct, allPct: pct };
   }
+  // For hybrid indicator (unchanged)
   function checkEvenOddRankCondition(symbol, predictedParity) {
     let ranks = getDigitRanksAndPct(symbol);
     if(!ranks) return false;
@@ -733,60 +797,69 @@
     return null;
   }
   
-  // --- Consensus: requires Arrow, Majority, and Batch Expectation to agree ---
+  // ========== ADJUSTABLE THRESHOLD CONSENSUS ==========
   function getConsensusPrediction(symbol) {
-    if(currentMarket !== 'evenodd' && currentMarket !== 'overunder') return null;
-    let marketType = currentMarket === 'evenodd' ? 'evenodd' : 'overunder';
-    let arrow = (currentMarket === 'evenodd') ? getEvenOddArrow(symbol) : getOverUnderArrow(symbol);
-    let majority = getMajorityPrediction(symbol);
-    // For consensus we still use the batch expectation (alternation) – unchanged
-    let batch = getBatchExpectation(symbol, marketType);
-    if(!arrow || !majority || !batch) return null;
-    if(arrow === majority && majority === batch) return arrow;
+    let settings = getSettings();
+    let greenThresh = settings.greenThreshold;
+    let blueThresh = settings.blueThreshold;
+    
+    if(currentMarket === 'evenodd') {
+      let ranks = getDigitRanksAndPct(symbol);
+      if(!ranks) return null;
+      let { most, secondMost, least, secondLeast, mostPct, secondPct } = ranks;
+      let trends = rawTrend[symbol];
+      if(!trends) return null;
+      let mostGaining = trends[most] === 1;
+      
+      // EVEN signal
+      if(most % 2 === 0 && secondMost % 2 === 0 && mostPct > greenThresh && secondPct > blueThresh && mostGaining) {
+        if( (least % 2 === 1) || (secondLeast % 2 === 1) ) {
+          console.log(`✅ CONSENSUS EVEN for ${symbol} (${mostPct.toFixed(1)}% > ${greenThresh}, ${secondPct.toFixed(1)}% > ${blueThresh})`);
+          return "EVEN";
+        }
+      }
+      // ODD signal
+      if(most % 2 === 1 && secondMost % 2 === 1 && mostPct > greenThresh && secondPct > blueThresh && mostGaining) {
+        if( (least % 2 === 0) || (secondLeast % 2 === 0) ) {
+          console.log(`✅ CONSENSUS ODD for ${symbol} (${mostPct.toFixed(1)}% > ${greenThresh}, ${secondPct.toFixed(1)}% > ${blueThresh})`);
+          return "ODD";
+        }
+      }
+      return null;
+    } 
+    else if(currentMarket === 'overunder') {
+      let ranks = getDigitRanksAndPct(symbol);
+      if(!ranks) return null;
+      let { most, secondMost, least, secondLeast, mostPct, secondPct } = ranks;
+      let trends = rawTrend[symbol];
+      if(!trends) return null;
+      let mostGaining = trends[most] === 1;
+      
+      const overDigits = [5,6,7,8,9];
+      const underDigits = [0,1,2,3,4];
+      const isOver = (d) => overDigits.includes(d);
+      const isUnder = (d) => underDigits.includes(d);
+      
+      // OVER signal
+      if(isOver(most) && isOver(secondMost) && mostPct > greenThresh && secondPct > blueThresh && mostGaining) {
+        if( isUnder(least) || isUnder(secondLeast) ) {
+          console.log(`✅ CONSENSUS OVER for ${symbol} (${mostPct.toFixed(1)}% > ${greenThresh}, ${secondPct.toFixed(1)}% > ${blueThresh})`);
+          return "OVER";
+        }
+      }
+      // UNDER signal
+      if(isUnder(most) && isUnder(secondMost) && mostPct > greenThresh && secondPct > blueThresh && mostGaining) {
+        if( isOver(least) || isOver(secondLeast) ) {
+          console.log(`✅ CONSENSUS UNDER for ${symbol} (${mostPct.toFixed(1)}% > ${greenThresh}, ${secondPct.toFixed(1)}% > ${blueThresh})`);
+          return "UNDER";
+        }
+      }
+      return null;
+    }
     return null;
   }
   
-  // Batch expectation (alternation) for consensus – kept as before
-  function getBatchExpectation(symbol, marketType) {
-    const data = marketData[symbol];
-    if(!data || !data.rollingArray || data.rollingArray.length < 150) return null;
-    let arr = data.rollingArray.slice();
-    let batchSize = 50;
-    let batches = [];
-    for(let i = 0; i + batchSize <= arr.length && batches.length < 20; i += batchSize) {
-      let batch = arr.slice(i, i+batchSize);
-      if(marketType === 'evenodd') {
-        let evens = batch.filter(d => d%2===0).length;
-        let odds = batchSize - evens;
-        if(evens > odds) batches.push('E');
-        else if(odds > evens) batches.push('O');
-        else batches.push('=');
-      } else if(marketType === 'overunder') {
-        let over = batch.filter(d => d >= 5).length;
-        let under = batchSize - over;
-        if(over > under) batches.push('O');
-        else if(under > over) batches.push('U');
-        else batches.push('=');
-      } else return null;
-    }
-    let len = batches.length;
-    if(len < 3) return null;
-    let last3 = batches.slice(-3);
-    let counts = last3.reduce((acc,val)=>{ acc[val]=(acc[val]||0)+1; return acc; }, {});
-    let dominant = null;
-    for(let key in counts) if(counts[key] >= 2 && key !== '=') dominant = key;
-    if(!dominant) return null;
-    if(marketType === 'evenodd') {
-      if(dominant === 'E') return "ODD";
-      if(dominant === 'O') return "EVEN";
-    } else {
-      if(dominant === 'O') return "UNDER";
-      if(dominant === 'U') return "OVER";
-    }
-    return null;
-  }
-  
-  // --- Hybrid (arrow+majority) and individual indicators ---
+  // --- Hybrid (arrow+majority) – unchanged ---
   function getHybridPrediction(symbol) {
     if(currentMarket === 'evenodd') {
       let arrow = getEvenOddArrow(symbol), maj = getMajorityPrediction(symbol);
@@ -989,7 +1062,6 @@
     return parseInt(document.getElementById('majorityThreshold').value) || 65;
   }
   
-  // Override majority threshold
   window.getMajorityPrediction = function(symbol) {
     let data = marketData[symbol], settings = getSettings();
     if(!data || data.last50Array.length < settings.majorityWindow) return null;
@@ -1076,6 +1148,37 @@
   
   window.getActivePrediction = enhancedGetActivePrediction;
   
+  // --- Test panel helper ---
+  function updateTestPanel(symbol) {
+    let panel = document.getElementById(`testPanel_${symbol}`);
+    if(!panel) return;
+    if(!testPanelsVisible) { panel.classList.remove('visible'); return; }
+    panel.classList.add('visible');
+    let ranks = getDigitRanksAndPct(symbol);
+    let trends = rawTrend[symbol];
+    if(!ranks) { panel.innerHTML = "Waiting for data..."; return; }
+    let { most, secondMost, least, secondLeast, mostPct, secondPct } = ranks;
+    let mostTrend = trends ? (trends[most] === 1 ? '↑' : (trends[most] === -1 ? '↓' : '→')) : '?';
+    let secondTrend = trends ? (trends[secondMost] === 1 ? '↑' : (trends[secondMost] === -1 ? '↓' : '→')) : '?';
+    let settings = getSettings();
+    let greenThresh = settings.greenThreshold;
+    let blueThresh = settings.blueThreshold;
+    let html = `<div style="font-size:0.65rem;">📊 Most: ${most} (${mostPct.toFixed(1)}% ${mostTrend})<br>📘 Second: ${secondMost} (${secondPct.toFixed(1)}% ${secondTrend})<br>🔴 Least: ${least}<br>🟠 SecondLeast: ${secondLeast}<br>🎯 Thresholds: Green >${greenThresh}% | Blue >${blueThresh}%<br>`;
+    if(currentMarket === 'evenodd') {
+      let evenCond = (most%2===0 && secondMost%2===0 && mostPct>greenThresh && secondPct>blueThresh && trends?.[most]===1 && (least%2===1 || secondLeast%2===1));
+      let oddCond = (most%2===1 && secondMost%2===1 && mostPct>greenThresh && secondPct>blueThresh && trends?.[most]===1 && (least%2===0 || secondLeast%2===0));
+      html += `<span style="color:${evenCond?'#4ade80':'#f87171'}">EVEN: ${evenCond?'✅':'❌'}</span> | <span style="color:${oddCond?'#4ade80':'#f87171'}">ODD: ${oddCond?'✅':'❌'}</span>`;
+    } else {
+      const overDigits = [5,6,7,8,9];
+      const underDigits = [0,1,2,3,4];
+      let overCond = (overDigits.includes(most) && overDigits.includes(secondMost) && mostPct>greenThresh && secondPct>blueThresh && trends?.[most]===1 && (underDigits.includes(least) || underDigits.includes(secondLeast)));
+      let underCond = (underDigits.includes(most) && underDigits.includes(secondMost) && mostPct>greenThresh && secondPct>blueThresh && trends?.[most]===1 && (overDigits.includes(least) || overDigits.includes(secondLeast)));
+      html += `<span style="color:${overCond?'#4ade80':'#f87171'}">OVER: ${overCond?'✅':'❌'}</span> | <span style="color:${underCond?'#4ade80':'#f87171'}">UNDER: ${underCond?'✅':'❌'}</span>`;
+    }
+    html += `</div>`;
+    panel.innerHTML = html;
+  }
+  
   // --- UI functions ---
   function rebuildDigitGrid(sym) {
     let rolling = getRollingCounts(sym); if(!rolling) return;
@@ -1094,6 +1197,7 @@
     let row2 = document.createElement('div'); row2.className='digits-row';
     odds.forEach(dig=>{ let cell = document.createElement('div'); cell.className='digit-cell'; if(most.has(dig)) cell.classList.add('most'); if(second.has(dig)) cell.classList.add('second'); if(least.has(dig)) cell.classList.add('least'); if(sleast.has(dig)) cell.classList.add('secondleast'); if(hot.has(dig)) cell.classList.add('hot'); if(cold.has(dig)) cell.classList.add('cold'); let arrow = tr[dig]===1?'↑':(tr[dig]===-1?'↓':'•'); cell.innerHTML = `<span class="digit">${dig}</span><div class="percent">${pct[dig]}%</div><span class="trend">${arrow}</span>`; if(data.lastDigit===dig) { let ptr = document.createElement('div'); ptr.className='pointer-marker'; cell.appendChild(ptr); } row2.appendChild(cell); });
     container.appendChild(row1); container.appendChild(row2);
+    updateTestPanel(sym);
   }
   
   function renderMarket(symbol) {
@@ -1132,7 +1236,8 @@
     if(!active && sig.active) {
       signalExpiry[symbol] = now + SIGNAL_LOCK_DURATION;
       activeSignalMsg[symbol] = sig.msg;
-      lockedMarkets.set(symbol, { expiry: signalExpiry[symbol], prediction: window.getActivePrediction(symbol) });
+      // Store both expiry and start time for timer display
+      lockedMarkets.set(symbol, { expiry: signalExpiry[symbol], prediction: window.getActivePrediction(symbol), startTime: now });
       div.innerHTML = `<div class="signal-flash">🎯 ${sig.msg} <div class="strength-meter"><div class="strength-fill" style="width:${sig.confidence}%"></div></div><div><button class="vote-btn" onclick="window.recordOutcome('${symbol}','win')">✅ Win</button><button class="vote-btn" onclick="window.recordOutcome('${symbol}','loss')">❌ Loss</button></div></div>`;
       playSignalSound(); sendDesktopNotification(symbol, sig.msg);
     } else if(active) {
@@ -1197,6 +1302,7 @@
   function createMarketUI(symbol, displayName, isInvalid=false) {
     if(document.getElementById(`market_${symbol}`)) return;
     let container = document.getElementById('marketsContainer');
+    if(!container) { console.error("marketsContainer not found"); return; }
     let card = document.createElement('div'); card.className='market-card'; card.id=`market_${symbol}`;
     card.innerHTML = `<div class="market-header"><div class="market-title"><span>📈 ${displayName}</span><span class="live-price-big" id="livePriceBig_${symbol}">—</span></div><div class="market-status" id="status_${symbol}">${isInvalid?'🔴 BLOCKED':'🔴 no data'}</div><span class="last-digit-badge" id="lastDigit_${symbol}">?</span></div>
       <div class="card-content">
@@ -1206,25 +1312,57 @@
         <div class="signal-area" id="signalDisplay_${symbol}"><span class="no-signal">⚡ waiting...</span></div>
         <div id="multiTFProgress_${symbol}" class="multi-tf-progress">⏳ multi‑TF</div>
         <div id="batchContainer_${symbol}" class="batch-analysis">⏳ loading batch cycles...</div>
+        <div id="testPanel_${symbol}" class="test-panel"></div>
       </div>`;
     container.appendChild(card);
+    console.log(`Created card for ${symbol}`);
   }
   
   function subscribeToMarket(sym) { if(ws && ws.readyState===WebSocket.OPEN && !invalidSymbols.has(sym)) { ws.send(JSON.stringify({ ticks_history: sym, count: 1000, end: "latest", style: "ticks" })); ws.send(JSON.stringify({ ticks: sym, subscribe: 1 })); } }
   
+  // ========== UPDATED MARKET LIST WITH SIGNAL TIMERS ==========
   function updateAllMarketsList() {
     let now = Date.now();
+    // Clean expired locks
     for(let [sym, data] of lockedMarkets.entries()) if(now > data.expiry) lockedMarkets.delete(sym);
-    for(let sym of ALL_SYMBOLS) { let pred = window.getActivePrediction(sym); if(pred && !lockedMarkets.has(sym)) lockedMarkets.set(sym, { expiry: now + SIGNAL_LOCK_DURATION, prediction: pred }); }
+    for(let sym of ALL_SYMBOLS) { 
+      let pred = window.getActivePrediction(sym); 
+      if(pred && !lockedMarkets.has(sym)) {
+        lockedMarkets.set(sym, { expiry: now + SIGNAL_LOCK_DURATION, prediction: pred, startTime: now });
+      }
+    }
     let items = ALL_SYMBOLS.map(sym => {
       let lock = lockedMarkets.get(sym);
       let active = !!lock;
       let cls = active ? (currentIndicator==='arrow'?'blink-arrow':(currentIndicator==='majority'?'blink-majority':(currentIndicator==='hybrid'?'blink-hybrid':'blink-consensus'))) : '';
-      let suffix = ''; if(active && lock && lock.prediction) suffix = ` → ${lock.prediction}`;
-      return `<div class="market-list-item ${cls}" data-symbol="${sym}">${MARKET_NAMES[sym]}${suffix}</div>`;
+      let suffix = '';
+      let timerHtml = '';
+      if(active && lock && lock.prediction) {
+        suffix = ` → ${lock.prediction}`;
+        let elapsed = Math.floor((now - (lock.startTime || now)) / 1000);
+        if(elapsed >= 0 && elapsed <= 60) {
+          timerHtml = `<span class="signal-timer">(${elapsed}s ago)</span>`;
+        }
+      }
+      return `<div class="market-list-item ${cls}" data-symbol="${sym}">
+                <span>${MARKET_NAMES[sym]}${suffix}</span>
+                ${timerHtml}
+              </div>`;
     }).join('');
     document.getElementById('marketsListContainer').innerHTML = items;
-    document.querySelectorAll('.market-list-item').forEach(el => el.onclick = () => { let card = document.getElementById(`market_${el.getAttribute('data-symbol')}`); if(card) card.scrollIntoView({behavior:'smooth', block:'center'}); });
+    document.querySelectorAll('.market-list-item').forEach(el => {
+      const sym = el.getAttribute('data-symbol');
+      if(sym) el.onclick = () => { let card = document.getElementById(`market_${sym}`); if(card) card.scrollIntoView({behavior:'smooth', block:'center'}); };
+    });
+  }
+  
+  // Timer refresh every second
+  let timerInterval;
+  function startTimerRefresh() {
+    if(timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      updateAllMarketsList();
+    }, 1000);
   }
   
   let audioCtx = null;
@@ -1248,13 +1386,17 @@
         if(msg.msg_type === 'authorize') {
           if(msg.error) { document.getElementById('connectionStatus').innerHTML = `❌ ${msg.error.message || 'Invalid token'}`; return; }
           document.getElementById('connectionStatus').innerHTML = '✅ Connected & loading markets';
-          document.getElementById('marketsContainer').innerHTML = '';
-          marketData = {}; invalidSymbols.clear(); signalExpiry={}; activeSignalMsg={}; lockedMarkets.clear(); rawTrend={}; signalHistory={}; pendingConfirmation={}; batchCache.clear();
+          console.log("Authorized, creating market cards...");
+          const container = document.getElementById('marketsContainer');
+          if(container) container.innerHTML = '';
+          marketData = {}; invalidSymbols.clear(); signalExpiry={}; activeSignalMsg={}; lockedMarkets.clear(); rawTrend={}; signalHistory={}; pendingConfirmation={};
           for(let sym of ALL_SYMBOLS) createMarketUI(sym, MARKET_NAMES[sym], false);
+          console.log("All cards created, starting subscriptions...");
           let idx=0;
           function nextSub() { if(idx>=ALL_SYMBOLS.length) { document.getElementById('connectionStatus').innerHTML = `✅ ${currentMarket.toUpperCase()} / ${currentIndicator.toUpperCase()}`; return; } let sym=ALL_SYMBOLS[idx]; if(!invalidSymbols.has(sym)) subscribeToMarket(sym); idx++; setTimeout(nextSub, 200); }
           nextSub();
           startPing();
+          startTimerRefresh(); // start the 1-second timer for the list
         } else if(msg.msg_type==='tick' && msg.tick) {
           let sym = msg.tick.symbol;
           if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) {
@@ -1271,7 +1413,7 @@
           let sym = msg.echo_req.ticks_history;
           if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) { invalidSymbols.add(sym); createMarketUI(sym, MARKET_NAMES[sym], true); }
         }
-      } catch(err) { console.warn(err); }
+      } catch(err) { console.warn("WS message error:", err); }
     };
     ws.onerror = () => { document.getElementById('connectionStatus').innerHTML = '⚠️ WS error'; };
     ws.onclose = () => { if(ping) clearInterval(ping); document.getElementById('connectionStatus').innerHTML = '🔴 Disconnected'; };
@@ -1296,10 +1438,15 @@
   document.getElementById('closeModal').onclick = () => settingsModal.style.display = 'none';
   document.getElementById('enhanceBtn').onclick = () => enhanceModal.style.display = 'flex';
   document.getElementById('closeEnhanceModal').onclick = () => enhanceModal.style.display = 'none';
+  document.getElementById('toggleTestPanelsBtn').onclick = () => {
+    testPanelsVisible = !testPanelsVisible;
+    for(let sym of ALL_SYMBOLS) updateTestPanel(sym);
+  };
   window.onclick = e => { if(e.target === settingsModal) settingsModal.style.display = 'none'; if(e.target === enhanceModal) enhanceModal.style.display = 'none'; };
   
   document.body.addEventListener('click', () => { if(audioCtx === null) audioCtx = new AudioContext(); if(audioCtx.state === 'suspended') audioCtx.resume(); requestNotificationPermission(); });
   setInterval(()=>{ for(let s in marketData) if(marketData[s]?.rollingArray?.length) renderMarket(s); }, 1500);
+  initThresholdControls();
 </script>
 </body>
 </html>
