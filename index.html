@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<title>TAJIRI TRADERS – Enhanced Signal Reliability (Optional Add-ons)</title>
+<title>TAJIRI TRADERS – Enhanced Responsive Signals</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -138,19 +138,20 @@
   }
 
   .market-cards-container {
-    flex: 3;
+    flex: 4;
     overflow-y: auto;
-    padding-right: 0.3rem;
     height: 100%;
+    padding-right: 0.3rem;
   }
   .market-grid {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
     gap: 1rem;
+    align-items: start;
   }
 
   .all-markets-container {
-    flex: 1;
+    flex: 0 0 260px;
     background: var(--bg-header);
     border-radius: 1rem;
     padding: 0.6rem;
@@ -179,12 +180,12 @@
     border: 1px solid var(--border-color);
     cursor: pointer;
     width: 100%;
-    height: auto;
-    min-height: 130mm;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    transition: box-shadow 0.2s;
   }
+  .market-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
   .market-header {
     background: var(--bg-header);
     padding: 0.35rem 0.7rem;
@@ -226,6 +227,7 @@
     flex-direction: column;
     overflow-y: auto;
     gap: 0.2rem;
+    max-height: 70vh;
   }
 
   .digits-grid {
@@ -405,11 +407,13 @@
   .enhancer-group { border-top: 1px solid var(--border-color); margin-top: 0.5rem; padding-top: 0.5rem; }
   .enhancer-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 0.9rem; }
 
+  @media (max-width: 1000px) {
+    .market-grid { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
+  }
   @media (max-width: 800px) {
     .main-scroll-area { flex-direction: column; }
-    .all-markets-container { max-height: 180px; flex: none; width: 100%; }
-    .market-card { height: auto; min-height: 130mm; }
-    .batch-cell { width: 22px; height: 22px; font-size: 0.6rem; }
+    .all-markets-container { flex: none; width: 100%; max-height: 200px; }
+    .market-grid { grid-template-columns: 1fr; }
   }
   @media (max-width: 480px) {
     .digits-row { gap: 4px; }
@@ -457,7 +461,7 @@
   </div>
 </div>
 
-<!-- Settings Modal (original) -->
+<!-- Settings Modal -->
 <div id="settingsModal" class="modal">
   <div class="modal-content"><span class="close-modal" id="closeModal">&times;</span><h3>Advanced Settings</h3>
     <div class="settings-panel">
@@ -471,7 +475,7 @@
   </div>
 </div>
 
-<!-- Enhancements Modal (optional filters) -->
+<!-- Enhancements Modal -->
 <div id="enhanceModal" class="modal">
   <div class="modal-content"><span class="close-modal" id="closeEnhanceModal">&times;</span><h3>⚡ Signal Reliability Enhancers</h3>
     <div class="enhancer-group">
@@ -494,7 +498,7 @@
 </div>
 
 <script>
-  // ================== ORIGINAL FULL ENGINE (stable batch alternation version) ==================
+  // ================== ENHANCED RESPONSIVE SIGNALS ==================
   const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,"1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
   const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Vol 10","R_25":"Vol 25","R_50":"Vol 50","R_75":"Vol 75","R_100":"Vol 100","JD10":"Jump 10","JD25":"Jump 25","JD50":"Jump 50","JD75":"Jump 75","JD100":"Jump 100" };
   const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
@@ -505,7 +509,7 @@
   function getSettings() {
     return {
       soundEnabled: document.getElementById('soundEnabled').value === 'true',
-      majorityWindow: 20,
+      majorityWindow: 10,            // REDUCED from 20 to 10 for faster response
       majorityThreshold: parseInt(document.getElementById('majorityThreshold').value) || 65,
       trendFilterEnabled: document.getElementById('trendFilter').value === 'true',
       volatilityThresh: parseFloat(document.getElementById('volatilityThresh').value) || 2.5,
@@ -517,7 +521,7 @@
   function lastDigitFromFormatted(str) { let digits = str.replace(/\./g,''); if(digits.length===0) return 0; return parseInt(digits.charAt(digits.length-1),10)||0; }
   function formatHistoryPrice(s, p) { let dec = DECIMAL_MAP[s] ?? 2; return p.toFixed(dec); }
 
-  // Batch analysis (stable alternation)
+  // ---------- IMPROVED BATCH EXPECTATION: uses last 3 batches ----------
   let batchCache = new Map();
   function computeBatchDominanceStable(symbol, marketType) {
     const data = marketData[symbol];
@@ -544,13 +548,26 @@
         else batches.push('=');
       } else { batches.push('?'); }
     }
+    // ENHANCED: look at last 3 batches, if at least 2 are same, expect opposite
     let nextExpect = "—";
-    let lastBatch = batches.length > 0 ? batches[batches.length-1] : null;
-    if(lastBatch === 'E') nextExpect = "🔮 NEXT 50 TICKS: Expect ODD wave";
-    else if(lastBatch === 'O') nextExpect = marketType === 'evenodd' ? "🔮 NEXT 50 TICKS: Expect EVEN wave" : "🔮 NEXT 50 TICKS: Expect UNDER wave";
-    else if(lastBatch === 'U') nextExpect = "🔮 NEXT 50 TICKS: Expect OVER wave";
-    else if(lastBatch === '=') nextExpect = "⚖️ NEXT 50 TICKS: Balanced / No clear edge";
-    else nextExpect = "📊 waiting for a full batch...";
+    let len = batches.length;
+    if(len >= 3) {
+      let last3 = batches.slice(-3);
+      let counts = last3.reduce((acc,val)=>{ acc[val]=(acc[val]||0)+1; return acc; }, {});
+      let dominant = null;
+      for(let key in counts) if(counts[key] >= 2 && key !== '=') dominant = key;
+      if(dominant === 'E') nextExpect = "🔮 NEXT 50 TICKS: Expect ODD wave";
+      else if(dominant === 'O') nextExpect = marketType === 'evenodd' ? "🔮 NEXT 50 TICKS: Expect EVEN wave" : "🔮 NEXT 50 TICKS: Expect UNDER wave";
+      else if(dominant === 'U') nextExpect = "🔮 NEXT 50 TICKS: Expect OVER wave";
+      else nextExpect = "⚖️ NEXT 50 TICKS: Mixed signals / Wait";
+    } else if(len > 0) {
+      let last = batches[len-1];
+      if(last === 'E') nextExpect = "🔮 NEXT 50 TICKS: Expect ODD wave";
+      else if(last === 'O') nextExpect = marketType === 'evenodd' ? "🔮 NEXT 50 TICKS: Expect EVEN wave" : "🔮 NEXT 50 TICKS: Expect UNDER wave";
+      else if(last === 'U') nextExpect = "🔮 NEXT 50 TICKS: Expect OVER wave";
+      else if(last === '=') nextExpect = "⚖️ NEXT 50 TICKS: Balanced / No clear edge";
+    } else nextExpect = "📊 waiting for a full batch...";
+    
     let cached = batchCache.get(symbol);
     let changed = false;
     if(!cached || cached.batches.length !== batches.length || JSON.stringify(cached.batches) !== JSON.stringify(batches)) {
@@ -598,7 +615,7 @@
     return data.last50Array.map(d => d%2===0 ? '<span style="color:#4ade80;">E</span>' : '<span style="color:#f87171;">O</span>').join('');
   }
 
-  // --- Original indicator functions ---
+  // --- ENHANCED ARROW INDICATOR (threshold 2 instead of 3) ---
   function updateTrends(symbol) {
     let data = marketData[symbol];
     if(!data || data.rollingArray.length < 20) return;
@@ -659,6 +676,7 @@
     if(predictedOu === "UNDER") return under.includes(most) && under.includes(secondMost) && over.includes(least) && over.includes(secondLeast);
     else return over.includes(most) && over.includes(secondMost) && under.includes(least) && under.includes(secondLeast);
   }
+  // ARROW: now requires at least 2 gaining digits (was 3)
   function getEvenOddArrow(symbol) {
     let trends = rawTrend[symbol]; if(!trends) return null;
     let data = marketData[symbol]; if(!data || data.last50Array.length < 20) return null;
@@ -667,8 +685,8 @@
     let last20 = data.last50Array.slice(-20);
     let evenCount = last20.filter(d=>d%2===0).length;
     let majorityEven = evenCount > (20-evenCount);
-    if(majorityEven && evenGain>=3 && oddGain===0) return "EVEN";
-    if(!majorityEven && oddGain>=3 && evenGain===0) return "ODD";
+    if(majorityEven && evenGain>=2 && oddGain===0) return "EVEN";
+    if(!majorityEven && oddGain>=2 && evenGain===0) return "ODD";
     return null;
   }
   function getOverUnderArrow(symbol) {
@@ -679,10 +697,11 @@
     let last20 = data.last50Array.slice(-20);
     let overCount = last20.filter(d=>d>=5).length;
     let majorityOver = overCount > (20-overCount);
-    if(majorityOver && overGain>=3 && underGain===0) return "OVER";
-    if(!majorityOver && underGain>=3 && overGain===0) return "UNDER";
+    if(majorityOver && overGain>=2 && underGain===0) return "OVER";
+    if(!majorityOver && underGain>=2 && overGain===0) return "UNDER";
     return null;
   }
+  // MAJORITY uses 10-tick window (set in getSettings)
   function getMajorityPrediction(symbol) {
     let data = marketData[symbol], settings = getSettings();
     if(!data || data.last50Array.length < settings.majorityWindow) return null;
@@ -714,7 +733,7 @@
   function getVolatility(symbol) { return 0; }
   function computeConfidence(symbol, pred) { return 70; }
   
-  // --- Enhancement hooks (optional, off by default) ---
+  // --- Enhancement hooks (unchanged, optional) ---
   let enhLastSignalTimes = new Map();
   let enhConsecutiveLosses = new Map();
   let enhTickTimestamps = new Map();
@@ -777,9 +796,10 @@
     let std = Math.sqrt(variance);
     return std > 0.5;
   }
+  // MULTI-TIMEFRAME: using 25,50,100 ticks for faster response
   function checkMultiTF(symbol) {
     if(currentMarket !== 'evenodd') return true;
-    let wins = [50,100,200];
+    let wins = [25,50,100];
     let preds = [];
     for(let w of wins) {
       let data = marketData[symbol];
@@ -918,7 +938,6 @@
     return null;
   };
   
-  // Enhanced getActivePrediction that applies optional filters
   function enhancedGetActivePrediction(symbol) {
     let basePred = getHybridPrediction(symbol);
     if(!basePred) return null;
@@ -935,7 +954,6 @@
     if(enh.seqConfirm && !checkSeqConfirm(symbol)) return null;
     if(enh.strengthMeter && !checkStrengthMeter(symbol, basePred)) return null;
     
-    // Original additional filters
     let settings = getSettings();
     if(settings.trendFilterEnabled) { let lt = getLongTermTrend(symbol); if(lt && basePred !== lt) return null; }
     let hist = signalHistory[symbol]||[];
@@ -953,8 +971,6 @@
     return basePred;
   }
   
-  // Override recordOutcome to update consecutive losses and dynamic threshold
-  const originalRecordOutcome = window.recordOutcome;
   window.recordOutcome = function(symbol, outcome) {
     if(!signalHistory[symbol]) signalHistory[symbol] = [];
     signalHistory[symbol].push({ outcome, timestamp: Date.now() });
@@ -981,10 +997,9 @@
     renderMarket(symbol);
   };
   
-  // Replace active prediction function
   window.getActivePrediction = enhancedGetActivePrediction;
   
-  // --- Remaining original functions (render, UI, WebSocket) ---
+  // --- UI and WebSocket (unchanged) ---
   function rebuildDigitGrid(sym) {
     let rolling = getRollingCounts(sym); if(!rolling) return;
     let { counts, total } = rolling; let pct = counts.map(c => (c/total*100).toFixed(1)); let tr = rawTrend[sym] || {};
@@ -1092,7 +1107,8 @@
   function updateMultiTFProgress(symbol) {
     let div = document.getElementById(`multiTFProgress_${symbol}`); if(!div) return;
     if(currentMarket !== 'evenodd') { div.innerHTML = `<div class="multi-tf-progress">📊 Only Even/Odd</div>`; return; }
-    let wins = [50,100,200]; let lines = []; let first = null, allSame = true;
+    let wins = [25,50,100]; // faster multi-timeframe
+    let lines = []; let first = null, allSame = true;
     for(let w of wins) {
       let info = getWindowDominant(symbol, w);
       if(!info) { lines.push(`<div class="tf-line"><span>>${w}t</span><span>—</span><span>—</span></div>`); allSame=false; continue; }
@@ -1128,7 +1144,6 @@
     if(data.last50Array.length > 50) data.last50Array.shift();
     updateTrends(symbol);
     renderMarket(symbol);
-    // for tick volume enhancer
     if(enhTickTimestamps.has(symbol)) {
       let ts = enhTickTimestamps.get(symbol);
       ts.push(Date.now());
@@ -1172,7 +1187,6 @@
     document.querySelectorAll('.market-list-item').forEach(el => el.onclick = () => { let card = document.getElementById(`market_${el.getAttribute('data-symbol')}`); if(card) card.scrollIntoView({behavior:'smooth', block:'center'}); });
   }
   
-  // WebSocket connection and audio
   let audioCtx = null;
   function playSignalSound() { if (!audioCtx || getSettings().soundEnabled === false) return; try { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.frequency.value = 880; gain.gain.value = 0.2; osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3); osc.stop(audioCtx.currentTime + 0.3); } catch(e) { console.warn(e); } }
   function sendDesktopNotification(symbol, message) { if (!("Notification" in window)) return; if (Notification.permission === "granted") { new Notification("📈 TAJIRI TRADERS Signal", { body: `${MARKET_NAMES[symbol]}: ${message}`, icon: "https://www.deriv.com/favicon.ico", silent: false }); } else if (Notification.permission !== "denied") { Notification.requestPermission(); } }
@@ -1231,7 +1245,7 @@
   window.toggleMode = toggleMode;
   window.setMarket = setMarket;
   window.setIndicator = setIndicator;
-  window.recordOutcome = recordOutcome; // already overridden
+  window.recordOutcome = recordOutcome;
   
   document.querySelectorAll('.market-btn').forEach(btn=>btn.onclick=()=>setMarket(btn.getAttribute('data-market')));
   document.querySelectorAll('.indicator-btn').forEach(btn=>btn.onclick=()=>setIndicator(btn.getAttribute('data-indicator')));
