@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<title>TAJIRI TRADERS – Adjustable Thresholds + Signal Timers</title>
+<title>TAJIRI TRADERS – Multi‑TF Dominant Direction (25,50,100,200)</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -351,11 +351,17 @@
     background: var(--bg-body);
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
+    min-height: 2rem;
   }
   .signal-flash { padding: 3px 5px; font-size: 0.7rem; }
   .strength-meter { width: 60px; height: 5px; margin-left: 6px; display: inline-block; background: var(--strength-meter-bg); }
   .strength-fill { height: 100%; background: var(--strength-fill); }
   .vote-btn { padding: 1px 4px; font-size: 0.6rem; margin: 0 2px; background: var(--btn-bg); border: none; color: white; border-radius: 1rem; cursor: pointer; }
+  .no-signal-placeholder {
+    display: inline-block;
+    width: 100%;
+    height: 1.2rem;
+  }
 
   .multi-tf-progress {
     background: var(--bg-panel);
@@ -416,6 +422,15 @@
     text-align: center;
     font-weight: bold;
     font-size: 0.8rem;
+  }
+  .state-timer {
+    margin-top: 4px;
+    font-size: 0.7rem;
+    background: var(--bg-body);
+    border-radius: 10px;
+    padding: 2px 5px;
+    text-align: center;
+    color: var(--text-secondary);
   }
 
   .hidden { display: none; }
@@ -511,6 +526,10 @@
         <input type="range" id="blueThreshold" min="5" max="20" step="0.5" value="10.5" style="width:100px">
         <input type="number" id="blueThresholdNum" step="0.5" value="10.5" style="width:50px">
       </div>
+      <div class="setting-row"><label>📏 Signal Strength Threshold %</label>
+        <input type="range" id="strengthThreshold" min="0" max="100" step="1" value="50" style="width:100px">
+        <input type="number" id="strengthThresholdNum" step="1" value="50" style="width:50px">
+      </div>
     </div>
   </div>
 </div>
@@ -530,7 +549,7 @@
       <div class="setting-row"><label>🧊 Signal Cooldown After Consecutive Losses</label><input type="checkbox" id="enh_cooldownLoss"></div>
       <div class="setting-row"><label>🔗 Pair Correlation Check (Vol10 vs Vol25)</label><input type="checkbox" id="enh_pairCorrelation"></div>
       <div class="setting-row"><label>🏆 Re‑entry Lock After Win</label><input type="checkbox" id="enh_winLock"></div>
-      <div class="setting-row"><label>📏 Signal Strength Meter (min 65)</label><input type="checkbox" id="enh_strengthMeter"></div>
+      <div class="setting-row"><label>📏 Signal Strength Meter (min X%)</label><input type="checkbox" id="enh_strengthMeter"></div>
       <div class="setting-row"><label>🔄 Extra Confirmation from Last 50‑Tick Sequence</label><input type="checkbox" id="enh_seqConfirm"></div>
     </div>
     <div style="margin-top:0.8rem;">
@@ -541,7 +560,7 @@
 </div>
 
 <script>
-  // ================== ADJUSTABLE THRESHOLDS CONSENSUS + SIGNAL TIMERS ==================
+  // ================== UNIFIED CONSENSUS + MULTI-TF DOMINANT DIRECTION (always visible) ==================
   console.log("Script loaded");
   const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,"1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
   const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Vol 10","R_25":"Vol 25","R_50":"Vol 50","R_75":"Vol 75","R_100":"Vol 100","JD10":"Jump 10","JD25":"Jump 25","JD50":"Jump 50","JD75":"Jump 75","JD100":"Jump 100" };
@@ -550,6 +569,8 @@
   let marketData = {}, signalExpiry = {}, activeSignalMsg = {}, lockedMarkets = new Map(), rawTrend = {}, signalHistory = {}, pendingConfirmation = {};
   let currentMarket = 'evenodd', currentIndicator = 'consensus', ws = null, invalidSymbols = new Set();
   let testPanelsVisible = false;
+  let marketStateStartTime = new Map();
+  let lastMarketState = new Map();
 
   function getSettings() {
     return {
@@ -561,16 +582,18 @@
       rejectionStreak: parseInt(document.getElementById('rejectionStreak').value) || 2,
       windowSize: parseInt(document.getElementById('windowSize').value) || 1000,
       greenThreshold: parseFloat(document.getElementById('greenThreshold').value) || 11.0,
-      blueThreshold: parseFloat(document.getElementById('blueThreshold').value) || 10.5
+      blueThreshold: parseFloat(document.getElementById('blueThreshold').value) || 10.5,
+      strengthThreshold: parseFloat(document.getElementById('strengthThreshold').value) || 50
     };
   }
 
-  // Sync sliders with number inputs
   function initThresholdControls() {
     const greenRange = document.getElementById('greenThreshold');
     const greenNum = document.getElementById('greenThresholdNum');
     const blueRange = document.getElementById('blueThreshold');
     const blueNum = document.getElementById('blueThresholdNum');
+    const strengthRange = document.getElementById('strengthThreshold');
+    const strengthNum = document.getElementById('strengthThresholdNum');
     if(greenRange && greenNum) {
       greenRange.oninput = () => { greenNum.value = greenRange.value; renderAllMarkets(); };
       greenNum.oninput = () => { greenRange.value = greenNum.value; renderAllMarkets(); };
@@ -578,6 +601,10 @@
     if(blueRange && blueNum) {
       blueRange.oninput = () => { blueNum.value = blueRange.value; renderAllMarkets(); };
       blueNum.oninput = () => { blueRange.value = blueNum.value; renderAllMarkets(); };
+    }
+    if(strengthRange && strengthNum) {
+      strengthRange.oninput = () => { strengthNum.value = strengthRange.value; };
+      strengthNum.oninput = () => { strengthRange.value = strengthNum.value; };
     }
   }
 
@@ -661,6 +688,21 @@
       else { stateText = "⏸️ NO DIRECTION / WAIT"; stateClass = "equal"; }
     }
     
+    let stateKey = currentState !== null ? currentState : "null";
+    let lastKey = lastMarketState.get(symbol) || "";
+    if(lastKey !== stateKey) {
+      lastMarketState.set(symbol, stateKey);
+      marketStateStartTime.set(symbol, Date.now());
+    }
+    let startTime = marketStateStartTime.get(symbol) || Date.now();
+    let elapsedSec = Math.floor((Date.now() - startTime) / 1000);
+    let timerDisplay = "";
+    if(elapsedSec >= 0) {
+      let mins = Math.floor(elapsedSec / 60);
+      let secs = elapsedSec % 60;
+      timerDisplay = `<div class="state-timer">⏱️ Current state: ${mins}m ${secs}s</div>`;
+    }
+    
     let gridHtml = `<div class="batch-analysis"><div class="batch-title">📦 20x50 TICK CYCLES (old → new)</div><div class="batch-grid">`;
     batches.forEach(b => {
       let cls = '';
@@ -675,7 +717,7 @@
       }
       gridHtml += `<div class="batch-cell ${cls}">${b}</div>`;
     });
-    gridHtml += `</div><div class="batch-expect" style="background: var(--bg-panel); margin-top:6px; border-radius:12px; padding:4px 6px; text-align:center; font-weight:bold;">📌 CURRENT MARKET: <span style="color:${stateClass==='even'?'#10b981':stateClass==='odd'?'#ef4444':stateClass==='over'?'#10b981':stateClass==='under'?'#ef4444':'#facc15'}">${stateText}</span></div></div>`;
+    gridHtml += `</div><div class="batch-expect" style="background: var(--bg-panel); margin-top:6px; border-radius:12px; padding:4px 6px; text-align:center; font-weight:bold;">📌 CURRENT MARKET: <span style="color:${stateClass==='even'?'#10b981':stateClass==='odd'?'#ef4444':stateClass==='over'?'#10b981':stateClass==='under'?'#ef4444':'#facc15'}">${stateText}</span></div>${timerDisplay}</div>`;
     container.innerHTML = gridHtml;
   }
 
@@ -797,61 +839,90 @@
     return null;
   }
   
-  // ========== ADJUSTABLE THRESHOLD CONSENSUS ==========
+  // ========== UNIFIED CONSENSUS: Arrow + Majority + Batch Expectation + Current Market State ==========
+  function getBatchExpectation(symbol, marketType) {
+    const data = marketData[symbol];
+    if(!data || !data.rollingArray || data.rollingArray.length < 150) return null;
+    let arr = data.rollingArray.slice();
+    let batchSize = 50;
+    let batches = [];
+    for(let i = 0; i + batchSize <= arr.length && batches.length < 20; i += batchSize) {
+      let batch = arr.slice(i, i+batchSize);
+      if(marketType === 'evenodd') {
+        let evens = batch.filter(d => d%2===0).length;
+        let odds = batchSize - evens;
+        if(evens > odds) batches.push('E');
+        else if(odds > evens) batches.push('O');
+        else batches.push('=');
+      } else if(marketType === 'overunder') {
+        let over = batch.filter(d => d >= 5).length;
+        let under = batchSize - over;
+        if(over > under) batches.push('O');
+        else if(under > over) batches.push('U');
+        else batches.push('=');
+      } else return null;
+    }
+    let len = batches.length;
+    if(len < 3) return null;
+    let last3 = batches.slice(-3);
+    let counts = last3.reduce((acc,val)=>{ acc[val]=(acc[val]||0)+1; return acc; }, {});
+    let dominant = null;
+    for(let key in counts) if(counts[key] >= 2 && key !== '=') dominant = key;
+    if(!dominant) return null;
+    if(marketType === 'evenodd') {
+      if(dominant === 'E') return "ODD";
+      if(dominant === 'O') return "EVEN";
+    } else {
+      if(dominant === 'O') return "UNDER";
+      if(dominant === 'U') return "OVER";
+    }
+    return null;
+  }
+
   function getConsensusPrediction(symbol) {
-    let settings = getSettings();
-    let greenThresh = settings.greenThreshold;
-    let blueThresh = settings.blueThreshold;
+    if(currentMarket !== 'evenodd' && currentMarket !== 'overunder') return null;
+    let marketType = currentMarket === 'evenodd' ? 'evenodd' : 'overunder';
+    let arrow = (currentMarket === 'evenodd') ? getEvenOddArrow(symbol) : getOverUnderArrow(symbol);
+    let majority = getMajorityPrediction(symbol);
+    let batchExp = getBatchExpectation(symbol, marketType);
+    let currentState = getCurrentMarketState(symbol, marketType);
     
-    if(currentMarket === 'evenodd') {
+    if(!arrow || !majority || !batchExp || !currentState) return null;
+    if(arrow === majority && majority === batchExp && batchExp === currentState) {
       let ranks = getDigitRanksAndPct(symbol);
+      let settings = getSettings();
+      let greenThresh = settings.greenThreshold;
+      let blueThresh = settings.blueThreshold;
       if(!ranks) return null;
       let { most, secondMost, least, secondLeast, mostPct, secondPct } = ranks;
       let trends = rawTrend[symbol];
       if(!trends) return null;
       let mostGaining = trends[most] === 1;
+      if(!mostGaining) return null;
       
-      // EVEN signal
-      if(most % 2 === 0 && secondMost % 2 === 0 && mostPct > greenThresh && secondPct > blueThresh && mostGaining) {
-        if( (least % 2 === 1) || (secondLeast % 2 === 1) ) {
-          console.log(`✅ CONSENSUS EVEN for ${symbol} (${mostPct.toFixed(1)}% > ${greenThresh}, ${secondPct.toFixed(1)}% > ${blueThresh})`);
-          return "EVEN";
+      if(currentMarket === 'evenodd') {
+        if(arrow === "EVEN") {
+          if(most % 2 === 0 && secondMost % 2 === 0 && mostPct > greenThresh && secondPct > blueThresh && (least % 2 === 1 || secondLeast % 2 === 1)) {
+            return "EVEN";
+          }
+        } else if(arrow === "ODD") {
+          if(most % 2 === 1 && secondMost % 2 === 1 && mostPct > greenThresh && secondPct > blueThresh && (least % 2 === 0 || secondLeast % 2 === 0)) {
+            return "ODD";
+          }
         }
-      }
-      // ODD signal
-      if(most % 2 === 1 && secondMost % 2 === 1 && mostPct > greenThresh && secondPct > blueThresh && mostGaining) {
-        if( (least % 2 === 0) || (secondLeast % 2 === 0) ) {
-          console.log(`✅ CONSENSUS ODD for ${symbol} (${mostPct.toFixed(1)}% > ${greenThresh}, ${secondPct.toFixed(1)}% > ${blueThresh})`);
-          return "ODD";
-        }
-      }
-      return null;
-    } 
-    else if(currentMarket === 'overunder') {
-      let ranks = getDigitRanksAndPct(symbol);
-      if(!ranks) return null;
-      let { most, secondMost, least, secondLeast, mostPct, secondPct } = ranks;
-      let trends = rawTrend[symbol];
-      if(!trends) return null;
-      let mostGaining = trends[most] === 1;
-      
-      const overDigits = [5,6,7,8,9];
-      const underDigits = [0,1,2,3,4];
-      const isOver = (d) => overDigits.includes(d);
-      const isUnder = (d) => underDigits.includes(d);
-      
-      // OVER signal
-      if(isOver(most) && isOver(secondMost) && mostPct > greenThresh && secondPct > blueThresh && mostGaining) {
-        if( isUnder(least) || isUnder(secondLeast) ) {
-          console.log(`✅ CONSENSUS OVER for ${symbol} (${mostPct.toFixed(1)}% > ${greenThresh}, ${secondPct.toFixed(1)}% > ${blueThresh})`);
-          return "OVER";
-        }
-      }
-      // UNDER signal
-      if(isUnder(most) && isUnder(secondMost) && mostPct > greenThresh && secondPct > blueThresh && mostGaining) {
-        if( isOver(least) || isOver(secondLeast) ) {
-          console.log(`✅ CONSENSUS UNDER for ${symbol} (${mostPct.toFixed(1)}% > ${greenThresh}, ${secondPct.toFixed(1)}% > ${blueThresh})`);
-          return "UNDER";
+      } else if(currentMarket === 'overunder') {
+        const overDigits = [5,6,7,8,9];
+        const underDigits = [0,1,2,3,4];
+        const isOver = (d) => overDigits.includes(d);
+        const isUnder = (d) => underDigits.includes(d);
+        if(arrow === "OVER") {
+          if(isOver(most) && isOver(secondMost) && mostPct > greenThresh && secondPct > blueThresh && (isUnder(least) || isUnder(secondLeast))) {
+            return "OVER";
+          }
+        } else if(arrow === "UNDER") {
+          if(isUnder(most) && isUnder(secondMost) && mostPct > greenThresh && secondPct > blueThresh && (isOver(least) || isOver(secondLeast))) {
+            return "UNDER";
+          }
         }
       }
       return null;
@@ -1027,7 +1098,9 @@
   }
   function checkStrengthMeter(symbol, pred) {
     if(!getEnhancements().strengthMeter) return true;
-    return computeStrengthMeter(symbol, pred) >= 65;
+    let strength = computeStrengthMeter(symbol, pred);
+    let threshold = getSettings().strengthThreshold;
+    return strength >= threshold;
   }
   function checkSeqConfirm(symbol) {
     if(currentMarket !== 'overunder') return true;
@@ -1179,6 +1252,60 @@
     panel.innerHTML = html;
   }
   
+  // ========== MULTI-TF with 25,50,100,200 ticks – ALWAYS SHOW DOMINANT (no threshold) ==========
+  function updateMultiTFProgress(symbol) {
+    let div = document.getElementById(`multiTFProgress_${symbol}`);
+    if(!div) return;
+    let wins = [25, 50, 100, 200];
+    let lines = [];
+    let allAgree = true;
+    let firstDir = null;
+    
+    for(let w of wins) {
+      let info = getWindowDominantAlways(symbol, w);
+      if(!info) {
+        lines.push(`<div class="tf-line"><span>>${w}t</span><span style="color:#facc15;">—</span><span>—</span></div>`);
+        allAgree = false;
+        continue;
+      }
+      let direction = info.direction;
+      let pct = info.pct;
+      let color = '';
+      if(currentMarket === 'evenodd') {
+        color = direction === 'EVEN' ? '#4ade80' : '#f87171';
+      } else {
+        color = direction === 'OVER' ? '#4ade80' : '#f87171';
+      }
+      lines.push(`<div class="tf-line"><span>>${w}t</span><span style="color:${color}">${direction}</span><span>${pct.toFixed(1)}%</span></div>`);
+      if(firstDir === null) firstDir = direction;
+      else if(direction !== firstDir) allAgree = false;
+    }
+    let strongHtml = '';
+    if(allAgree && firstDir !== null && wins.length === lines.length) {
+      strongHtml = `<div style="margin-top:0.2rem; font-weight:bold; color:${firstDir === 'EVEN' || firstDir === 'OVER' ? '#4ade80' : '#f87171'};">🔥 STRONG ${firstDir}</div>`;
+    }
+    div.innerHTML = `<div class="multi-tf-progress"><div>📊 Dominant direction (25,50,100,200t)</div>${lines.join('')}${strongHtml}</div>`;
+  }
+  
+  function getWindowDominantAlways(symbol, win) {
+    let data = marketData[symbol];
+    if(!data || data.rollingArray.length < win) return null;
+    let arr = data.rollingArray.slice(-win);
+    let cnt = new Array(10).fill(0);
+    for(let d of arr) cnt[d]++;
+    let max = Math.max(...cnt);
+    let dig = cnt.indexOf(max);
+    let pct = (max / win) * 100;
+    if(currentMarket === 'evenodd') {
+      let parity = dig % 2 === 0 ? "EVEN" : "ODD";
+      return { direction: parity, pct: pct };
+    } else if(currentMarket === 'overunder') {
+      let type = dig >= 5 ? "OVER" : "UNDER";
+      return { direction: type, pct: pct };
+    }
+    return null;
+  }
+  
   // --- UI functions ---
   function rebuildDigitGrid(sym) {
     let rolling = getRollingCounts(sym); if(!rolling) return;
@@ -1236,44 +1363,19 @@
     if(!active && sig.active) {
       signalExpiry[symbol] = now + SIGNAL_LOCK_DURATION;
       activeSignalMsg[symbol] = sig.msg;
-      // Store both expiry and start time for timer display
       lockedMarkets.set(symbol, { expiry: signalExpiry[symbol], prediction: window.getActivePrediction(symbol), startTime: now });
       div.innerHTML = `<div class="signal-flash">🎯 ${sig.msg} <div class="strength-meter"><div class="strength-fill" style="width:${sig.confidence}%"></div></div><div><button class="vote-btn" onclick="window.recordOutcome('${symbol}','win')">✅ Win</button><button class="vote-btn" onclick="window.recordOutcome('${symbol}','loss')">❌ Loss</button></div></div>`;
       playSignalSound(); sendDesktopNotification(symbol, sig.msg);
     } else if(active) {
       let rem = Math.max(0, Math.floor((signalExpiry[symbol]-now)/1000));
       div.innerHTML = `<div class="signal-flash">🎯 ${activeSignalMsg[symbol]} (${rem}s)</div>`;
-    } else { div.innerHTML = `<span class="no-signal">⚡ waiting...</span>`; }
+    } else {
+      div.innerHTML = `<div class="no-signal-placeholder"></div>`;
+    }
     rebuildDigitGrid(symbol);
     updateMultiTFProgress(symbol);
     updateBatchAnalysis(symbol);
     updateAllMarketsList();
-  }
-  
-  function updateMultiTFProgress(symbol) {
-    let div = document.getElementById(`multiTFProgress_${symbol}`); if(!div) return;
-    if(currentMarket !== 'evenodd') { div.innerHTML = `<div class="multi-tf-progress">📊 Only Even/Odd</div>`; return; }
-    let wins = [25,50,100];
-    let lines = []; let first = null, allSame = true;
-    for(let w of wins) {
-      let info = getWindowDominant(symbol, w);
-      if(!info) { lines.push(`<div class="tf-line"><span>>${w}t</span><span>—</span><span>—</span></div>`); allSame=false; continue; }
-      let color = info.parity==='EVEN' ? '#4ade80' : '#f87171';
-      lines.push(`<div class="tf-line"><span>>${w}t</span><span style="color:${color}">${info.parity}</span><span>${info.pct.toFixed(1)}%</span></div>`);
-      if(first===null) first=info.parity; else if(info.parity !== first) allSame=false;
-    }
-    let strong = allSame && first ? `<div style="margin-top:0.1rem;">🔥 STRONG → ${first}</div>` : '';
-    div.innerHTML = `<div class="multi-tf-progress"><div>📊 Dominant parity</div>${lines.join('')}${strong}</div>`;
-  }
-  function getWindowDominant(symbol, win) {
-    let data = marketData[symbol];
-    if(!data || data.rollingArray.length < win) return null;
-    let arr = data.rollingArray.slice(-win);
-    let cnt = new Array(10).fill(0);
-    arr.forEach(d=>cnt[d]++);
-    let max = Math.max(...cnt);
-    let dig = cnt.indexOf(max);
-    return { parity: dig%2===0 ? "EVEN":"ODD", pct: max/win*100 };
   }
   
   function processTick(symbol, priceNumeric, quoteDisplay) {
@@ -1309,8 +1411,8 @@
         <div id="digitsContainer_${symbol}" class="digits-grid"></div>
         <div class="info-row"><div class="parity-stats" id="parityStats_${symbol}">--</div><div class="streak-stats" id="streakStats_${symbol}">Streak: 0</div><div class="prediction-box" id="prediction_${symbol}">🔮 NEXT DIGIT: —</div></div>
         <div class="letter-sequence-wrapper"><div class="letter-sequence" id="paritySeq_${symbol}">⏳ ticks...</div><div class="letter-sequence hidden" id="ouSeq_${symbol}"></div></div>
-        <div class="signal-area" id="signalDisplay_${symbol}"><span class="no-signal">⚡ waiting...</span></div>
-        <div id="multiTFProgress_${symbol}" class="multi-tf-progress">⏳ multi‑TF</div>
+        <div class="signal-area" id="signalDisplay_${symbol}"><div class="no-signal-placeholder"></div></div>
+        <div id="multiTFProgress_${symbol}" class="multi-tf-progress">⏳ loading multi‑TF</div>
         <div id="batchContainer_${symbol}" class="batch-analysis">⏳ loading batch cycles...</div>
         <div id="testPanel_${symbol}" class="test-panel"></div>
       </div>`;
@@ -1320,10 +1422,8 @@
   
   function subscribeToMarket(sym) { if(ws && ws.readyState===WebSocket.OPEN && !invalidSymbols.has(sym)) { ws.send(JSON.stringify({ ticks_history: sym, count: 1000, end: "latest", style: "ticks" })); ws.send(JSON.stringify({ ticks: sym, subscribe: 1 })); } }
   
-  // ========== UPDATED MARKET LIST WITH SIGNAL TIMERS ==========
   function updateAllMarketsList() {
     let now = Date.now();
-    // Clean expired locks
     for(let [sym, data] of lockedMarkets.entries()) if(now > data.expiry) lockedMarkets.delete(sym);
     for(let sym of ALL_SYMBOLS) { 
       let pred = window.getActivePrediction(sym); 
@@ -1356,12 +1456,12 @@
     });
   }
   
-  // Timer refresh every second
-  let timerInterval;
+  let timerRefreshInterval;
   function startTimerRefresh() {
-    if(timerInterval) clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
+    if(timerRefreshInterval) clearInterval(timerRefreshInterval);
+    timerRefreshInterval = setInterval(() => {
       updateAllMarketsList();
+      for(let s in marketData) if(marketData[s]?.rollingArray?.length) updateBatchAnalysis(s);
     }, 1000);
   }
   
@@ -1396,7 +1496,7 @@
           function nextSub() { if(idx>=ALL_SYMBOLS.length) { document.getElementById('connectionStatus').innerHTML = `✅ ${currentMarket.toUpperCase()} / ${currentIndicator.toUpperCase()}`; return; } let sym=ALL_SYMBOLS[idx]; if(!invalidSymbols.has(sym)) subscribeToMarket(sym); idx++; setTimeout(nextSub, 200); }
           nextSub();
           startPing();
-          startTimerRefresh(); // start the 1-second timer for the list
+          startTimerRefresh();
         } else if(msg.msg_type==='tick' && msg.tick) {
           let sym = msg.tick.symbol;
           if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) {
