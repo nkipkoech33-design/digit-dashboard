@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<title>TAJIRI TRADERS – Multi‑TF Dominant Direction (25,50,100,200)</title>
+<title>TAJIRI TRADERS – Faster Consensus (25‑tick current state)</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -560,8 +560,8 @@
 </div>
 
 <script>
-  // ================== UNIFIED CONSENSUS + MULTI-TF DOMINANT DIRECTION (always visible) ==================
-  console.log("Script loaded");
+  // ================== FASTER CONSENSUS: 25‑tick current state (instead of 50) ==================
+  console.log("Script loaded - Faster consensus active");
   const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,"1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
   const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Vol 10","R_25":"Vol 25","R_50":"Vol 50","R_75":"Vol 75","R_100":"Vol 100","JD10":"Jump 10","JD25":"Jump 25","JD50":"Jump 50","JD75":"Jump 75","JD100":"Jump 100" };
   const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
@@ -615,8 +615,29 @@
   function lastDigitFromFormatted(str) { let digits = str.replace(/\./g,''); if(digits.length===0) return 0; return parseInt(digits.charAt(digits.length-1),10)||0; }
   function formatHistoryPrice(s, p) { let dec = DECIMAL_MAP[s] ?? 2; return p.toFixed(dec); }
 
-  // --- BATCH ANALYSIS (current market state) ---
-  function getCurrentMarketState(symbol, marketType) {
+  // --- BATCH ANALYSIS (still shows 20x50 cycles for reference, but the "CURRENT MARKET" now uses FAST 25‑tick) ---
+  function getCurrentMarketStateFast(symbol, marketType) {
+    const data = marketData[symbol];
+    if(!data || !data.rollingArray || data.rollingArray.length < 25) return null;
+    let arr = data.rollingArray.slice(-25);
+    if(marketType === 'evenodd') {
+      let evens = arr.filter(d => d%2===0).length;
+      let odds = 25 - evens;
+      if(evens > odds) return "EVEN";
+      if(odds > evens) return "ODD";
+      return null;
+    } else if(marketType === 'overunder') {
+      let over = arr.filter(d => d >= 5).length;
+      let under = 25 - over;
+      if(over > under) return "OVER";
+      if(under > over) return "UNDER";
+      return null;
+    }
+    return null;
+  }
+
+  // Original 50‑batch analysis still used for display in the batch panel
+  function getCurrentMarketStateBatch(symbol, marketType) {
     const data = marketData[symbol];
     if(!data || !data.rollingArray || data.rollingArray.length < 50) return null;
     let arr = data.rollingArray.slice();
@@ -675,20 +696,21 @@
         }
       }
     }
-    let currentState = getCurrentMarketState(symbol, marketType);
+    // For display, we still show the 50‑batch based state (more stable)
+    let currentStateBatch = getCurrentMarketStateBatch(symbol, marketType);
     let stateText = "—";
     let stateClass = "";
     if(currentMarket === 'evenodd') {
-      if(currentState === "EVEN") { stateText = "🎲 EVEN MARKET"; stateClass = "even"; }
-      else if(currentState === "ODD") { stateText = "🎲 ODD MARKET"; stateClass = "odd"; }
+      if(currentStateBatch === "EVEN") { stateText = "🎲 EVEN MARKET (50‑batch)"; stateClass = "even"; }
+      else if(currentStateBatch === "ODD") { stateText = "🎲 ODD MARKET (50‑batch)"; stateClass = "odd"; }
       else { stateText = "⏸️ NO DIRECTION / WAIT"; stateClass = "equal"; }
     } else if(currentMarket === 'overunder') {
-      if(currentState === "OVER") { stateText = "📈 OVER MARKET"; stateClass = "over"; }
-      else if(currentState === "UNDER") { stateText = "📉 UNDER MARKET"; stateClass = "under"; }
+      if(currentStateBatch === "OVER") { stateText = "📈 OVER MARKET (50‑batch)"; stateClass = "over"; }
+      else if(currentStateBatch === "UNDER") { stateText = "📉 UNDER MARKET (50‑batch)"; stateClass = "under"; }
       else { stateText = "⏸️ NO DIRECTION / WAIT"; stateClass = "equal"; }
     }
     
-    let stateKey = currentState !== null ? currentState : "null";
+    let stateKey = currentStateBatch !== null ? currentStateBatch : "null";
     let lastKey = lastMarketState.get(symbol) || "";
     if(lastKey !== stateKey) {
       lastMarketState.set(symbol, stateKey);
@@ -717,7 +739,7 @@
       }
       gridHtml += `<div class="batch-cell ${cls}">${b}</div>`;
     });
-    gridHtml += `</div><div class="batch-expect" style="background: var(--bg-panel); margin-top:6px; border-radius:12px; padding:4px 6px; text-align:center; font-weight:bold;">📌 CURRENT MARKET: <span style="color:${stateClass==='even'?'#10b981':stateClass==='odd'?'#ef4444':stateClass==='over'?'#10b981':stateClass==='under'?'#ef4444':'#facc15'}">${stateText}</span></div>${timerDisplay}</div>`;
+    gridHtml += `</div><div class="batch-expect" style="background: var(--bg-panel); margin-top:6px; border-radius:12px; padding:4px 6px; text-align:center; font-weight:bold;">📌 CURRENT MARKET (50‑batch): <span style="color:${stateClass==='even'?'#10b981':stateClass==='odd'?'#ef4444':stateClass==='over'?'#10b981':stateClass==='under'?'#ef4444':'#facc15'}">${stateText}</span></div>${timerDisplay}</div>`;
     container.innerHTML = gridHtml;
   }
 
@@ -736,7 +758,7 @@
     return data.last50Array.map(d => d%2===0 ? '<span style="color:#4ade80;">E</span>' : '<span style="color:#f87171;">O</span>').join('');
   }
 
-  // --- Core indicators (Arrow, Majority) ---
+  // --- Core indicators (Arrow, Majority) unchanged ---
   function updateTrends(symbol) {
     let data = marketData[symbol];
     if(!data || data.rollingArray.length < 20) return;
@@ -775,7 +797,6 @@
     let secondPct = sorted[1]?.pct || 0;
     return { most, secondMost, least, secondLeast, mostPct, secondPct, allPct: pct };
   }
-  // For hybrid indicator (unchanged)
   function checkEvenOddRankCondition(symbol, predictedParity) {
     let ranks = getDigitRanksAndPct(symbol);
     if(!ranks) return false;
@@ -839,10 +860,10 @@
     return null;
   }
   
-  // ========== UNIFIED CONSENSUS: Arrow + Majority + Batch Expectation + Current Market State ==========
+  // ========== FASTER CONSENSUS: uses 25‑tick current state instead of 50‑batch ==========
   function getBatchExpectation(symbol, marketType) {
     const data = marketData[symbol];
-    if(!data || !data.rollingArray || data.rollingArray.length < 150) return null;
+    if(!data || !data.rollingArray || data.rollingArray.length < 100) return null;
     let arr = data.rollingArray.slice();
     let batchSize = 50;
     let batches = [];
@@ -863,9 +884,9 @@
       } else return null;
     }
     let len = batches.length;
-    if(len < 3) return null;
-    let last3 = batches.slice(-3);
-    let counts = last3.reduce((acc,val)=>{ acc[val]=(acc[val]||0)+1; return acc; }, {});
+    if(len < 2) return null;
+    let last2 = batches.slice(-2);
+    let counts = last2.reduce((acc,val)=>{ acc[val]=(acc[val]||0)+1; return acc; }, {});
     let dominant = null;
     for(let key in counts) if(counts[key] >= 2 && key !== '=') dominant = key;
     if(!dominant) return null;
@@ -885,7 +906,7 @@
     let arrow = (currentMarket === 'evenodd') ? getEvenOddArrow(symbol) : getOverUnderArrow(symbol);
     let majority = getMajorityPrediction(symbol);
     let batchExp = getBatchExpectation(symbol, marketType);
-    let currentState = getCurrentMarketState(symbol, marketType);
+    let currentState = getCurrentMarketStateFast(symbol, marketType); // FAST 25‑tick state
     
     if(!arrow || !majority || !batchExp || !currentState) return null;
     if(arrow === majority && majority === batchExp && batchExp === currentState) {
@@ -948,7 +969,7 @@
   function getVolatility(symbol) { return 0; }
   function computeConfidence(symbol, pred) { return 70; }
   
-  // --- Enhancement hooks (optional) ---
+  // --- Enhancement hooks (optional) unchanged ---
   let enhLastSignalTimes = new Map();
   let enhConsecutiveLosses = new Map();
   let enhTickTimestamps = new Map();
@@ -1252,7 +1273,7 @@
     panel.innerHTML = html;
   }
   
-  // ========== MULTI-TF with 25,50,100,200 ticks – ALWAYS SHOW DOMINANT (no threshold) ==========
+  // ========== MULTI-TF with 25,50,100,200 ticks – always show dominant ==========
   function updateMultiTFProgress(symbol) {
     let div = document.getElementById(`multiTFProgress_${symbol}`);
     if(!div) return;
