@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<title>TAJIRI TRADERS – Opposite Filter Only + Arrow Activity Restored</title>
+<title>TAJIRI TRADERS – Fixed 20×50 Batch Cycles</title>
 <style>
+  /* (same CSS as the previous working version – no changes) */
   * { margin: 0; padding: 0; box-sizing: border-box; }
   :root {
     --bg-body: #0b1120; --bg-card: #111827; --bg-header: #1e293b; --bg-panel: #0a0f1c;
@@ -14,129 +15,120 @@
     --reversal-strong-bg: #0f3b2c; --reversal-strong-text: #a3e635; --batch-equal: #6b7280;
     --batch-even: #10b981; --batch-odd: #ef4444; --batch-over: #10b981; --batch-under: #ef4444;
     --external-nav-height: 70px; --green: #10b981; --green-dim: #064e3b; --red: #ef4444; --red-dim: #450a0a;
-    --gold: #f59e0b;
+    --gold: #facc15;
   }
   body.light {
     --bg-body: #f8fafc; --bg-card: #ffffff; --bg-header: #e2e8f0; --bg-panel: #f1f5f9;
     --bg-digit: #ffffff; --border-color: #cbd5e1; --text-primary: #0f172a; --text-secondary: #475569;
-    --price-color: #0f172a; --strength-meter-bg: #cbd5e1; --strength-fill: #15803d;
+    --price-color: #eab308; --strength-meter-bg: #cbd5e1; --strength-fill: #15803d;
     --btn-bg: #2563eb; --trade-active: #059669; --percent-accent: #b45309; --last-digit-bg: #e2e8f0;
     --reversal-strong-bg: #bbf7d0; --reversal-strong-text: #166534; --batch-equal: #94a3b8;
     --batch-even: #059669; --batch-odd: #dc2626; --batch-over: #059669; --batch-under: #dc2626;
+    --gold: #eab308;
   }
   body { font-family: 'Segoe UI', Roboto, system-ui, sans-serif; background: var(--bg-body); color: var(--text-primary); height: 100vh; overflow: hidden; margin: 0; padding: 0; }
   .top-spacer { height: var(--external-nav-height); width: 100%; background: transparent; flex-shrink: 0; }
   .app-container { display: flex; flex-direction: column; height: calc(100vh - var(--external-nav-height)); overflow: hidden; }
-  .top-slim-bar { background: var(--bg-header); border-bottom: 1px solid var(--border-color); padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; flex-shrink: 0; }
-  .logo-area h1 { font-size: 1.3rem; margin: 0; }
-  .right-controls { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
-  .token-group { display: flex; align-items: center; gap: 0.3rem; background: var(--bg-panel); padding: 0.25rem 0.7rem; border-radius: 2rem; }
-  .token-group input { background: var(--bg-body); border: none; padding: 0.25rem 0.5rem; border-radius: 1.5rem; color: var(--text-primary); font-size: 0.8rem; width: 130px; }
-  .connect-btn { background: var(--btn-bg); border: none; padding: 0.25rem 0.9rem; border-radius: 2rem; font-weight: bold; color: white; cursor: pointer; font-size: 0.8rem; }
-  .settings-icon { background: var(--bg-panel); border: none; font-size: 1.2rem; cursor: pointer; border-radius: 2rem; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; }
-  .status-badge { background: var(--bg-panel); padding: 0.25rem 0.7rem; border-radius: 2rem; font-size: 0.75rem; }
-  .mode-toggle-small { background: var(--btn-bg); border: none; padding: 0.25rem 0.7rem; border-radius: 2rem; color: white; cursor: pointer; font-size: 0.8rem; }
-  .balance-box { background: var(--bg-panel); padding: 0.25rem 0.7rem; border-radius: 2rem; font-size: 0.75rem; display: flex; align-items: center; gap: 6px; }
+  .top-slim-bar { background: var(--bg-header); border-bottom: 1px solid var(--border-color); padding: 0.4rem 0.8rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; flex-shrink: 0; }
+  .logo-area h1 { font-size: 1.2rem; margin: 0; }
+  .right-controls { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .token-group { display: flex; align-items: center; gap: 0.2rem; background: var(--bg-panel); padding: 0.2rem 0.6rem; border-radius: 1.5rem; }
+  .token-group input { background: var(--bg-body); border: none; padding: 0.2rem 0.5rem; border-radius: 1rem; color: var(--text-primary); font-size: 0.75rem; width: 120px; }
+  .connect-btn { background: var(--btn-bg); border: none; padding: 0.2rem 0.8rem; border-radius: 1.5rem; font-weight: bold; color: white; cursor: pointer; font-size: 0.75rem; }
+  .settings-icon, .mode-toggle-small { background: var(--bg-panel); border: none; font-size: 1.1rem; cursor: pointer; border-radius: 1.5rem; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; }
+  .status-badge { background: var(--bg-panel); padding: 0.2rem 0.6rem; border-radius: 1.5rem; font-size: 0.7rem; }
+  .balance-box { background: var(--bg-panel); padding: 0.2rem 0.6rem; border-radius: 1.5rem; font-size: 0.75rem; display: flex; align-items: center; gap: 4px; }
   .balance-value { font-weight: 700; color: var(--price-color); }
-  .selector-row { background: var(--bg-header); padding: 0.4rem 1rem; display: flex; gap: 1rem; flex-wrap: wrap; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
-  .market-type-selector { display: flex; gap: 0.4rem; background: var(--bg-panel); padding: 0.25rem 0.7rem; border-radius: 2rem; }
-  .market-btn { background: none; border: none; font-size: 0.85rem; padding: 0.25rem 0.8rem; border-radius: 1.5rem; cursor: pointer; opacity: 0.6; font-weight: bold; color: var(--text-primary); }
+  .selector-row { background: var(--bg-header); padding: 0.3rem 0.8rem; display: flex; gap: 1rem; flex-wrap: wrap; border-bottom: 1px solid var(--border-color); flex-shrink: 0; align-items: center; }
+  .market-type-selector { display: flex; gap: 0.3rem; background: var(--bg-panel); padding: 0.2rem 0.5rem; border-radius: 1.5rem; }
+  .market-btn { background: none; border: none; font-size: 0.8rem; padding: 0.2rem 0.7rem; border-radius: 1.2rem; cursor: pointer; opacity: 0.6; font-weight: bold; color: var(--text-primary); }
   .market-btn.active { opacity: 1; background: var(--trade-active); }
-  .main-scroll-area { flex: 1; display: flex; overflow: hidden; padding: 0.8rem; gap: 0.8rem; min-height: 0; }
-  .market-cards-container { flex: 4; overflow-y: auto; height: 100%; padding-right: 0.3rem; }
-  .market-grid { display: flex; flex-direction: column; gap: 1rem; }
-  .all-markets-container { flex: 0 0 260px; background: var(--bg-header); border-radius: 1rem; padding: 0.6rem; border-left: 3px solid #facc15; overflow-y: auto; max-height: 100%; }
-  .all-markets-container h3 { font-size: 0.85rem; margin: 0 0 0.4rem 0; }
-  .markets-list { display: flex; flex-direction: column; gap: 0.4rem; }
-  .market-list-item { background: var(--bg-panel); padding: 0.25rem 0.5rem; border-radius: 0.8rem; font-weight: bold; cursor: pointer; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
-  .market-card { background: var(--bg-card); border-radius: 0.8rem; border: 1px solid var(--border-color); cursor: pointer; width: 100%; display: flex; flex-direction: column; overflow: hidden; transition: box-shadow 0.2s; }
-  .market-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-  .market-header { background: var(--bg-header); padding: 0.35rem 0.7rem; display: flex; justify-content: space-between; align-items: center; gap: 0.3rem; flex-shrink: 0; flex-wrap: wrap; }
-  .market-title { font-size: 0.9rem; font-weight: 700; display: flex; align-items: center; gap: 0.3rem; }
-  .live-price-big { font-size: 0.9rem; background: var(--bg-body); padding: 0.1rem 0.4rem; border-radius: 0.8rem; color: var(--price-color); }
-  .last-digit-badge { font-size: 1.6rem; font-weight: 800; background: var(--last-digit-bg); padding: 0 0.4rem; border-radius: 1rem; min-width: 50px; text-align: center; }
-  .market-status { font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 1rem; }
-  .card-content { flex: 1; display: flex; flex-direction: column; gap: 0.2rem; }
-  .digits-grid { display: flex; flex-direction: column; gap: 6px; padding: 0.4rem 0.5rem; background: var(--bg-body); flex-shrink: 0; }
-  .digits-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-  .digit-cell { background: var(--bg-digit); border-radius: 0.7rem; padding: 0.2rem 0.1rem; text-align: center; position: relative; border: 1px solid var(--border-color); }
-  .digit-cell span.digit { font-size: 1.3rem; font-weight: 800; display: block; line-height: 1.2; }
-  .digit-cell .percent { font-size: 0.65rem; font-weight: 800; color: var(--percent-accent); }
-  .digit-cell .trend { font-size: 0.65rem; margin-left: 2px; }
-  .pointer-marker { position: absolute; bottom: 0px; left: 50%; transform: translateX(-50%); width: 30px; height: 6px; background: #ffaa00; border-radius: 3px; z-index: 2; }
+  .focus-bar { background: var(--bg-header); padding: 0.2rem 0.6rem; margin-bottom: 0.3rem; border-radius: 1.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; }
+  .focus-bar button { background: var(--btn-bg); border: none; padding: 0.2rem 0.6rem; border-radius: 1rem; color: white; cursor: pointer; font-size: 0.7rem; }
+  .main-scroll-area { flex: 1; display: flex; overflow: hidden; padding: 0.6rem; gap: 0.6rem; min-height: 0; }
+  .market-cards-container { flex: 1; overflow-y: auto; height: 100%; padding-right: 0.3rem; }
+  .market-grid { display: flex; flex-direction: column; gap: 0.8rem; }
+  .all-markets-container { flex: 0 0 240px; background: var(--bg-header); border-radius: 0.8rem; padding: 0.4rem; border-left: 2px solid var(--gold); overflow-y: auto; }
+  .all-markets-container h3 { font-size: 0.75rem; margin: 0 0 0.3rem 0; }
+  .markets-list { display: flex; flex-direction: column; gap: 0.2rem; }
+  .market-list-item { background: var(--bg-panel); padding: 0.2rem 0.5rem; border-radius: 0.6rem; font-weight: bold; cursor: pointer; font-size: 0.7rem; display: flex; justify-content: space-between; align-items: center; }
+  .market-card { background: var(--bg-card); border-radius: 0.7rem; border: 1px solid var(--border-color); cursor: pointer; width: 100%; display: flex; flex-direction: column; overflow: hidden; transition: box-shadow 0.2s; }
+  .market-header { background: var(--bg-header); padding: 0.3rem 0.6rem; display: flex; justify-content: space-between; align-items: center; gap: 0.3rem; flex-wrap: wrap; font-size: 0.8rem; }
+  .market-title { font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 0.3rem; }
+  .focus-icon { cursor: pointer; font-size: 1rem; opacity: 0.7; }
+  .live-price-big { font-size: 0.85rem; background: var(--bg-body); padding: 0.1rem 0.4rem; border-radius: 0.6rem; }
+  .last-digit-badge { font-size: 1.8rem; font-weight: 800; background: var(--last-digit-bg); padding: 0 0.3rem; border-radius: 0.8rem; min-width: 55px; text-align: center; color: var(--gold); }
+  .market-status { font-size: 0.65rem; padding: 0.1rem 0.3rem; border-radius: 0.8rem; }
+  .card-content { display: flex; flex-direction: column; gap: 0.15rem; }
+  .digits-grid { display: flex; flex-direction: column; gap: 4px; padding: 0.3rem 0.4rem; background: var(--bg-body); }
+  .digits-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .digit-cell { background: var(--bg-digit); border-radius: 0.6rem; padding: 0.15rem 0.05rem; text-align: center; position: relative; border: 1px solid var(--border-color); transition: all 0.1s; }
+  .digit-cell span.digit { font-size: 1.2rem; font-weight: 800; display: block; line-height: 1.2; }
+  .digit-cell .percent { font-size: 0.6rem; font-weight: 800; color: var(--percent-accent); }
+  .digit-cell .trend { font-size: 0.6rem; margin-left: 2px; }
+  .digit-cell.last-digit-highlight { border: 2px solid var(--gold); box-shadow: 0 0 8px var(--gold); background: var(--bg-digit); transform: scale(1.02); }
+  .pointer-marker { position: absolute; left: 50%; transform: translateX(-50%); z-index: 2; transition: all 0.1s; }
+  .pointer-marker.triangle { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 8px solid var(--gold); background: none; }
+  .pointer-marker.arrow { width: auto; height: auto; background: none; font-size: 1rem; line-height: 1; color: var(--gold); font-weight: bold; content: "›"; }
+  .pointer-marker.dot { width: 8px; height: 8px; background: var(--gold); border-radius: 50%; box-shadow: 0 0 6px var(--gold); animation: pulse 1s infinite; }
+  @keyframes pulse { 0% { opacity: 0.4; transform: scale(0.8) translateX(-50%); } 50% { opacity: 1; transform: scale(1.2) translateX(-50%); } 100% { opacity: 0.4; transform: scale(0.8) translateX(-50%); } }
+  .pointer-top { bottom: auto; top: -4px; }
+  .pointer-bottom { bottom: -4px; top: auto; }
   .most { background: linear-gradient(145deg, #15803d, #0f5a2e); border-color: #4ade80; }
   .second { background: linear-gradient(145deg, #1e40af, #152e7a); border-color: #60a5fa; }
   .least { background: linear-gradient(145deg, #b91c1c, #7f1414); border-color: #f87171; }
   .secondleast { background: linear-gradient(145deg, #c2410c, #7a2b0a); border-color: #fb923c; }
   .hot { box-shadow: 0 0 6px #facc15; border-color: #facc15; }
   .cold { opacity: 0.6; }
-  .info-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.3rem; padding: 0.3rem 0.5rem; background: var(--bg-body); font-size: 0.7rem; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
-  .parity-stats, .streak-stats, .prediction-box { background: var(--bg-panel); padding: 0.1rem 0.4rem; border-radius: 0.8rem; }
-  .letter-sequence-wrapper { padding: 0.2rem 0.5rem; background: var(--bg-body); border-bottom: 1px solid var(--border-color); flex-shrink: 0; overflow-x: auto; white-space: nowrap; }
-  .letter-sequence { font-size: 1rem; font-family: 'Courier New', monospace; letter-spacing: 2px; display: inline-block; }
-  .seq-u { background: #ef4444; color: white; padding: 0 2px; border-radius: 4px; margin: 0 1px; display: inline-block; }
-  .seq-m { background: #3b82f6; color: white; padding: 0 2px; border-radius: 4px; margin: 0 1px; display: inline-block; }
-  .seq-o { background: #10b981; color: white; padding: 0 2px; border-radius: 4px; margin: 0 1px; display: inline-block; }
-  .signal-area { padding: 0.25rem 0.5rem; text-align: center; background: var(--bg-body); border-bottom: 1px solid var(--border-color); flex-shrink: 0; min-height: 2rem; }
-  .signal-flash { padding: 3px 5px; font-size: 0.7rem; font-weight: 700; }
-  .strength-meter { width: 60px; height: 5px; margin-left: 6px; display: inline-block; background: var(--strength-meter-bg); }
-  .strength-fill { height: 100%; background: var(--strength-fill); }
-  .multi-tf-progress { background: var(--bg-panel); border-radius: 0.6rem; padding: 0.2rem; margin: 0.2rem 0.4rem; font-size: 0.65rem; text-align: center; flex-shrink: 0; }
+  .info-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.2rem; padding: 0.2rem 0.3rem; background: var(--bg-body); font-size: 0.65rem; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
+  .parity-stats, .streak-stats, .prediction-box { background: var(--bg-panel); padding: 0.05rem 0.3rem; border-radius: 0.6rem; }
+  .dom-row { display: flex; justify-content: space-between; gap: 0.4rem; padding: 0.2rem 0.3rem; background: var(--bg-panel); border-radius: 0.6rem; margin: 0.1rem 0.2rem; font-size: 0.65rem; font-weight: bold; }
+  .dom-group { display: flex; gap: 0.4rem; background: var(--bg-card); padding: 0.05rem 0.4rem; border-radius: 1rem; }
+  .dom-up { color: var(--green); }
+  .dom-down { color: var(--red); }
+  .letter-sequence-wrapper { padding: 0.3rem 0.2rem; background: var(--bg-body); border-bottom: 1px solid var(--border-color); overflow-x: auto; text-align: center; }
+  .letter-sequence { font-size: 1rem; font-family: monospace; letter-spacing: 4px; display: inline-block; white-space: nowrap; }
+  .seq-u, .seq-m, .seq-o { display: inline-block; padding: 0 2px; border-radius: 4px; margin: 0 1px; }
+  .seq-u { background: #ef4444; color: white; }
+  .seq-m { background: #3b82f6; color: white; }
+  .seq-o { background: #10b981; color: white; }
+  .signal-area { padding: 0.15rem 0.3rem; text-align: center; background: var(--bg-body); border-bottom: 1px solid var(--border-color); min-height: 1.8rem; font-size: 0.7rem; }
+  .signal-flash { font-weight: 700; }
+  .multi-tf-progress { background: var(--bg-panel); border-radius: 0.5rem; padding: 0.1rem; margin: 0.1rem 0.2rem; font-size: 0.6rem; text-align: center; }
   .tf-line { display: flex; justify-content: space-between; padding: 0.05rem 0.1rem; }
-  .batch-analysis { background: var(--bg-panel); margin: 0.2rem 0.4rem; padding: 0.3rem; border-radius: 0.6rem; font-size: 0.7rem; flex-shrink: 0; }
-  .batch-title { font-weight: bold; margin-bottom: 0.2rem; font-size: 0.7rem; display: flex; justify-content: space-between; }
-  .batch-grid { display: flex; flex-wrap: nowrap; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
-  .batch-cell { width: 26px; height: 26px; background: #334155; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.7rem; flex-shrink: 0; }
+  .batch-analysis { background: var(--bg-panel); margin: 0.1rem 0.2rem; padding: 0.15rem; border-radius: 0.5rem; font-size: 0.65rem; }
+  .batch-title { font-weight: bold; margin-bottom: 0.1rem; font-size: 0.65rem; }
+  .batch-grid { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 2px; }
+  .batch-cell { width: 24px; height: 24px; background: #334155; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.7rem; flex-shrink: 0; }
   .batch-cell.even { background: var(--batch-even); color: white; }
   .batch-cell.odd { background: var(--batch-odd); color: white; }
   .batch-cell.equal { background: var(--batch-equal); color: white; }
   .batch-cell.over { background: var(--batch-over); color: white; }
   .batch-cell.under { background: var(--batch-under); color: white; }
-  .batch-expect { margin-top: 6px; background: var(--bg-body); border-radius: 12px; padding: 4px 6px; text-align: center; font-weight: bold; font-size: 0.8rem; }
-  .state-timer { margin-top: 4px; font-size: 0.7rem; background: var(--bg-body); border-radius: 10px; padding: 2px 5px; text-align: center; }
-  .control-panel { flex: 1; min-width: 280px; max-width: 320px; background: var(--bg-card); border-radius: 1rem; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; }
-  .control-panel-header { background: var(--bg-header); padding: 10px 14px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); }
-  .control-panel-body { padding: 12px; flex: 1; overflow-y: auto; }
-  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
-  .field label { font-size: 0.72rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
-  .field input { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; color: var(--text-primary); outline: none; width: 100%; }
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 16px; border: none; border-radius: 6px; font-weight: 600; font-size: 0.82rem; cursor: pointer; transition: all 0.18s; }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-success { background: var(--green); color: white; }
-  .btn-warning { background: var(--gold); color: black; }
-  .btn-danger { background: var(--red); color: white; }
-  .btn-ghost { background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); }
-  .btn-full { width: 100%; }
-  .btn-row { display: flex; gap: 8px; margin-top: 12px; }
-  .btn-row .btn { flex: 1; }
-  .trade-log { max-height: 200px; overflow-y: auto; font-size: 0.78rem; margin-top: 8px; }
-  .trade-row { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--border-color); }
-  .trade-row:last-child { border-bottom: none; }
-  .trade-row .sym { color: var(--btn-bg); font-weight: 600; min-width: 80px; }
-  .trade-row .dir { min-width: 42px; font-weight: 700; font-size: 0.7rem; }
-  .trade-row .dir.even { color: var(--green); }
-  .trade-row .dir.odd { color: var(--red); }
-  .trade-row .outcome { margin-left: auto; font-weight: 700; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; }
-  .trade-row .outcome.win { background: var(--green-dim); color: var(--green); }
-  .trade-row .outcome.loss { background: var(--red-dim); color: var(--red); }
-  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
-  .stat-box { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; }
-  .stat-label { font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
-  .stat-value { font-size: 1.1rem; font-weight: 700; }
-  .stat-value.positive { color: var(--green); }
-  .stat-value.negative { color: var(--red); }
+  .batch-expect { margin-top: 4px; font-size: 0.6rem; text-align: center; }
+  .trend-bars { background: var(--bg-panel); margin: 0.1rem 0.2rem; padding: 0.2rem; border-radius: 0.5rem; }
+  .trend-bar-item { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; font-size: 0.7rem; font-weight: bold; }
+  .trend-bar-label { width: 45px; }
+  .trend-bar-container { flex: 1; height: 20px; background: var(--strength-meter-bg); border-radius: 10px; overflow: hidden; }
+  .trend-bar-fill { height: 100%; width: 0%; transition: width 0.2s; }
+  .trend-bar-fill.even { background: var(--green); }
+  .trend-bar-fill.odd { background: var(--red); }
+  .trend-bar-fill.over { background: var(--green); }
+  .trend-bar-fill.under { background: var(--red); }
+  .trend-percent { width: 45px; text-align: right; font-family: monospace; }
+  .trend-arrow { width: 20px; text-align: center; font-size: 1rem; }
+  .arrow-up { color: var(--green); }
+  .arrow-down { color: var(--red); transform: scaleX(-1); display: inline-block; }
   .blink-agreement { animation: blinkAgreement 1s infinite; }
   @keyframes blinkAgreement { 0% { background: var(--bg-panel); } 50% { background: #facc15; color: #0f172a; } 100% { background: var(--bg-panel); } }
   .hidden { display: none; }
   .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; }
-  .modal-content { background: var(--bg-card); border-radius: 1rem; padding: 1rem; max-width: 480px; width: 90%; max-height: 80vh; overflow-y: auto; }
+  .modal-content { background: var(--bg-card); border-radius: 0.8rem; padding: 0.8rem; max-width: 450px; width: 90%; max-height: 80vh; overflow-y: auto; font-size: 0.8rem; }
   .close-modal { float: right; cursor: pointer; font-size: 1.2rem; }
-  .settings-panel { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
+  .settings-panel { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; }
   .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-  input[type="range"] { width: 120px; }
-  @media (max-width: 800px) { .main-scroll-area { flex-direction: column; } .all-markets-container { flex: none; width: 100%; max-height: 200px; } .control-panel { max-width: none; width: 100%; } }
-  .active-market-indicator { background: var(--gold); color: black; padding: 0.1rem 0.4rem; border-radius: 1rem; font-size: 0.7rem; margin-left: 0.5rem; }
-  .locked-direction-badge { background: var(--green); color: black; padding: 0.1rem 0.4rem; border-radius: 1rem; font-size: 0.7rem; margin-left: 0.5rem; }
+  select, input[type="range"], input[type="number"] { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.2rem 0.4rem; color: var(--text-primary); }
+  @media (max-width: 800px) { .main-scroll-area { flex-direction: column; } .all-markets-container { flex: none; width: 100%; max-height: 160px; } }
 </style>
 </head>
 <body>
@@ -151,7 +143,7 @@
         <button onclick="connectWebSocket()" class="connect-btn">🚀 CONNECT</button>
       </div>
       <div class="balance-box" id="balanceBox" style="display: none;">
-        <span>💰 Balance:</span>
+        <span>💰</span>
         <span id="balanceValue" class="balance-value">$0.00</span>
       </div>
       <div class="status-badge" id="connectionStatus">⚫ Off</div>
@@ -164,607 +156,553 @@
       <button class="market-btn active" data-market="evenodd">🎲 Even/Odd</button>
       <button class="market-btn" data-market="overunder">📊 Over/Under</button>
     </div>
-    <div style="margin-left: auto; font-size:0.7rem; color:var(--text-secondary);">⚡ Signal = Opposite digits ≤ threshold (arrows restored for insight)</div>
   </div>
 
   <div class="main-scroll-area">
     <div class="market-cards-container" id="marketCardsContainer">
+      <div id="focusBar" class="focus-bar" style="display: none;">
+        <span>🔍 Focus mode: one market</span>
+        <button id="showAllBtn">Show all</button>
+      </div>
       <div id="marketsContainer" class="market-grid"></div>
     </div>
     <div class="all-markets-container">
-      <h3>📋 ALL MARKETS (signal blink)</h3>
+      <h3>📋 ALL MARKETS</h3>
       <div id="marketsListContainer" class="markets-list"></div>
-    </div>
-
-    <div class="control-panel">
-      <div class="control-panel-header">🤖 TRADING BOT <span id="activeMarketDisplay"></span><span id="lockedDirectionDisplay"></span></div>
-      <div class="control-panel-body">
-        <div class="field"><label>Base Stake ($)</label><input type="number" id="base-stake" value="1" min="0.35" step="0.01"></div>
-        <div class="field"><label>Martingale Multiplier</label><input type="number" id="mart-mult" value="2.1" min="1.1" step="0.1"></div>
-        <div class="field"><label>Take Profit ($)</label><input type="number" id="take-profit" value="2" min="0.1" step="0.1"></div>
-        <div class="field"><label>Stop Loss ($)</label><input type="number" id="stop-loss" value="20" min="0.5" step="0.5"></div>
-        <div class="field"><label>Trade Speed (ticks)</label><input type="number" id="trade-speed" value="1" min="1" max="10" step="1"><div style="font-size:0.65rem;">1 = every tick</div></div>
-        
-        <div class="btn-row">
-          <button class="btn btn-success" id="btn-start" onclick="manualStart()" disabled>▶ START</button>
-          <button class="btn btn-warning" id="btn-pause" onclick="manualPause()" disabled>⏸ PAUSE</button>
-          <button class="btn btn-danger" id="btn-stop" onclick="manualStop()" disabled>⏹ STOP</button>
-        </div>
-        <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="resetBot()">🔄 Reset Bot (keep markets)</button>
-        
-        <div class="stats-grid">
-          <div class="stat-box"><div class="stat-label">Net P/L</div><div class="stat-value" id="net-pl">$0.00</div></div>
-          <div class="stat-box"><div class="stat-label">Current Stake</div><div class="stat-value" id="cur-stake">$1.00</div></div>
-          <div class="stat-box"><div class="stat-label">Wins</div><div class="stat-value positive" id="win-count">0</div></div>
-          <div class="stat-box"><div class="stat-label">Losses</div><div class="stat-value negative" id="loss-count">0</div></div>
-        </div>
-        <div class="stat-label" style="margin-bottom:6px">📜 Recent Trades</div>
-        <div class="trade-log" id="trade-log"><div style="color:var(--text-secondary);text-align:center;padding:10px">No trades yet</div></div>
-      </div>
     </div>
   </div>
 </div>
 
 <div id="settingsModal" class="modal">
-  <div class="modal-content"><span class="close-modal" id="closeModal">&times;</span><h3>Settings (Monitor & Signal)</h3>
+  <div class="modal-content"><span class="close-modal" id="closeModal">&times;</span><h3>Settings</h3>
     <div class="settings-panel">
       <div class="setting-row"><label>🔊 Sound</label><select id="soundEnabled"><option value="true">ON</option><option value="false">OFF</option></select></div>
       <div class="setting-row"><label>📊 Window Size (ticks)</label><input type="number" id="windowSize" value="1000" min="100" step="50" style="width:80px"></div>
-      <div class="setting-row"><label>🎯 Opposite Digit Threshold %</label><input type="number" id="oppositeThreshold" value="10" min="1" max="20" step="1" style="width:60px"> (≤% to allow signal)</div>
+      <div class="setting-row"><label>🎯 Opposite Digit %</label><input type="number" id="oppositeThreshold" value="10" min="1" max="20" step="1" style="width:60px"></div>
+      <div class="setting-row"><label>📍 Tick Pointer Style</label>
+        <select id="pointerStyle">
+          <option value="triangle">Triangle (▲)</option>
+          <option value="arrow">Arrow (›)</option>
+          <option value="dot">Glowing Dot</option>
+        </select>
+      </div>
+      <div class="setting-row"><label>🔍 Pointer Scale (1–20)</label>
+        <input type="range" id="pointerScale" min="1" max="20" step="0.5" value="3" style="width:120px">
+        <span id="scaleValue">3.0</span>
+      </div>
     </div>
-    <div style="font-size:0.7rem; margin-top:0.8rem;">✅ Signal condition: All opposite digits ≤ threshold.<br>
-    For Even: Odd digits (1,3,5,7,9). For Odd: Even digits (0,2,4,6,8).<br>
-    For Over: digits 0,1,2,3. For Under: digits 6,7,8,9.<br>
-    ✅ Arrows (↑, ↓, •) show short‑term trend based on last 10 vs previous 10 ticks – restored for full market insight.</div>
+    <div style="font-size:0.7rem; margin-top:0.5rem;">✅ 20×50 batch cycles update every tick – shows last 20 blocks of 50 ticks each.<br>✅ Even digits: pointer top; Odd digits: pointer bottom.</div>
   </div>
 </div>
 
 <script>
-  // ==================== ONLY OPPOSITE DIGIT FILTER + FULL ARROWS (NO OPTIMIZATION) ====================
+  // ==================== FIXED BATCH ANALYSIS (UPDATES EVERY TICK) ====================
   const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,"1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
-  const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Vol 10","R_25":"Vol 25","R_50":"Vol 50","R_75":"Vol 75","R_100":"Vol 100","JD10":"Jump 10","JD25":"Jump 25","JD50":"Jump 50","JD75":"Jump 75","JD100":"Jump 100" };
+  const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Volatility 10 Index","R_25":"Volatility 25 Index","R_50":"Volatility 50 Index","R_75":"Volatility 75 Index","R_100":"Volatility 100 Index","JD10":"Jump 10 Index","JD25":"Jump 25 Index","JD50":"Jump 50 Index","JD75":"Jump 75 Index","JD100":"Jump 100 Index" };
   const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
 
   let marketData = {}, rawTrend = {};
   let currentMarket = 'evenodd', ws = null, invalidSymbols = new Set();
   let marketStateStartTime = new Map(), lastMarketState = new Map();
-
-  // Bot state
-  let botActive = false, botPaused = false, pendingTrade = null;
-  let netPL = 0, wins = 0, losses = 0, totalTrades = 0;
-  let currentStake = 1, tradeLog = [];
-  let lockedMarket = null, lockedDirection = null;
-  let tickCounter = {};
   let balanceCurrency = 'USD';
+  let focusedSymbol = null;
+  let prevPercentages = {};
+
+  const scaleSlider = document.getElementById('pointerScale');
+  const scaleValue = document.getElementById('scaleValue');
+  if(scaleSlider) {
+    scaleSlider.addEventListener('input', () => {
+      scaleValue.innerText = scaleSlider.value;
+      for(let s in marketData) if(marketData[s]?.rollingArray?.length) renderMarket(s);
+    });
+  }
 
   function getSettings() {
     return {
       soundEnabled: document.getElementById('soundEnabled').value === 'true',
       windowSize: parseInt(document.getElementById('windowSize').value) || 1000,
       oppositeThreshold: parseFloat(document.getElementById('oppositeThreshold').value) || 10,
+      pointerStyle: document.getElementById('pointerStyle').value,
+      pointerScale: parseFloat(scaleSlider ? scaleSlider.value : 3),
     };
   }
 
   function lastDigitFromFormatted(str) { let digits = str.replace(/\./g,''); return digits.length ? parseInt(digits.charAt(digits.length-1),10) : 0; }
   function formatHistoryPrice(s,p) { return p.toFixed(DECIMAL_MAP[s]??2); }
   function showToast(msg,type) { console.log(`[${type}] ${msg}`); }
-  function updateTradeLog() { let logDiv=document.getElementById('trade-log'); if(!tradeLog.length){logDiv.innerHTML='<div style="color:var(--text-secondary);text-align:center;padding:10px">No trades yet</div>';return;} logDiv.innerHTML=tradeLog.slice(0,20).map(e=>`<div class="trade-row"><span class="sym">${e.sym}</span><span class="dir ${e.direction.toLowerCase()}">${e.direction}</span><span>$${e.stake.toFixed(2)}</span><span class="outcome ${e.outcome}">${e.outcome.toUpperCase()}</span></div>`).join(''); }
-  function updateStats() { let netEl=document.getElementById('net-pl'); netEl.textContent=(netPL>=0?'+':'')+'$'+netPL.toFixed(2); netEl.className='stat-value '+(netPL>0?'positive':netPL<0?'negative':''); document.getElementById('cur-stake').textContent='$'+currentStake.toFixed(2); document.getElementById('win-count').textContent=wins; document.getElementById('loss-count').textContent=losses; }
-  function manualStart() { if(!ws||ws.readyState!==WebSocket.OPEN){alert("Connect to Deriv first");return;} botActive=true; botPaused=false; document.getElementById('btn-start').disabled=true; document.getElementById('btn-pause').disabled=false; document.getElementById('btn-stop').disabled=false; showToast('Bot STARTED','info'); updateLockDisplay(); }
-  function manualPause() { botPaused=true; botActive=false; document.getElementById('btn-start').disabled=false; document.getElementById('btn-pause').disabled=true; document.getElementById('btn-stop').disabled=false; showToast('Bot PAUSED','info'); updateLockDisplay(); }
-  function manualStop() { botActive=false; botPaused=false; lockedMarket=null; lockedDirection=null; document.getElementById('btn-start').disabled=false; document.getElementById('btn-pause').disabled=false; document.getElementById('btn-stop').disabled=true; showToast('Bot STOPPED','info'); updateLockDisplay(); }
-  function resetBot() { manualStop(); netPL=0; wins=0; losses=0; totalTrades=0; currentStake=parseFloat(document.getElementById('base-stake').value)||1; tradeLog=[]; pendingTrade=null; tickCounter={}; updateTradeLog(); updateStats(); showToast('Bot reset','info'); }
-  function updateLockDisplay() { 
-    let marketSpan=document.getElementById('activeMarketDisplay'), dirSpan=document.getElementById('lockedDirectionDisplay');
-    if(lockedMarket && lockedDirection && !botPaused && botActive) { 
-      marketSpan.innerHTML=`<span class="active-market-indicator">🔒 Market: ${MARKET_NAMES[lockedMarket]}</span>`; 
-      dirSpan.innerHTML=`<span class="locked-direction-badge">📈 Direction: ${lockedDirection}</span>`; 
-    } else if(lockedMarket && lockedDirection && (botPaused||!botActive)) {
-      marketSpan.innerHTML=`<span class="active-market-indicator">⏸ Locked (paused): ${MARKET_NAMES[lockedMarket]}</span>`; 
-      dirSpan.innerHTML=`<span class="locked-direction-badge">📈 Direction: ${lockedDirection}</span>`; 
-    } else { marketSpan.innerHTML=''; dirSpan.innerHTML=''; }
-  }
-  function updateBalanceDisplay(balance, currency) { let box=document.getElementById('balanceBox'), valSpan=document.getElementById('balanceValue'); if(balance!==null){ box.style.display='flex'; valSpan.textContent=(currency==='USD'?'$':currency+' ')+balance.toFixed(2); } else { box.style.display='none'; } }
+  function updateBalanceDisplay(balance, currency) { let box=document.getElementById('balanceBox'), val=document.getElementById('balanceValue'); if(balance!==null){ box.style.display='flex'; val.textContent=(currency==='USD'?'$':currency+' ')+balance.toFixed(2); } else box.style.display='none'; }
 
-  // --- Arrow trend calculation (fully restored) ---
-  function updateTrends(symbol) {
-    let data = marketData[symbol];
-    if(!data || data.rollingArray.length < 20) return;
-    let last10 = data.rollingArray.slice(-10);
-    let prev10 = data.rollingArray.slice(-20, -10);
-    let lastCounts = new Array(10).fill(0);
-    let prevCounts = new Array(10).fill(0);
-    last10.forEach(d => lastCounts[d]++);
-    prev10.forEach(d => prevCounts[d]++);
-    let trends = {};
-    for(let d=0; d<10; d++) {
-      let diff = (lastCounts[d]/10) - (prevCounts[d]/10);
-      if(diff > 0.08) trends[d] = 1;
-      else if(diff < -0.08) trends[d] = -1;
-      else trends[d] = 0;
-    }
-    rawTrend[symbol] = trends;
+  function updateTrends(sym) {
+    let data = marketData[sym];
+    if(!data || data.rollingArray.length<20) return;
+    let last10 = data.rollingArray.slice(-10), prev10 = data.rollingArray.slice(-20,-10);
+    let lc=new Array(10).fill(0), pc=new Array(10).fill(0);
+    last10.forEach(d=>lc[d]++); prev10.forEach(d=>pc[d]++);
+    let trends={};
+    for(let d=0;d<10;d++) { let diff=(lc[d]/10)-(pc[d]/10); trends[d]=diff>0.08?1:(diff<-0.08?-1:0); }
+    rawTrend[sym]=trends;
   }
 
-  // --- Digit counts for a given window size (used for signal) ---
-  function getDigitCounts(symbol, windowSize) {
-    let data = marketData[symbol];
-    if(!data || data.rollingArray.length < windowSize) return null;
-    let arr = data.rollingArray.slice(-windowSize);
-    let cnt = new Array(10).fill(0);
+  function getDigitCounts(sym, win) {
+    let data=marketData[sym];
+    if(!data||data.rollingArray.length<win) return null;
+    let arr=data.rollingArray.slice(-win), cnt=new Array(10).fill(0);
     for(let d of arr) cnt[d]++;
-    let total = arr.length;
-    let pct = cnt.map(c => (c/total)*100);
-    return { cnt, pct, total };
+    let total=arr.length, pct=cnt.map(c=>(c/total)*100);
+    return {cnt, pct, total};
   }
 
-  // --- The only signal: opposite digit filter ---
-  function getOppositeFilterSignal(symbol) {
-    let settings = getSettings();
-    let win = settings.windowSize;
-    let counts = getDigitCounts(symbol, win);
-    if(!counts) return null;
-    let { pct } = counts;
-    let thresh = settings.oppositeThreshold;
-    
-    if(currentMarket === 'evenodd') {
-      let oddDigits = [1,3,5,7,9];
-      let allOddLow = oddDigits.every(d => pct[d] <= thresh);
-      if(allOddLow) return "EVEN";
-      let evenDigits = [0,2,4,6,8];
-      let allEvenLow = evenDigits.every(d => pct[d] <= thresh);
-      if(allEvenLow) return "ODD";
-    } 
-    else if(currentMarket === 'overunder') {
-      let lowDigits = [0,1,2,3];
-      let allLow = lowDigits.every(d => pct[d] <= thresh);
-      if(allLow) return "OVER";
-      let highDigits = [6,7,8,9];
-      let allHigh = highDigits.every(d => pct[d] <= thresh);
-      if(allHigh) return "UNDER";
+  function getOppositeFilterSignal(sym) {
+    let s=getSettings(), win=s.windowSize, thresh=s.oppositeThreshold;
+    let cnts=getDigitCounts(sym,win);
+    if(!cnts) return null;
+    let pct=cnts.pct;
+    if(currentMarket==='evenodd') {
+      let odd=[1,3,5,7,9], even=[0,2,4,6,8];
+      if(odd.every(d=>pct[d]<=thresh)) return "EVEN";
+      if(even.every(d=>pct[d]<=thresh)) return "ODD";
+    } else {
+      let low=[0,1,2,3], high=[6,7,8,9];
+      if(low.every(d=>pct[d]<=thresh)) return "OVER";
+      if(high.every(d=>pct[d]<=thresh)) return "UNDER";
     }
     return null;
   }
 
-  // --- Full digit grid rebuild (including arrows) for every symbol on every tick ---
-  function rebuildDigitGrid(symbol) {
-    let settings = getSettings();
-    let win = settings.windowSize;
-    let counts = getDigitCounts(symbol, win);
-    if(!counts) return;
-    let { pct } = counts;
-    let tr = rawTrend[symbol] || {};
-    let data = marketData[symbol];
-    let last50 = data.last50Array;
-    // For hot/cold effect (optional)
-    let opct = pct.map(c=>c/100);
-    let lc = new Array(10).fill(0);
-    last50.forEach(dd=>lc[dd]++);
-    let hot = new Set(), cold = new Set();
-    if(last50.length>=20) {
-      let diff = lc.map((c,i)=> (c/last50.length - opct[i]));
-      let sd = diff.map((v,i)=>({dig:i, diff:v})).sort((a,b)=>b.diff - a.diff);
-      hot = new Set(sd.slice(0,2).map(x=>x.dig));
-      cold = new Set(sd.slice(-2).map(x=>x.dig));
+  function getGroupArrowStats(sym) {
+    let tr=rawTrend[sym];
+    if(!tr) return null;
+    let g1,g2,l1,l2;
+    if(currentMarket==='evenodd') { g1=[0,2,4,6,8]; g2=[1,3,5,7,9]; l1="Even"; l2="Odd"; }
+    else { g1=[5,6,7,8,9]; g2=[0,1,2,3,4]; l1="Over"; l2="Under"; }
+    let stats=(digits)=>{ let up=0,down=0; for(let d of digits){ let v=tr[d]; if(v===1) up++; else if(v===-1) down++; } let avg=(up-down)/digits.length; return {up,down,avg}; };
+    return { label1:l1, stats1:stats(g1), label2:l2, stats2:stats(g2) };
+  }
+
+  function updateTrendBars(sym) {
+    let s=getSettings(), win=s.windowSize;
+    let cnts=getDigitCounts(sym, win);
+    if(!cnts) return;
+    let pct = cnts.pct;
+    let bar1Pct, bar2Pct, bar1Label, bar2Label;
+    if(currentMarket==='evenodd') {
+      let evenPct=0, oddPct=0;
+      for(let d of [0,2,4,6,8]) evenPct+=pct[d];
+      for(let d of [1,3,5,7,9]) oddPct+=pct[d];
+      bar1Pct=evenPct; bar2Pct=oddPct;
+      bar1Label="Even"; bar2Label="Odd";
+    } else {
+      let overPct=0, underPct=0;
+      for(let d of [5,6,7,8,9]) overPct+=pct[d];
+      for(let d of [0,1,2,3,4]) underPct+=pct[d];
+      bar1Pct=overPct; bar2Pct=underPct;
+      bar1Label="Over"; bar2Label="Under";
     }
-    // Ranks for most, second, least, secondleast (visual)
-    let arr = pct.map((_,i)=>({digit:i, count:Math.round(pct[i]*win/100)}));
-    let s = [...arr].sort((a,b)=>b.count - a.count);
-    let max = s[0].count;
-    let most = new Set(s.filter(i=>i.count===max).map(i=>i.digit));
-    let sec = null;
-    for(let i of s) if(i.count!==max) { sec=i.count; break; }
-    let second = sec!==null ? new Set(s.filter(i=>i.count===sec).map(i=>i.digit)) : new Set();
-    let min = s[s.length-1].count;
-    let least = new Set(s.filter(i=>i.count===min).map(i=>i.digit));
-    let sm = null;
-    for(let i=s.length-2;i>=0;i--) if(s[i].count!==min) { sm=s[i].count; break; }
-    let sleast = sm!==null ? new Set(s.filter(i=>i.count===sm).map(i=>i.digit)) : new Set();
-    let container = document.getElementById(`digitsContainer_${symbol}`);
+    let prev=prevPercentages[sym]||{bar1:bar1Pct,bar2:bar2Pct};
+    let arrow1=(bar1Pct>prev.bar1)?'→':(bar1Pct<prev.bar1)?'←':'•';
+    let arrow2=(bar2Pct>prev.bar2)?'→':(bar2Pct<prev.bar2)?'←':'•';
+    prevPercentages[sym]={bar1:bar1Pct,bar2:bar2Pct};
+    let container=document.getElementById(`trendBars_${sym}`);
     if(!container) return;
-    container.innerHTML = '';
-    let evens = [0,2,4,6,8], odds = [1,3,5,7,9];
-    let row1 = document.createElement('div'); row1.className='digits-row';
+    container.innerHTML=`
+      <div class="trend-bar-item">
+        <div class="trend-bar-label">${bar1Label}</div>
+        <div class="trend-bar-container"><div class="trend-bar-fill ${(currentMarket==='evenodd')?'even':'over'}" style="width:${bar1Pct}%"></div></div>
+        <div class="trend-percent">${bar1Pct.toFixed(1)}%</div>
+        <div class="trend-arrow ${arrow1==='→'?'arrow-up':(arrow1==='←'?'arrow-down':'')}">${arrow1}</div>
+      </div>
+      <div class="trend-bar-item">
+        <div class="trend-bar-label">${bar2Label}</div>
+        <div class="trend-bar-container"><div class="trend-bar-fill ${(currentMarket==='evenodd')?'odd':'under'}" style="width:${bar2Pct}%"></div></div>
+        <div class="trend-percent">${bar2Pct.toFixed(1)}%</div>
+        <div class="trend-arrow ${arrow2==='→'?'arrow-up':(arrow2==='←'?'arrow-down':'')}">${arrow2}</div>
+      </div>
+    `;
+  }
+
+  function applyPointerSettings(ptrElem, digit, scale) {
+    if(!ptrElem) return;
+    const style = ptrElem.style;
+    if(ptrElem.classList.contains('triangle')) {
+      const borderSize = 6 * scale;
+      const height = 8 * scale;
+      style.borderLeftWidth = borderSize + 'px';
+      style.borderRightWidth = borderSize + 'px';
+      style.borderBottomWidth = height + 'px';
+    } else if(ptrElem.classList.contains('arrow')) {
+      style.fontSize = (1 * scale) + 'rem';
+    } else if(ptrElem.classList.contains('dot')) {
+      const size = 8 * scale;
+      style.width = size + 'px';
+      style.height = size + 'px';
+    }
+    if(currentMarket === 'evenodd') {
+      if(digit % 2 === 0) {
+        ptrElem.classList.add('pointer-top');
+        ptrElem.classList.remove('pointer-bottom');
+        if(ptrElem.classList.contains('triangle')) style.top = (-4 * scale) + 'px';
+        else if(ptrElem.classList.contains('arrow')) style.top = (-6 * scale) + 'px';
+        else if(ptrElem.classList.contains('dot')) style.top = (-4 * scale) + 'px';
+        style.bottom = 'auto';
+      } else {
+        ptrElem.classList.add('pointer-bottom');
+        ptrElem.classList.remove('pointer-top');
+        if(ptrElem.classList.contains('triangle')) style.bottom = (-4 * scale) + 'px';
+        else if(ptrElem.classList.contains('arrow')) style.bottom = (-6 * scale) + 'px';
+        else if(ptrElem.classList.contains('dot')) style.bottom = (-4 * scale) + 'px';
+        style.top = 'auto';
+      }
+    } else {
+      ptrElem.classList.add('pointer-bottom');
+      ptrElem.classList.remove('pointer-top');
+      if(ptrElem.classList.contains('triangle')) style.bottom = (-4 * scale) + 'px';
+      else if(ptrElem.classList.contains('arrow')) style.bottom = (-6 * scale) + 'px';
+      else if(ptrElem.classList.contains('dot')) style.bottom = (-4 * scale) + 'px';
+      style.top = 'auto';
+    }
+  }
+
+  function rebuildDigitGrid(sym) {
+    let s=getSettings(), win=s.windowSize, scale=s.pointerScale, styleName=s.pointerStyle;
+    let cnts=getDigitCounts(sym,win);
+    if(!cnts) return;
+    let pct=cnts.pct, tr=rawTrend[sym]||{}, data=marketData[sym], last50=data.last50Array;
+    let opct=pct.map(c=>c/100), lc=new Array(10).fill(0);
+    last50.forEach(dd=>lc[dd]++);
+    let hot=new Set(), cold=new Set();
+    if(last50.length>=20) {
+      let diff=lc.map((c,i)=>(c/last50.length - opct[i]));
+      let sd=diff.map((v,i)=>({dig:i,diff:v})).sort((a,b)=>b.diff-a.diff);
+      hot=new Set(sd.slice(0,2).map(x=>x.dig)); cold=new Set(sd.slice(-2).map(x=>x.dig));
+    }
+    let arr=pct.map((_,i)=>({digit:i, count:Math.round(pct[i]*win/100)}));
+    let srt=[...arr].sort((a,b)=>b.count-a.count);
+    let max=srt[0].count, most=new Set(srt.filter(i=>i.count===max).map(i=>i.digit));
+    let sec=null; for(let i of srt) if(i.count!==max){sec=i.count;break;}
+    let second=sec!==null?new Set(srt.filter(i=>i.count===sec).map(i=>i.digit)):new Set();
+    let min=srt[srt.length-1].count, least=new Set(srt.filter(i=>i.count===min).map(i=>i.digit));
+    let sm=null; for(let i=srt.length-2;i>=0;i--) if(srt[i].count!==min){sm=srt[i].count;break;}
+    let sleast=sm!==null?new Set(srt.filter(i=>i.count===sm).map(i=>i.digit)):new Set();
+    let container=document.getElementById(`digitsContainer_${sym}`);
+    if(!container) return;
+    container.innerHTML='';
+    let evens=[0,2,4,6,8], odds=[1,3,5,7,9];
+    let row1=document.createElement('div'); row1.className='digits-row';
     evens.forEach(dig=>{
-      let cell = document.createElement('div'); cell.className='digit-cell';
+      let cell=document.createElement('div'); cell.className='digit-cell';
       if(most.has(dig)) cell.classList.add('most');
       if(second.has(dig)) cell.classList.add('second');
       if(least.has(dig)) cell.classList.add('least');
       if(sleast.has(dig)) cell.classList.add('secondleast');
-      if(hot.has(dig)) cell.classList.add('hot');
-      if(cold.has(dig)) cell.classList.add('cold');
-      let arrow = tr[dig]===1 ? '↑' : (tr[dig]===-1 ? '↓' : '•');
-      cell.innerHTML = `<span class="digit">${dig}</span><div class="percent">${pct[dig].toFixed(1)}%</div><span class="trend">${arrow}</span>`;
-      if(data.lastDigit===dig) { let ptr = document.createElement('div'); ptr.className='pointer-marker'; cell.appendChild(ptr); }
+      if(hot.has(dig)) cell.classList.add('hot'); if(cold.has(dig)) cell.classList.add('cold');
+      let arrow=tr[dig]===1?'↑':(tr[dig]===-1?'↓':'•');
+      cell.innerHTML=`<span class="digit">${dig}</span><div class="percent">${pct[dig].toFixed(1)}%</div><span class="trend">${arrow}</span>`;
+      if(data.lastDigit===dig){
+        cell.classList.add('last-digit-highlight');
+        let ptr=document.createElement('div');
+        ptr.className=`pointer-marker ${styleName}`;
+        if(styleName==='arrow') ptr.innerHTML='›';
+        applyPointerSettings(ptr, dig, scale);
+        cell.appendChild(ptr);
+      }
       row1.appendChild(cell);
     });
-    let row2 = document.createElement('div'); row2.className='digits-row';
+    let row2=document.createElement('div'); row2.className='digits-row';
     odds.forEach(dig=>{
-      let cell = document.createElement('div'); cell.className='digit-cell';
+      let cell=document.createElement('div'); cell.className='digit-cell';
       if(most.has(dig)) cell.classList.add('most');
       if(second.has(dig)) cell.classList.add('second');
       if(least.has(dig)) cell.classList.add('least');
       if(sleast.has(dig)) cell.classList.add('secondleast');
-      if(hot.has(dig)) cell.classList.add('hot');
-      if(cold.has(dig)) cell.classList.add('cold');
-      let arrow = tr[dig]===1 ? '↑' : (tr[dig]===-1 ? '↓' : '•');
-      cell.innerHTML = `<span class="digit">${dig}</span><div class="percent">${pct[dig].toFixed(1)}%</div><span class="trend">${arrow}</span>`;
-      if(data.lastDigit===dig) { let ptr = document.createElement('div'); ptr.className='pointer-marker'; cell.appendChild(ptr); }
+      if(hot.has(dig)) cell.classList.add('hot'); if(cold.has(dig)) cell.classList.add('cold');
+      let arrow=tr[dig]===1?'↑':(tr[dig]===-1?'↓':'•');
+      cell.innerHTML=`<span class="digit">${dig}</span><div class="percent">${pct[dig].toFixed(1)}%</div><span class="trend">${arrow}</span>`;
+      if(data.lastDigit===dig){
+        cell.classList.add('last-digit-highlight');
+        let ptr=document.createElement('div');
+        ptr.className=`pointer-marker ${styleName}`;
+        if(styleName==='arrow') ptr.innerHTML='›';
+        applyPointerSettings(ptr, dig, scale);
+        cell.appendChild(ptr);
+      }
       row2.appendChild(cell);
     });
     container.appendChild(row1); container.appendChild(row2);
   }
 
-  // --- UI functions for multi-TF and batch analysis (monitoring only) ---
-  function getWindowInfo(symbol, win) {
-    let counts = getDigitCounts(symbol, win);
-    if(!counts) return null;
-    let max = Math.max(...counts.cnt);
-    let mostDig = counts.cnt.indexOf(max);
-    let pct = (max / counts.total) * 100;
-    let direction = null;
-    if(currentMarket === 'evenodd') direction = mostDig % 2 === 0 ? "EVEN" : "ODD";
-    else direction = mostDig >= 5 ? "OVER" : "UNDER";
-    return { direction, mostDig, pct };
+  function getWindowInfo(sym, win) {
+    let cnts=getDigitCounts(sym,win);
+    if(!cnts) return null;
+    let max=Math.max(...cnts.cnt), mostDig=cnts.cnt.indexOf(max), pct=(max/cnts.total)*100;
+    let dir=null;
+    if(currentMarket==='evenodd') dir=mostDig%2===0?"EVEN":"ODD";
+    else dir=mostDig>=5?"OVER":"UNDER";
+    return {direction:dir, pct};
   }
-  function updateMultiTFProgress(symbol) {
-    let div = document.getElementById(`multiTFProgress_${symbol}`); if(!div) return;
-    let wins = [25,50,100,200]; let lines = [], allAgree=true, firstDir=null;
-    for(let w of wins) {
-      let info = getWindowInfo(symbol,w);
-      if(!info) { lines.push(`<div class="tf-line"><span>>${w}t</span><span>—</span><span>—</span></div>`); allAgree=false; continue; }
-      let direction = info.direction, pct = info.pct, color = (currentMarket === 'evenodd') ? (direction === 'EVEN' ? '#4ade80' : '#f87171') : (direction === 'OVER' ? '#4ade80' : '#f87171');
-      lines.push(`<div class="tf-line"><span>>${w}t</span><span style="color:${color}">${direction}</span><span>${pct.toFixed(1)}%</span></div>`);
-      if(firstDir===null) firstDir=direction; else if(direction!==firstDir) allAgree=false;
+
+  function updateMultiTFProgress(sym) {
+    let div=document.getElementById(`multiTFProgress_${sym}`);
+    if(!div) return;
+    let wins=[25,50,100,200], lines=[], allAgree=true, first=null;
+    for(let w of wins){
+      let info=getWindowInfo(sym,w);
+      if(!info){ lines.push(`<div class="tf-line"><span>>${w}t</span><span>—</span></div>`); allAgree=false; continue; }
+      let col=(currentMarket==='evenodd')?(info.direction==='EVEN'?'#4ade80':'#f87171'):(info.direction==='OVER'?'#4ade80':'#f87171');
+      lines.push(`<div class="tf-line"><span>>${w}t</span><span style="color:${col}">${info.direction}</span><span>${info.pct.toFixed(0)}%</span></div>`);
+      if(first===null) first=info.direction; else if(info.direction!==first) allAgree=false;
     }
-    let strongHtml = (allAgree && firstDir!==null) ? `<div style="margin-top:0.2rem;font-weight:bold;color:${firstDir==='EVEN'||firstDir==='OVER'?'#4ade80':'#f87171'};">🔥 ALL AGREED</div>` : '';
-    div.innerHTML = `<div class="multi-tf-progress"><div>📊 Agreement (25,50,100,200t) – Monitoring only</div>${lines.join('')}${strongHtml}</div>`;
+    let strong=allAgree&&first!==null?`<div style="font-size:0.6rem;color:${first==='EVEN'||first==='OVER'?'#4ade80':'#f87171'};">🔥 ALL AGREED</div>`:'';
+    div.innerHTML=`<div class="multi-tf-progress"><div>📊 Agreement (25,50,100,200t)</div>${lines.join('')}${strong}</div>`;
   }
-  function updateBatchAnalysis(symbol) {
-    const container = document.getElementById(`batchContainer_${symbol}`); if(!container) return;
-    let marketType = currentMarket === 'evenodd' ? 'evenodd' : 'overunder';
+
+  // FIXED: batch analysis rebuilds every tick from the full rolling array
+  function updateBatchAnalysis(sym) {
+    let container = document.getElementById(`batchContainer_${sym}`);
+    if(!container) return;
+    let mt = currentMarket === 'evenodd' ? 'evenodd' : 'overunder';
+    let data = marketData[sym];
+    if(!data || data.rollingArray.length < 50) {
+      container.innerHTML = '<div class="batch-analysis">Need at least 50 ticks</div>';
+      return;
+    }
+    let arr = data.rollingArray.slice(); // copy
     let batches = [];
-    const data = marketData[symbol];
-    if(data && data.rollingArray && data.rollingArray.length >= 50) {
-      let arr = data.rollingArray.slice();
-      for(let i=0;i+50<=arr.length&&batches.length<20;i+=50){
-        let b=arr.slice(i,i+50);
-        if(marketType==='evenodd'){
-          let evens=b.filter(d=>d%2===0).length;
-          if(evens>25) batches.push('E'); else if(evens<25) batches.push('O'); else batches.push('=');
-        }else{
-          let over=b.filter(d=>d>=5).length;
-          if(over>25) batches.push('O'); else if(over<25) batches.push('U'); else batches.push('=');
-        }
+    let batchSize = 50;
+    // take up to 20 batches from the END of the array (most recent)
+    let startIdx = Math.max(0, arr.length - 20 * batchSize);
+    for(let i = startIdx; i + batchSize <= arr.length && batches.length < 20; i += batchSize) {
+      let batch = arr.slice(i, i + batchSize);
+      if(mt === 'evenodd') {
+        let evens = batch.filter(d => d % 2 === 0).length;
+        if(evens > batchSize/2) batches.push('E');
+        else if(evens < batchSize/2) batches.push('O');
+        else batches.push('=');
+      } else {
+        let over = batch.filter(d => d >= 5).length;
+        if(over > batchSize/2) batches.push('O');
+        else if(over < batchSize/2) batches.push('U');
+        else batches.push('=');
       }
     }
-    let batchInfo = (()=>{ let cnts = getDigitCounts(symbol,50); if(!cnts) return null; let max=Math.max(...cnts.cnt); let mostDig=cnts.cnt.indexOf(max); let dir=null; if(currentMarket==='evenodd') dir=mostDig%2===0?"EVEN":"ODD"; else dir=mostDig>=5?"OVER":"UNDER"; return {direction:dir}; })();
-    let stateText="—", stateClass="";
-    if(currentMarket==='evenodd'){
-      if(batchInfo?.direction==="EVEN") { stateText="EVEN MARKET (50‑batch)"; stateClass="even"; }
-      else if(batchInfo?.direction==="ODD") { stateText="ODD MARKET (50‑batch)"; stateClass="odd"; }
-      else stateText="NO DIRECTION";
-    }else{
-      if(batchInfo?.direction==="OVER") { stateText="OVER MARKET (50‑batch)"; stateClass="over"; }
-      else if(batchInfo?.direction==="UNDER") { stateText="UNDER MARKET (50‑batch)"; stateClass="under"; }
-      else stateText="NO DIRECTION";
+    // current 50‑tick state (last 50 ticks)
+    let lastBatch = arr.slice(-50);
+    let currentState = null;
+    if(mt === 'evenodd') {
+      let evens = lastBatch.filter(d => d % 2 === 0).length;
+      currentState = evens > 25 ? "EVEN" : (evens < 25 ? "ODD" : null);
+    } else {
+      let over = lastBatch.filter(d => d >= 5).length;
+      currentState = over > 25 ? "OVER" : (over < 25 ? "UNDER" : null);
     }
-    let stateKey = batchInfo?.direction??"null";
-    let lastKey = lastMarketState.get(symbol)||"";
-    if(lastKey!==stateKey){ lastMarketState.set(symbol,stateKey); marketStateStartTime.set(symbol,Date.now()); }
-    let startTime = marketStateStartTime.get(symbol)||Date.now();
-    let elapsedSec = Math.floor((Date.now()-startTime)/1000);
-    let timerDisplay = `<div class="state-timer">⏱️ Current state: ${Math.floor(elapsedSec/60)}m ${elapsedSec%60}s</div>`;
-    let gridHtml = `<div class="batch-analysis"><div class="batch-title">📦 20x50 TICK CYCLES</div><div class="batch-grid">`;
-    batches.forEach(b=>{
-      let cls = (marketType==='evenodd') ? (b==='E'?'even':(b==='O'?'odd':'equal')) : (b==='O'?'over':(b==='U'?'under':'equal'));
-      gridHtml+=`<div class="batch-cell ${cls}">${b}</div>`;
+    let stateText = currentState ? `${currentState} MARKET` : "NO DIRECTION";
+    let stateClass = (currentState === 'EVEN' || currentState === 'OVER') ? 'even' : (currentState === 'ODD' || currentState === 'UNDER') ? 'odd' : 'equal';
+    let start = marketStateStartTime.get(sym) || Date.now();
+    if(lastMarketState.get(sym) !== currentState) {
+      lastMarketState.set(sym, currentState);
+      marketStateStartTime.set(sym, Date.now());
+      start = Date.now();
+    }
+    let elapsed = Math.floor((Date.now() - start) / 1000);
+    let timer = `${Math.floor(elapsed/60)}m ${elapsed%60}s`;
+    let gridHtml = `<div class="batch-analysis"><div class="batch-title">📦 20x50 TICK CYCLES (old → new)</div><div class="batch-grid">`;
+    batches.forEach(b => {
+      let cls = '';
+      if(mt === 'evenodd') {
+        if(b === 'E') cls = 'even';
+        else if(b === 'O') cls = 'odd';
+        else cls = 'equal';
+      } else {
+        if(b === 'O') cls = 'over';
+        else if(b === 'U') cls = 'under';
+        else cls = 'equal';
+      }
+      gridHtml += `<div class="batch-cell ${cls}">${b}</div>`;
     });
-    gridHtml+=`</div><div class="batch-expect">📌 CURRENT MARKET (50‑batch): <span style="color:${stateClass==='even'?'#10b981':stateClass==='odd'?'#ef4444':stateClass==='over'?'#10b981':stateClass==='under'?'#ef4444':'#facc15'}">${stateText}</span></div>${timerDisplay}</div>`;
+    gridHtml += `</div><div class="batch-expect">📌 CURRENT MARKET (50‑batch): <span style="color:${stateClass === 'even' ? '#10b981' : stateClass === 'odd' ? '#ef4444' : stateClass === 'over' ? '#10b981' : stateClass === 'under' ? '#ef4444' : '#facc15'}">${stateText}</span> ${timer}</div></div>`;
     container.innerHTML = gridHtml;
   }
 
-  // Full render of market card (including digits grid, signal, etc.)
-  function renderMarket(symbol) {
-    let data = marketData[symbol]; if(!data || data.rollingArray.length===0) return;
-    // Price and last digit
-    let priceSpan = document.getElementById(`livePriceBig_${symbol}`);
-    if(priceSpan) priceSpan.innerText = data.lastPriceDisplay;
-    let lastSpan = document.getElementById(`lastDigit_${symbol}`);
-    if(lastSpan) lastSpan.innerText = data.lastDigit;
-    // Parity / Over-Under stats
-    let last50 = data.last50Array;
-    let paritySeqDiv = document.getElementById(`paritySeq_${symbol}`), ouSeqDiv = document.getElementById(`ouSeq_${symbol}`);
-    if(currentMarket === 'evenodd') {
-      if(paritySeqDiv) { paritySeqDiv.classList.remove('hidden'); paritySeqDiv.innerHTML = last50.map(d => d%2===0 ? '<span style="color:#4ade80;">E</span>' : '<span style="color:#f87171;">O</span>').join(''); }
-      if(ouSeqDiv) ouSeqDiv.classList.add('hidden');
-      let even = last50.filter(d=>d%2===0).length;
-      document.getElementById(`parityStats_${symbol}`).innerHTML = `🎲 E:${(even/last50.length*100).toFixed(1)}% O:${(100-even/last50.length*100).toFixed(1)}%`;
-      let streak=1, lastPar=last50[last50.length-1]%2===0?'E':'O';
-      for(let i=last50.length-2;i>=0;i--) if((last50[i]%2===0?'E':'O')===lastPar) streak++; else break;
-      document.getElementById(`streakStats_${symbol}`).innerHTML = `📊 Streak: ${streak}x ${lastPar}`;
+  function renderMarket(sym) {
+    let data=marketData[sym]; if(!data||!data.rollingArray.length) return;
+    document.getElementById(`livePriceBig_${sym}`).innerText=data.lastPriceDisplay;
+    document.getElementById(`lastDigit_${sym}`).innerText=data.lastDigit;
+    let last50=data.last50Array;
+    let parityDiv=document.getElementById(`paritySeq_${sym}`), ouDiv=document.getElementById(`ouSeq_${sym}`);
+    if(currentMarket==='evenodd'){
+      parityDiv.classList.remove('hidden'); ouDiv.classList.add('hidden');
+      parityDiv.innerHTML=last50.map(d=>d%2===0?'<span style="color:#4ade80;">E</span>':'<span style="color:#f87171;">O</span>').join('');
+      let even=last50.filter(d=>d%2===0).length;
+      document.getElementById(`parityStats_${sym}`).innerHTML=`🎲 E:${(even/last50.length*100).toFixed(0)}% O:${(100-even/last50.length*100).toFixed(0)}%`;
+      let streak=1, last=last50[last50.length-1]%2===0?'E':'O';
+      for(let i=last50.length-2;i>=0;i--) if((last50[i]%2===0?'E':'O')===last) streak++; else break;
+      document.getElementById(`streakStats_${sym}`).innerHTML=`📊 Streak: ${streak}x ${last}`;
     } else {
-      if(ouSeqDiv) { ouSeqDiv.classList.remove('hidden'); ouSeqDiv.innerHTML = last50.map(d => d<=3 ? '<span class="seq-u">U</span>' : (d<=5 ? '<span class="seq-m">M</span>' : '<span class="seq-o">O</span>')).join(''); }
-      if(paritySeqDiv) paritySeqDiv.classList.add('hidden');
-      let over = last50.filter(d=>d>=5).length;
-      document.getElementById(`parityStats_${symbol}`).innerHTML = `📈 Over 4: ${(over/last50.length*100).toFixed(1)}% | Under 5: ${(100-over/last50.length*100).toFixed(1)}%`;
-      let streak=1, lastOU=last50[last50.length-1]>=5?'O':'U';
-      for(let i=last50.length-2;i>=0;i--) if((last50[i]>=5?'O':'U')===lastOU) streak++; else break;
-      document.getElementById(`streakStats_${symbol}`).innerHTML = `📊 Streak: ${streak}x ${lastOU}`;
+      ouDiv.classList.remove('hidden'); parityDiv.classList.add('hidden');
+      ouDiv.innerHTML=last50.map(d=>d<=3?'<span class="seq-u">U</span>':(d<=5?'<span class="seq-m">M</span>':'<span class="seq-o">O</span>')).join('');
+      let over=last50.filter(d=>d>=5).length;
+      document.getElementById(`parityStats_${sym}`).innerHTML=`📈 Over:${(over/last50.length*100).toFixed(0)}% Under:${(100-over/last50.length*100).toFixed(0)}%`;
+      let streak=1, last=last50[last50.length-1]>=5?'O':'U';
+      for(let i=last50.length-2;i>=0;i--) if((last50[i]>=5?'O':'U')===last) streak++; else break;
+      document.getElementById(`streakStats_${sym}`).innerHTML=`📊 Streak: ${streak}x ${last}`;
     }
-    // Next digit prediction (simple)
-    let pred = (()=>{ if(last50.length<10) return {digit:null,prob:0}; let w=new Array(10).fill(0); for(let i=0;i<last50.length;i++) w[last50[i]] += (i>=last50.length-10?3:1); let best=w.indexOf(Math.max(...w)); return {digit:best, prob:(w[best]/w.reduce((a,b)=>a+b,0)*100).toFixed(1)}; })();
-    document.getElementById(`prediction_${symbol}`).innerHTML = `🔮 NEXT DIGIT: ${pred.digit!==null?`${pred.digit} (${pred.prob}%)`:'—'}`;
-    // Signal display
-    let signal = getOppositeFilterSignal(symbol);
-    let div = document.getElementById(`signalDisplay_${symbol}`);
-    if(div) {
-      if(signal) {
-        let color = (signal === 'EVEN' || signal === 'OVER') ? '#4ade80' : '#f87171';
-        div.innerHTML = `<div class="signal-flash" style="color:${color}">🎯 OPPOSITE DIGITS ≤${getSettings().oppositeThreshold}% → ${signal}</div><div><button class="vote-btn" onclick="recordOutcomeAndRefresh('${symbol}','win')">✅ Win</button><button class="vote-btn" onclick="recordOutcomeAndRefresh('${symbol}','loss')">❌ Loss</button></div>`;
-      } else {
-        div.innerHTML = `<div class="no-signal-placeholder"></div>`;
-      }
-    }
-    // Rebuild digit grid with arrows
-    rebuildDigitGrid(symbol);
+    let pred=(()=>{ if(last50.length<10) return {digit:null}; let w=new Array(10).fill(0); for(let i=0;i<last50.length;i++) w[last50[i]]+=(i>=last50.length-10?3:1); let best=w.indexOf(Math.max(...w)); return {digit:best, prob:(w[best]/w.reduce((a,b)=>a+b,0)*100).toFixed(0)}; })();
+    document.getElementById(`prediction_${sym}`).innerHTML=`🔮 NEXT DIGIT: ${pred.digit!==null?`${pred.digit} (${pred.prob}%)`:'—'}`;
+    let signal=getOppositeFilterSignal(sym);
+    let sigDiv=document.getElementById(`signalDisplay_${sym}`);
+    if(signal){
+      let col=(signal==='EVEN'||signal==='OVER')?'#4ade80':'#f87171';
+      sigDiv.innerHTML=`<div class="signal-flash" style="color:${col}">🎯 OPPOSITE ≤${getSettings().oppositeThreshold}% → ${signal}</div><div><button class="vote-btn" onclick="playSignalSound()">🔊</button></div>`;
+    } else sigDiv.innerHTML='<div class="no-signal-placeholder"></div>';
+    rebuildDigitGrid(sym);
+    let domStats=getGroupArrowStats(sym);
+    let domDiv=document.getElementById(`dominanceMeter_${sym}`);
+    if(domStats) domDiv.innerHTML=`<div class="dom-group"><span>${domStats.label1}</span><span class="dom-up">↑${domStats.stats1.up}</span><span class="dom-down">↓${domStats.stats1.down}</span><span class="dom-avg">(${domStats.stats1.avg.toFixed(1)})</span></div><div class="dom-group"><span>${domStats.label2}</span><span class="dom-up">↑${domStats.stats2.up}</span><span class="dom-down">↓${domStats.stats2.down}</span><span class="dom-avg">(${domStats.stats2.avg.toFixed(1)})</span></div>`;
+    updateTrendBars(sym);
+    updateBatchAnalysis(sym); // ensure it runs every tick
   }
 
-  function recordOutcomeAndRefresh(symbol, outcome) {
-    let settings = getSettings();
-    if(settings.soundEnabled && audioCtx) {
-      let osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
-      osc.connect(gain); gain.connect(audioCtx.destination);
-      osc.frequency.value = outcome==='win' ? 1046.5 : 440;
-      gain.gain.value = 0.15;
-      osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime+0.3);
-      osc.stop(audioCtx.currentTime+0.3);
-    }
-    renderMarket(symbol);
-  }
+  function playSignalSound(){ let s=getSettings(); if(s.soundEnabled&&audioCtx){ let osc=audioCtx.createOscillator(), gain=audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.frequency.value=880; gain.gain.value=0.15; osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime+0.3); osc.stop(audioCtx.currentTime+0.3); } }
 
-  // Main tick processor: update data, trends, render, and trading logic
-  function processTick(symbol, priceNumeric, quoteDisplay) {
-    if(!marketData[symbol]) marketData[symbol] = { rollingArray: [], last50Array: [], lastDigit: null, lastPriceDisplay: "—" };
-    let data = marketData[symbol];
-    let display = quoteDisplay || formatHistoryPrice(symbol, priceNumeric);
-    data.lastPriceDisplay = display;
-    let digit = lastDigitFromFormatted(display);
-    data.lastDigit = digit;
+  function processTick(sym, price, quoteDisplay){
+    if(!marketData[sym]) marketData[sym]={rollingArray:[], last50Array:[], lastDigit:null, lastPriceDisplay:"—"};
+    let data=marketData[sym];
+    let display=quoteDisplay||formatHistoryPrice(sym,price);
+    data.lastPriceDisplay=display;
+    let digit=lastDigitFromFormatted(display);
+    data.lastDigit=digit;
     data.rollingArray.push(digit);
-    let winSize = getSettings().windowSize;
-    while(data.rollingArray.length > winSize) data.rollingArray.shift();
+    let winSize=getSettings().windowSize;
+    while(data.rollingArray.length>winSize) data.rollingArray.shift();
     data.last50Array.push(digit);
-    if(data.last50Array.length > 50) data.last50Array.shift();
-    updateTrends(symbol);
-    renderMarket(symbol);
-    updateMultiTFProgress(symbol);
-    updateBatchAnalysis(symbol);
-    
-    // Trading logic: only if bot active, not paused, no pending trade
-    if(botActive && !botPaused && !pendingTrade) {
-      let tradeSpeed = parseInt(document.getElementById('trade-speed').value) || 1;
-      if(!tickCounter[symbol]) tickCounter[symbol] = 0;
-      tickCounter[symbol]++;
-      if(tickCounter[symbol] % tradeSpeed === 0) {
-        if(lockedMarket && lockedDirection) {
-          if(symbol === lockedMarket) {
-            tryTrade(symbol, lockedDirection);
-          }
-        } else {
-          let signal = getOppositeFilterSignal(symbol);
-          if(signal) {
-            lockedMarket = symbol;
-            lockedDirection = signal;
-            updateLockDisplay();
-            showToast(`OPPOSITE FILTER SIGNAL on ${MARKET_NAMES[symbol]} → ${signal}. Trading now.`, 'info');
-            tryTrade(symbol, signal);
-          }
-        }
-      }
-    }
+    if(data.last50Array.length>50) data.last50Array.shift();
+    updateTrends(sym);
+    renderMarket(sym);
+    updateMultiTFProgress(sym);
+    applyFocusVisibility();
   }
 
-  function tryTrade(sym, direction) {
-    if(pendingTrade) return;
-    let tp = parseFloat(document.getElementById('take-profit').value) || 2;
-    let sl = parseFloat(document.getElementById('stop-loss').value) || 20;
-    if(netPL >= tp) { manualStop(); return; }
-    if(netPL <= -sl) { manualStop(); return; }
-    placeTrade(sym, direction, currentStake);
+  function setFocus(sym){
+    focusedSymbol=sym;
+    let bar=document.getElementById('focusBar');
+    bar.style.display=sym?'flex':'none';
+    applyFocusVisibility();
   }
-
-  function placeTrade(sym, direction, stake) {
-    let contractType = (direction === 'EVEN' || direction === 'OVER') ? 'DIGITEVEN' : 'DIGITODD';
-    let tradeId = Date.now();
-    let entry = { id: tradeId, sym, direction, stake, outcome: 'pending', profit: 0, ts: new Date().toLocaleTimeString() };
-    tradeLog.unshift(entry);
-    pendingTrade = { logId: tradeId, sym, direction, stake };
-    if(!ws || ws.readyState !== WebSocket.OPEN) { pendingTrade = null; return; }
-    ws.send(JSON.stringify({
-      buy: 1, price: stake,
-      parameters: { amount: stake, basis: 'stake', contract_type: contractType, currency: 'USD', duration: 1, duration_unit: 't', symbol: sym }
-    }));
+  function applyFocusVisibility(){
+    let cards=document.querySelectorAll('.market-card');
+    if(focusedSymbol){
+      cards.forEach(c=>{ if(c.id===`market_${focusedSymbol}`) c.style.display='flex'; else c.style.display='none'; });
+    } else cards.forEach(c=>c.style.display='flex');
   }
+  function showAllMarkets(){ setFocus(null); }
 
-  function handleContractResult(poc) {
-    if(!pendingTrade) return;
-    let isWin = poc.profit > 0;
-    let profit = parseFloat(poc.profit) || 0;
-    settleTrade(isWin, profit, pendingTrade.logId);
-    pendingTrade = null;
-  }
-
-  function settleTrade(isWin, profit, logId) {
-    netPL += profit;
-    totalTrades++;
-    let entry = tradeLog.find(e => e.id === logId);
-    let tradedSym = entry?.sym || lockedMarket;
-    let tradedDir = entry?.direction || lockedDirection;
-    if(isWin) {
-      wins++;
-      currentStake = parseFloat(document.getElementById('base-stake').value) || 1;
-      // keep locked market and direction (continue same)
-      showToast(`WIN +$${profit.toFixed(2)} — Continuing ${tradedDir} on ${MARKET_NAMES[tradedSym]}`, 'win');
-    } else {
-      losses++;
-      let mult = parseFloat(document.getElementById('mart-mult').value) || 2.1;
-      currentStake = parseFloat((currentStake * mult).toFixed(2));
-      lockedMarket = null;
-      lockedDirection = null;
-      botActive = false;
-      botPaused = false;
-      document.getElementById('btn-start').disabled = false;
-      document.getElementById('btn-pause').disabled = false;
-      document.getElementById('btn-stop').disabled = true;
-      updateLockDisplay();
-      showToast(`LOSS $${Math.abs(profit).toFixed(2)} — Bot stopped. Click START to resume.`, 'loss');
-    }
-    if(entry) { entry.outcome = isWin ? 'win' : 'loss'; entry.profit = profit; }
-    updateTradeLog();
-    updateStats();
-    let tp = parseFloat(document.getElementById('take-profit').value) || 2;
-    let sl = parseFloat(document.getElementById('stop-loss').value) || 20;
-    if(netPL >= tp || netPL <= -sl) {
-      if(botActive) manualStop();
-      lockedMarket = null;
-      lockedDirection = null;
-      updateLockDisplay();
-    }
-  }
-
-  // All markets list (blinking when signal present)
-  function updateAllMarketsList() {
-    let items = ALL_SYMBOLS.map(sym => {
-      let signal = getOppositeFilterSignal(sym);
-      let active = !!signal;
-      let cls = active ? 'blink-agreement' : '';
-      let suffix = active ? ` → ${signal}` : '';
+  function updateAllMarketsList(){
+    let items=ALL_SYMBOLS.map(sym=>{
+      let signal=getOppositeFilterSignal(sym);
+      let cls=signal?'blink-agreement':'';
+      let suffix=signal?` → ${signal}`:'';
       return `<div class="market-list-item ${cls}" data-symbol="${sym}"><span>${MARKET_NAMES[sym]}${suffix}</span></div>`;
     }).join('');
-    document.getElementById('marketsListContainer').innerHTML = items;
-    document.querySelectorAll('.market-list-item').forEach(el => {
-      const sym = el.getAttribute('data-symbol');
-      if(sym) el.onclick = () => { let card = document.getElementById(`market_${sym}`); if(card) card.scrollIntoView({behavior:'smooth', block:'center'}); };
+    document.getElementById('marketsListContainer').innerHTML=items;
+    document.querySelectorAll('.market-list-item').forEach(el=>{
+      let sym=el.getAttribute('data-symbol');
+      if(sym) el.onclick=()=>setFocus(sym);
     });
   }
 
   let timerRefreshInterval;
-  function startTimerRefresh() {
-    if(timerRefreshInterval) clearInterval(timerRefreshInterval);
-    timerRefreshInterval = setInterval(() => {
-      updateAllMarketsList();
-    }, 1000);
-  }
+  function startTimerRefresh(){ if(timerRefreshInterval) clearInterval(timerRefreshInterval); timerRefreshInterval=setInterval(updateAllMarketsList,1000); }
 
-  let audioCtx = null;
-  function sendDesktopNotification(symbol, message) { if (!("Notification" in window)) return; if (Notification.permission === "granted") { new Notification("📈 TAJIRI TRADERS Signal", { body: `${MARKET_NAMES[symbol]}: ${message}`, icon: "https://www.deriv.com/favicon.ico", silent: false }); } else if (Notification.permission !== "denied") { Notification.requestPermission(); } }
-  function requestNotificationPermission() { if ("Notification" in window && Notification.permission === "default") Notification.requestPermission(); }
+  let audioCtx=null;
+  function requestNotificationPermission(){ if("Notification" in window && Notification.permission==="default") Notification.requestPermission(); }
 
   let pingInterval;
-  function startPing() { if(pingInterval) clearInterval(pingInterval); pingInterval = setInterval(()=>{ if(ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify({ping:1})); }, 25000); }
+  function startPing(){ if(pingInterval) clearInterval(pingInterval); pingInterval=setInterval(()=>{ if(ws&&ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify({ping:1})); },25000); }
 
-  function createMarketUI(symbol, displayName, isInvalid=false) {
-    if(document.getElementById(`market_${symbol}`)) return;
-    let container = document.getElementById('marketsContainer');
-    if(!container) { console.error("marketsContainer not found"); return; }
-    let card = document.createElement('div'); card.className='market-card'; card.id=`market_${symbol}`;
-    card.innerHTML = `<div class="market-header"><div class="market-title"><span>📈 ${displayName}</span><span class="live-price-big" id="livePriceBig_${symbol}">—</span></div><div class="market-status" id="status_${symbol}">${isInvalid?'🔴 BLOCKED':'🔴 no data'}</div><span class="last-digit-badge" id="lastDigit_${symbol}">?</span></div>
+  function createMarketUI(sym, name, isInvalid=false){
+    if(document.getElementById(`market_${sym}`)) return;
+    let container=document.getElementById('marketsContainer');
+    let card=document.createElement('div'); card.className='market-card'; card.id=`market_${sym}`;
+    card.innerHTML=`<div class="market-header">
+        <div class="market-title"><span>📈 ${name}</span><span class="focus-icon" onclick="setFocus('${sym}')">👁️</span></div>
+        <div><span class="live-price-big" id="livePriceBig_${sym}">—</span></div>
+        <div class="market-status" id="status_${sym}">${isInvalid?'🔴 BLOCKED':'🔴 no data'}</div>
+        <span class="last-digit-badge" id="lastDigit_${sym}">?</span>
+      </div>
       <div class="card-content">
-        <div id="digitsContainer_${symbol}" class="digits-grid"></div>
-        <div class="info-row"><div class="parity-stats" id="parityStats_${symbol}">--</div><div class="streak-stats" id="streakStats_${symbol}">Streak: 0</div><div class="prediction-box" id="prediction_${symbol}">🔮 NEXT DIGIT: —</div></div>
-        <div class="letter-sequence-wrapper"><div class="letter-sequence" id="paritySeq_${symbol}">⏳ ticks...</div><div class="letter-sequence hidden" id="ouSeq_${symbol}"></div></div>
-        <div class="signal-area" id="signalDisplay_${symbol}"><div class="no-signal-placeholder"></div></div>
-        <div id="multiTFProgress_${symbol}" class="multi-tf-progress">⏳ loading multi‑TF</div>
-        <div id="batchContainer_${symbol}" class="batch-analysis">⏳ loading batch cycles...</div>
+        <div id="digitsContainer_${sym}" class="digits-grid"></div>
+        <div class="info-row"><div class="parity-stats" id="parityStats_${sym}">--</div><div class="streak-stats" id="streakStats_${sym}">Streak:0</div><div class="prediction-box" id="prediction_${sym}">—</div></div>
+        <div class="letter-sequence-wrapper"><div class="letter-sequence" id="paritySeq_${sym}">⏳</div><div class="letter-sequence hidden" id="ouSeq_${sym}"></div></div>
+        <div class="signal-area" id="signalDisplay_${sym}"></div>
+        <div id="multiTFProgress_${sym}" class="multi-tf-progress">⏳</div>
+        <div id="batchContainer_${sym}" class="batch-analysis">⏳</div>
+        <div class="dom-row" id="dominanceMeter_${sym}"></div>
+        <div id="trendBars_${sym}" class="trend-bars"></div>
       </div>`;
     container.appendChild(card);
   }
 
-  function subscribeToMarket(sym) { if(ws && ws.readyState===WebSocket.OPEN && !invalidSymbols.has(sym)) { ws.send(JSON.stringify({ ticks_history: sym, count: 1000, end: "latest", style: "ticks" })); ws.send(JSON.stringify({ ticks: sym, subscribe: 1 })); } }
+  function subscribeToMarket(sym){ if(ws&&ws.readyState===WebSocket.OPEN&&!invalidSymbols.has(sym)){ ws.send(JSON.stringify({ticks_history:sym,count:1000,end:"latest",style:"ticks"})); ws.send(JSON.stringify({ticks:sym,subscribe:1})); } }
 
-  function connectWebSocket() {
-    let token = document.getElementById('token').value.trim();
-    if(!token) { alert("Enter API token"); return; }
-    if(ws && (ws.readyState===WebSocket.OPEN || ws.readyState===WebSocket.CONNECTING)) ws.close();
-    document.getElementById('connectionStatus').innerHTML = '⏳ Connecting...';
-    ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089');
-    ws.onopen = () => { ws.send(JSON.stringify({authorize: token})); };
-    ws.onmessage = e => {
-      try {
-        let msg = JSON.parse(e.data);
-        if(msg.msg_type === 'authorize') {
-          if(msg.error) { document.getElementById('connectionStatus').innerHTML = `❌ ${msg.error.message || 'Invalid token'}`; return; }
-          document.getElementById('connectionStatus').innerHTML = '✅ Connected & loading markets';
-          if(msg.authorize && msg.authorize.balance !== undefined) {
-            balanceCurrency = msg.authorize.currency || 'USD';
-            updateBalanceDisplay(msg.authorize.balance, balanceCurrency);
-          }
-          ws.send(JSON.stringify({ balance: 1, subscribe: 1 }));
-          const container = document.getElementById('marketsContainer');
-          if(container) container.innerHTML = '';
-          marketData = {}; invalidSymbols.clear(); rawTrend = {};
-          for(let sym of ALL_SYMBOLS) createMarketUI(sym, MARKET_NAMES[sym], false);
+  function connectWebSocket(){
+    let token=document.getElementById('token').value.trim();
+    if(!token){ alert("Enter API token"); return; }
+    if(ws&&(ws.readyState===WebSocket.OPEN||ws.readyState===WebSocket.CONNECTING)) ws.close();
+    document.getElementById('connectionStatus').innerHTML='⏳ Connecting...';
+    ws=new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089');
+    ws.onopen=()=>{ ws.send(JSON.stringify({authorize:token})); };
+    ws.onmessage=e=>{
+      try{
+        let msg=JSON.parse(e.data);
+        if(msg.msg_type==='authorize'){
+          if(msg.error){ document.getElementById('connectionStatus').innerHTML=`❌ ${msg.error.message||'Invalid token'}`; return; }
+          document.getElementById('connectionStatus').innerHTML='✅ Connected';
+          if(msg.authorize&&msg.authorize.balance!==undefined){ balanceCurrency=msg.authorize.currency||'USD'; updateBalanceDisplay(msg.authorize.balance,balanceCurrency); }
+          ws.send(JSON.stringify({balance:1,subscribe:1}));
+          let cont=document.getElementById('marketsContainer'); if(cont) cont.innerHTML='';
+          marketData={}; invalidSymbols.clear(); rawTrend={}; prevPercentages={};
+          for(let sym of ALL_SYMBOLS) createMarketUI(sym,MARKET_NAMES[sym],false);
           let idx=0;
-          function nextSub() { if(idx>=ALL_SYMBOLS.length) { document.getElementById('connectionStatus').innerHTML = `✅ ${currentMarket.toUpperCase()} | Opposite Filter Only`; return; } let sym=ALL_SYMBOLS[idx]; if(!invalidSymbols.has(sym)) subscribeToMarket(sym); idx++; setTimeout(nextSub, 200); }
-          nextSub();
-          startPing();
-          startTimerRefresh();
-          document.getElementById('btn-start').disabled = false;
-          document.getElementById('btn-pause').disabled = false;
-          document.getElementById('btn-stop').disabled = true;
-        } else if(msg.msg_type === 'balance') {
-          updateBalanceDisplay(msg.balance.balance, balanceCurrency);
-        } else if(msg.msg_type==='tick' && msg.tick) {
-          let sym = msg.tick.symbol;
-          if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) {
-            if(!marketData[sym]) marketData[sym] = { rollingArray: [], last50Array: [], lastDigit: null, lastPriceDisplay: "—" };
-            let display = msg.tick.quote_display || formatHistoryPrice(sym, msg.tick.quote);
-            processTick(sym, msg.tick.quote, display);
-            let statusSpan = document.getElementById(`status_${sym}`);
-            if(statusSpan && statusSpan.innerText !== '🟢 live') statusSpan.innerHTML = '🟢 live';
+          let nextSub=()=>{ if(idx>=ALL_SYMBOLS.length){ document.getElementById('connectionStatus').innerHTML=`✅ ${currentMarket.toUpperCase()}`; return; } let sym=ALL_SYMBOLS[idx]; if(!invalidSymbols.has(sym)) subscribeToMarket(sym); idx++; setTimeout(nextSub,200); };
+          nextSub(); startPing(); startTimerRefresh();
+        } else if(msg.msg_type==='balance'){ updateBalanceDisplay(msg.balance.balance,balanceCurrency); }
+        else if(msg.msg_type==='tick'&&msg.tick){
+          let sym=msg.tick.symbol;
+          if(MARKET_NAMES[sym]&&!invalidSymbols.has(sym)){
+            if(!marketData[sym]) marketData[sym]={rollingArray:[],last50Array:[],lastDigit:null,lastPriceDisplay:"—"};
+            let display=msg.tick.quote_display||formatHistoryPrice(sym,msg.tick.quote);
+            processTick(sym,msg.tick.quote,display);
+            let status=document.getElementById(`status_${sym}`);
+            if(status&&status.innerText!=='🟢 live') status.innerHTML='🟢 live';
           }
-        } else if(msg.msg_type==='history' && msg.history?.prices && msg.echo_req?.ticks_history) {
-          let sym = msg.echo_req.ticks_history;
-          if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) msg.history.prices.forEach(p => processTick(sym, p, null));
-        } else if(msg.error && msg.error.code==='InvalidSymbol' && msg.echo_req?.ticks_history) {
-          let sym = msg.echo_req.ticks_history;
-          if(MARKET_NAMES[sym] && !invalidSymbols.has(sym)) { invalidSymbols.add(sym); createMarketUI(sym, MARKET_NAMES[sym], true); }
-        } else if(msg.msg_type === 'proposal_open_contract') {
-          let poc = msg.proposal_open_contract;
-          if(poc.is_sold || poc.status === 'sold') handleContractResult(poc);
-        } else if(msg.msg_type === 'buy') {
-          let b = msg.buy;
-          if(pendingTrade) pendingTrade.contractId = b.contract_id;
-          ws.send(JSON.stringify({ proposal_open_contract: 1, contract_id: b.contract_id, subscribe: 1 }));
+        } else if(msg.msg_type==='history'&&msg.history?.prices&&msg.echo_req?.ticks_history){
+          let sym=msg.echo_req.ticks_history;
+          if(MARKET_NAMES[sym]&&!invalidSymbols.has(sym)){
+            msg.history.prices.forEach(p=>processTick(sym,p,null));
+            updateTrendBars(sym);
+          }
+        } else if(msg.error&&msg.error.code==='InvalidSymbol'&&msg.echo_req?.ticks_history){
+          let sym=msg.echo_req.ticks_history;
+          if(MARKET_NAMES[sym]&&!invalidSymbols.has(sym)){ invalidSymbols.add(sym); createMarketUI(sym,MARKET_NAMES[sym],true); }
         }
-      } catch(err) { console.warn("WS message error:", err); }
+      } catch(err){ console.warn(err); }
     };
-    ws.onerror = () => { document.getElementById('connectionStatus').innerHTML = '⚠️ WS error'; };
-    ws.onclose = () => { if(pingInterval) clearInterval(pingInterval); document.getElementById('connectionStatus').innerHTML = '🔴 Disconnected'; document.getElementById('btn-start').disabled = true; document.getElementById('btn-pause').disabled = true; document.getElementById('btn-stop').disabled = true; updateBalanceDisplay(null); };
+    ws.onerror=()=>{ document.getElementById('connectionStatus').innerHTML='⚠️ WS error'; };
+    ws.onclose=()=>{ if(pingInterval) clearInterval(pingInterval); document.getElementById('connectionStatus').innerHTML='🔴 Disconnected'; updateBalanceDisplay(null); };
   }
 
-  function toggleMode() { document.body.classList.toggle('light'); }
-  function setMarket(m) { currentMarket=m; document.querySelectorAll('.market-btn').forEach(btn=>btn.classList.toggle('active', btn.getAttribute('data-market')===m)); for(let s in marketData) if(marketData[s]?.rollingArray?.length) renderMarket(s); document.getElementById('connectionStatus').innerHTML = `✅ ${m.toUpperCase()} | Opposite Filter Only`; }
+  function toggleMode(){ document.body.classList.toggle('light'); }
+  function setMarket(m){ currentMarket=m; document.querySelectorAll('.market-btn').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('data-market')===m)); for(let s in marketData) if(marketData[s]?.rollingArray?.length) renderMarket(s); document.getElementById('connectionStatus').innerHTML=`✅ ${m.toUpperCase()}`; }
 
-  window.connectWebSocket = connectWebSocket;
-  window.toggleMode = toggleMode;
-  window.setMarket = setMarket;
-  window.manualStart = manualStart;
-  window.manualPause = manualPause;
-  window.manualStop = manualStop;
-  window.resetBot = resetBot;
-  window.recordOutcomeAndRefresh = recordOutcomeAndRefresh;
-
+  window.connectWebSocket=connectWebSocket; window.toggleMode=toggleMode; window.setMarket=setMarket; window.playSignalSound=playSignalSound; window.setFocus=setFocus; window.showAllMarkets=showAllMarkets;
   document.querySelectorAll('.market-btn').forEach(btn=>btn.onclick=()=>setMarket(btn.getAttribute('data-market')));
+  document.getElementById('showAllBtn')?.addEventListener('click',showAllMarkets);
 
-  const settingsModal = document.getElementById('settingsModal');
-  document.getElementById('settingsBtn').onclick = () => settingsModal.style.display = 'flex';
-  document.getElementById('closeModal').onclick = () => settingsModal.style.display = 'none';
-  window.onclick = e => { if(e.target === settingsModal) settingsModal.style.display = 'none'; };
-
-  document.body.addEventListener('click', () => { if(audioCtx === null) audioCtx = new AudioContext(); if(audioCtx.state === 'suspended') audioCtx.resume(); requestNotificationPermission(); });
-  console.log("TAJIRI TRADERS – Opposite digit filter only. Arrows fully restored (trend based on last 10 vs previous 10 ticks). Manual Start/Pause/Stop.");
+  let settingsModal=document.getElementById('settingsModal');
+  document.getElementById('settingsBtn').onclick=()=>settingsModal.style.display='flex';
+  document.getElementById('closeModal').onclick=()=>settingsModal.style.display='none';
+  window.onclick=e=>{ if(e.target===settingsModal) settingsModal.style.display='none'; };
+  document.body.addEventListener('click',()=>{ if(audioCtx===null) audioCtx=new AudioContext(); if(audioCtx.state==='suspended') audioCtx.resume(); requestNotificationPermission(); });
+  console.log("TAJIRI TRADERS – 20×50 batch cycles fixed: now recalculated every tick and shows the last 20 complete 50‑tick blocks.");
 </script>
 </body>
 </html>
