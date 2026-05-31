@@ -3,132 +3,153 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<title>TAJIRI TRADERS – Fixed 20×50 Batch Cycles</title>
+<title>TAJIRI TRADERS – Compact Colors</title>
 <style>
-  /* (same CSS as the previous working version – no changes) */
+  /* ==================== COMPACT LAYOUT – ONLY 4 RANK COLORS ==================== */
   * { margin: 0; padding: 0; box-sizing: border-box; }
   :root {
     --bg-body: #0b1120; --bg-card: #111827; --bg-header: #1e293b; --bg-panel: #0a0f1c;
     --bg-digit: #1e293b; --border-color: #2d3a4e; --text-primary: #e2e8f0; --text-secondary: #94a3b8;
     --price-color: #facc15; --strength-meter-bg: #334155; --strength-fill: #4ade80;
     --btn-bg: #3b82f6; --trade-active: #10b981; --percent-accent: #facc15; --last-digit-bg: #0f172a;
-    --reversal-strong-bg: #0f3b2c; --reversal-strong-text: #a3e635; --batch-equal: #6b7280;
-    --batch-even: #10b981; --batch-odd: #ef4444; --batch-over: #10b981; --batch-under: #ef4444;
-    --external-nav-height: 70px; --green: #10b981; --green-dim: #064e3b; --red: #ef4444; --red-dim: #450a0a;
-    --gold: #facc15;
+    --batch-equal: #6b7280; --batch-even: #10b981; --batch-odd: #ef4444;
+    --batch-over: #10b981; --batch-under: #ef4444;
+    --external-nav-height: 60px; --green: #10b981; --red: #ef4444; --gold: #facc15;
   }
   body.light {
     --bg-body: #f8fafc; --bg-card: #ffffff; --bg-header: #e2e8f0; --bg-panel: #f1f5f9;
     --bg-digit: #ffffff; --border-color: #cbd5e1; --text-primary: #0f172a; --text-secondary: #475569;
     --price-color: #eab308; --strength-meter-bg: #cbd5e1; --strength-fill: #15803d;
     --btn-bg: #2563eb; --trade-active: #059669; --percent-accent: #b45309; --last-digit-bg: #e2e8f0;
-    --reversal-strong-bg: #bbf7d0; --reversal-strong-text: #166534; --batch-equal: #94a3b8;
     --batch-even: #059669; --batch-odd: #dc2626; --batch-over: #059669; --batch-under: #dc2626;
     --gold: #eab308;
   }
   body { font-family: 'Segoe UI', Roboto, system-ui, sans-serif; background: var(--bg-body); color: var(--text-primary); height: 100vh; overflow: hidden; margin: 0; padding: 0; }
   .top-spacer { height: var(--external-nav-height); width: 100%; background: transparent; flex-shrink: 0; }
   .app-container { display: flex; flex-direction: column; height: calc(100vh - var(--external-nav-height)); overflow: hidden; }
-  .top-slim-bar { background: var(--bg-header); border-bottom: 1px solid var(--border-color); padding: 0.4rem 0.8rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; flex-shrink: 0; }
-  .logo-area h1 { font-size: 1.2rem; margin: 0; }
-  .right-controls { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-  .token-group { display: flex; align-items: center; gap: 0.2rem; background: var(--bg-panel); padding: 0.2rem 0.6rem; border-radius: 1.5rem; }
-  .token-group input { background: var(--bg-body); border: none; padding: 0.2rem 0.5rem; border-radius: 1rem; color: var(--text-primary); font-size: 0.75rem; width: 120px; }
-  .connect-btn { background: var(--btn-bg); border: none; padding: 0.2rem 0.8rem; border-radius: 1.5rem; font-weight: bold; color: white; cursor: pointer; font-size: 0.75rem; }
-  .settings-icon, .mode-toggle-small { background: var(--bg-panel); border: none; font-size: 1.1rem; cursor: pointer; border-radius: 1.5rem; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; }
+  
+  /* top bar compact */
+  .top-slim-bar { background: var(--bg-header); border-bottom: 1px solid var(--border-color); padding: 0.3rem 0.8rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.4rem; flex-shrink: 0; }
+  .logo-area h1 { font-size: 1.1rem; margin: 0; background: linear-gradient(135deg, var(--gold), #38bdf8); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .right-controls { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+  .token-group { display: flex; align-items: center; gap: 0.2rem; background: var(--bg-panel); padding: 0.1rem 0.5rem; border-radius: 1.5rem; }
+  .token-group input { background: var(--bg-body); border: none; padding: 0.2rem 0.4rem; border-radius: 1rem; color: var(--text-primary); font-size: 0.7rem; width: 110px; }
+  .connect-btn { background: var(--btn-bg); border: none; padding: 0.2rem 0.7rem; border-radius: 1.5rem; font-weight: bold; color: white; cursor: pointer; font-size: 0.7rem; }
+  .settings-icon, .mode-toggle-small { background: var(--bg-panel); border: none; font-size: 1rem; cursor: pointer; border-radius: 1.5rem; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; }
   .status-badge { background: var(--bg-panel); padding: 0.2rem 0.6rem; border-radius: 1.5rem; font-size: 0.7rem; }
-  .balance-box { background: var(--bg-panel); padding: 0.2rem 0.6rem; border-radius: 1.5rem; font-size: 0.75rem; display: flex; align-items: center; gap: 4px; }
+  .balance-box { background: var(--bg-panel); padding: 0.2rem 0.6rem; border-radius: 1.5rem; font-size: 0.7rem; display: flex; align-items: center; gap: 4px; }
   .balance-value { font-weight: 700; color: var(--price-color); }
-  .selector-row { background: var(--bg-header); padding: 0.3rem 0.8rem; display: flex; gap: 1rem; flex-wrap: wrap; border-bottom: 1px solid var(--border-color); flex-shrink: 0; align-items: center; }
-  .market-type-selector { display: flex; gap: 0.3rem; background: var(--bg-panel); padding: 0.2rem 0.5rem; border-radius: 1.5rem; }
-  .market-btn { background: none; border: none; font-size: 0.8rem; padding: 0.2rem 0.7rem; border-radius: 1.2rem; cursor: pointer; opacity: 0.6; font-weight: bold; color: var(--text-primary); }
+  
+  .selector-row { background: var(--bg-header); padding: 0.2rem 0.8rem; display: flex; gap: 0.8rem; flex-wrap: wrap; border-bottom: 1px solid var(--border-color); flex-shrink: 0; align-items: center; }
+  .market-type-selector { display: flex; gap: 0.3rem; background: var(--bg-panel); padding: 0.1rem 0.4rem; border-radius: 1.5rem; }
+  .market-btn { background: none; border: none; font-size: 0.75rem; padding: 0.2rem 0.8rem; border-radius: 1.2rem; cursor: pointer; opacity: 0.6; font-weight: bold; color: var(--text-primary); }
   .market-btn.active { opacity: 1; background: var(--trade-active); }
-  .focus-bar { background: var(--bg-header); padding: 0.2rem 0.6rem; margin-bottom: 0.3rem; border-radius: 1.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; }
-  .focus-bar button { background: var(--btn-bg); border: none; padding: 0.2rem 0.6rem; border-radius: 1rem; color: white; cursor: pointer; font-size: 0.7rem; }
-  .main-scroll-area { flex: 1; display: flex; overflow: hidden; padding: 0.6rem; gap: 0.6rem; min-height: 0; }
-  .market-cards-container { flex: 1; overflow-y: auto; height: 100%; padding-right: 0.3rem; }
-  .market-grid { display: flex; flex-direction: column; gap: 0.8rem; }
-  .all-markets-container { flex: 0 0 240px; background: var(--bg-header); border-radius: 0.8rem; padding: 0.4rem; border-left: 2px solid var(--gold); overflow-y: auto; }
-  .all-markets-container h3 { font-size: 0.75rem; margin: 0 0 0.3rem 0; }
-  .markets-list { display: flex; flex-direction: column; gap: 0.2rem; }
-  .market-list-item { background: var(--bg-panel); padding: 0.2rem 0.5rem; border-radius: 0.6rem; font-weight: bold; cursor: pointer; font-size: 0.7rem; display: flex; justify-content: space-between; align-items: center; }
-  .market-card { background: var(--bg-card); border-radius: 0.7rem; border: 1px solid var(--border-color); cursor: pointer; width: 100%; display: flex; flex-direction: column; overflow: hidden; transition: box-shadow 0.2s; }
-  .market-header { background: var(--bg-header); padding: 0.3rem 0.6rem; display: flex; justify-content: space-between; align-items: center; gap: 0.3rem; flex-wrap: wrap; font-size: 0.8rem; }
-  .market-title { font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 0.3rem; }
-  .focus-icon { cursor: pointer; font-size: 1rem; opacity: 0.7; }
-  .live-price-big { font-size: 0.85rem; background: var(--bg-body); padding: 0.1rem 0.4rem; border-radius: 0.6rem; }
-  .last-digit-badge { font-size: 1.8rem; font-weight: 800; background: var(--last-digit-bg); padding: 0 0.3rem; border-radius: 0.8rem; min-width: 55px; text-align: center; color: var(--gold); }
-  .market-status { font-size: 0.65rem; padding: 0.1rem 0.3rem; border-radius: 0.8rem; }
-  .card-content { display: flex; flex-direction: column; gap: 0.15rem; }
-  .digits-grid { display: flex; flex-direction: column; gap: 4px; padding: 0.3rem 0.4rem; background: var(--bg-body); }
+  
+  .focus-bar { background: var(--bg-header); padding: 0.2rem 0.6rem; margin-bottom: 0.3rem; border-radius: 1.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; }
+  .focus-bar button { background: var(--btn-bg); border: none; padding: 0.1rem 0.5rem; border-radius: 1rem; color: white; cursor: pointer; font-size: 0.65rem; }
+  
+  .main-scroll-area { flex: 1; display: flex; overflow: hidden; padding: 0.5rem; gap: 0.6rem; min-height: 0; }
+  .market-cards-container { flex: 1; overflow-y: auto; height: 100%; padding-right: 0.2rem; }
+  .market-grid { display: flex; flex-direction: column; gap: 0.6rem; }
+  
+  .market-card { background: var(--bg-card); border-radius: 0.8rem; border: 1px solid var(--border-color); cursor: pointer; display: flex; flex-direction: column; overflow: hidden; transition: 0.1s; }
+  .market-header { background: var(--bg-header); padding: 0.3rem 0.6rem; display: flex; justify-content: space-between; align-items: center; gap: 0.3rem; flex-wrap: wrap; font-size: 0.75rem; }
+  .market-title { font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 0.3rem; }
+  .focus-icon { cursor: pointer; font-size: 0.9rem; opacity: 0.7; }
+  .live-price-big { font-size: 0.75rem; background: var(--bg-body); padding: 0.1rem 0.4rem; border-radius: 0.8rem; }
+  .market-status { font-size: 0.6rem; padding: 0.1rem 0.3rem; border-radius: 0.8rem; background: var(--bg-panel); }
+  .last-digit-badge { font-size: 1.6rem; font-weight: 800; background: var(--last-digit-bg); padding: 0 0.3rem; border-radius: 0.8rem; min-width: 50px; text-align: center; color: var(--gold); line-height: 1.1; }
+  
+  .card-content { display: flex; flex-direction: column; gap: 0.2rem; }
+  .digits-grid { display: flex; flex-direction: column; gap: 4px; padding: 0.3rem 0.5rem; background: var(--bg-body); }
   .digits-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-  .digit-cell { background: var(--bg-digit); border-radius: 0.6rem; padding: 0.15rem 0.05rem; text-align: center; position: relative; border: 1px solid var(--border-color); transition: all 0.1s; }
-  .digit-cell span.digit { font-size: 1.2rem; font-weight: 800; display: block; line-height: 1.2; }
-  .digit-cell .percent { font-size: 0.6rem; font-weight: 800; color: var(--percent-accent); }
-  .digit-cell .trend { font-size: 0.6rem; margin-left: 2px; }
-  .digit-cell.last-digit-highlight { border: 2px solid var(--gold); box-shadow: 0 0 8px var(--gold); background: var(--bg-digit); transform: scale(1.02); }
-  .pointer-marker { position: absolute; left: 50%; transform: translateX(-50%); z-index: 2; transition: all 0.1s; }
-  .pointer-marker.triangle { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 8px solid var(--gold); background: none; }
-  .pointer-marker.arrow { width: auto; height: auto; background: none; font-size: 1rem; line-height: 1; color: var(--gold); font-weight: bold; content: "›"; }
-  .pointer-marker.dot { width: 8px; height: 8px; background: var(--gold); border-radius: 50%; box-shadow: 0 0 6px var(--gold); animation: pulse 1s infinite; }
+  .digit-cell { background: var(--bg-digit); border-radius: 0.5rem; padding: 0.2rem 0.05rem; text-align: center; position: relative; border: 1px solid var(--border-color); }
+  .digit-cell span.digit { font-size: 1.1rem; font-weight: 800; display: block; line-height: 1.1; }
+  .digit-cell .percent { font-size: 0.55rem; font-weight: 800; color: var(--percent-accent); margin-top: 1px; }
+  .digit-cell .trend { font-size: 0.6rem; margin-left: 0; display: inline-block; }
+  .digit-cell.last-digit-highlight { border: 2px solid var(--gold); box-shadow: 0 0 6px var(--gold); transform: scale(1.01); }
+  
+  /* ONLY FOUR RANK COLORS – NO GRADIENTS, NO HOT/COLD */
+  .most { background: #10b981; }      /* green */
+  .second { background: #3b82f6; }    /* blue */
+  .least { background: #ef4444; }     /* red */
+  .secondleast { background: #f97316; } /* orange */
+  
+  .pointer-marker { position: absolute; left: 50%; transform: translateX(-50%); z-index: 2; }
+  .pointer-marker.triangle { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 7px solid var(--gold); background: none; }
+  .pointer-marker.arrow { font-size: 0.9rem; line-height: 1; color: var(--gold); }
+  .pointer-marker.dot { width: 6px; height: 6px; background: var(--gold); border-radius: 50%; animation: pulse 1s infinite; }
   @keyframes pulse { 0% { opacity: 0.4; transform: scale(0.8) translateX(-50%); } 50% { opacity: 1; transform: scale(1.2) translateX(-50%); } 100% { opacity: 0.4; transform: scale(0.8) translateX(-50%); } }
-  .pointer-top { bottom: auto; top: -4px; }
-  .pointer-bottom { bottom: -4px; top: auto; }
-  .most { background: linear-gradient(145deg, #15803d, #0f5a2e); border-color: #4ade80; }
-  .second { background: linear-gradient(145deg, #1e40af, #152e7a); border-color: #60a5fa; }
-  .least { background: linear-gradient(145deg, #b91c1c, #7f1414); border-color: #f87171; }
-  .secondleast { background: linear-gradient(145deg, #c2410c, #7a2b0a); border-color: #fb923c; }
-  .hot { box-shadow: 0 0 6px #facc15; border-color: #facc15; }
-  .cold { opacity: 0.6; }
-  .info-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.2rem; padding: 0.2rem 0.3rem; background: var(--bg-body); font-size: 0.65rem; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
-  .parity-stats, .streak-stats, .prediction-box { background: var(--bg-panel); padding: 0.05rem 0.3rem; border-radius: 0.6rem; }
-  .dom-row { display: flex; justify-content: space-between; gap: 0.4rem; padding: 0.2rem 0.3rem; background: var(--bg-panel); border-radius: 0.6rem; margin: 0.1rem 0.2rem; font-size: 0.65rem; font-weight: bold; }
-  .dom-group { display: flex; gap: 0.4rem; background: var(--bg-card); padding: 0.05rem 0.4rem; border-radius: 1rem; }
+  .pointer-top { bottom: auto; top: -5px; }
+  .pointer-bottom { bottom: -5px; top: auto; }
+  
+  .info-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.3rem; padding: 0.2rem 0.5rem; background: var(--bg-body); font-size: 0.65rem; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
+  .parity-stats, .streak-stats, .prediction-box { background: var(--bg-panel); padding: 0.1rem 0.4rem; border-radius: 0.8rem; }
+  
+  .dom-row { display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.2rem 0.5rem; background: var(--bg-panel); border-radius: 0.6rem; margin: 0.1rem 0.4rem; font-size: 0.65rem; font-weight: bold; }
+  .dom-group { display: flex; gap: 0.4rem; background: var(--bg-card); padding: 0.1rem 0.4rem; border-radius: 1rem; }
   .dom-up { color: var(--green); }
   .dom-down { color: var(--red); }
-  .letter-sequence-wrapper { padding: 0.3rem 0.2rem; background: var(--bg-body); border-bottom: 1px solid var(--border-color); overflow-x: auto; text-align: center; }
-  .letter-sequence { font-size: 1rem; font-family: monospace; letter-spacing: 4px; display: inline-block; white-space: nowrap; }
-  .seq-u, .seq-m, .seq-o { display: inline-block; padding: 0 2px; border-radius: 4px; margin: 0 1px; }
+  
+  .letter-sequence-wrapper { padding: 0.2rem 0.4rem; background: var(--bg-body); border-bottom: 1px solid var(--border-color); overflow-x: auto; text-align: center; }
+  .letter-sequence { font-size: 0.85rem; font-family: monospace; letter-spacing: 2px; white-space: nowrap; }
+  .seq-u, .seq-m, .seq-o { display: inline-block; padding: 0 2px; border-radius: 4px; margin: 0 1px; font-weight: bold; }
   .seq-u { background: #ef4444; color: white; }
   .seq-m { background: #3b82f6; color: white; }
   .seq-o { background: #10b981; color: white; }
-  .signal-area { padding: 0.15rem 0.3rem; text-align: center; background: var(--bg-body); border-bottom: 1px solid var(--border-color); min-height: 1.8rem; font-size: 0.7rem; }
-  .signal-flash { font-weight: 700; }
-  .multi-tf-progress { background: var(--bg-panel); border-radius: 0.5rem; padding: 0.1rem; margin: 0.1rem 0.2rem; font-size: 0.6rem; text-align: center; }
+  
+  .signal-area { padding: 0.2rem 0.4rem; text-align: center; background: var(--bg-body); border-bottom: 1px solid var(--border-color); min-height: 1.8rem; font-size: 0.65rem; display: flex; justify-content: center; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
+  .vote-btn { background: var(--btn-bg); border: none; padding: 0.1rem 0.5rem; border-radius: 1rem; color: white; cursor: pointer; font-size: 0.6rem; }
+  
+  .multi-tf-progress { background: var(--bg-panel); border-radius: 0.5rem; padding: 0.2rem; margin: 0.1rem 0.4rem; font-size: 0.6rem; text-align: center; }
   .tf-line { display: flex; justify-content: space-between; padding: 0.05rem 0.1rem; }
-  .batch-analysis { background: var(--bg-panel); margin: 0.1rem 0.2rem; padding: 0.15rem; border-radius: 0.5rem; font-size: 0.65rem; }
-  .batch-title { font-weight: bold; margin-bottom: 0.1rem; font-size: 0.65rem; }
+  
+  .batch-analysis { background: var(--bg-panel); margin: 0.1rem 0.4rem; padding: 0.2rem; border-radius: 0.5rem; font-size: 0.6rem; }
+  .batch-title { font-weight: bold; margin-bottom: 0.2rem; font-size: 0.6rem; }
   .batch-grid { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 2px; }
-  .batch-cell { width: 24px; height: 24px; background: #334155; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.7rem; flex-shrink: 0; }
+  .batch-cell { width: 22px; height: 22px; background: #334155; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.65rem; flex-shrink: 0; }
   .batch-cell.even { background: var(--batch-even); color: white; }
   .batch-cell.odd { background: var(--batch-odd); color: white; }
   .batch-cell.equal { background: var(--batch-equal); color: white; }
   .batch-cell.over { background: var(--batch-over); color: white; }
   .batch-cell.under { background: var(--batch-under); color: white; }
-  .batch-expect { margin-top: 4px; font-size: 0.6rem; text-align: center; }
-  .trend-bars { background: var(--bg-panel); margin: 0.1rem 0.2rem; padding: 0.2rem; border-radius: 0.5rem; }
-  .trend-bar-item { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; font-size: 0.7rem; font-weight: bold; }
-  .trend-bar-label { width: 45px; }
-  .trend-bar-container { flex: 1; height: 20px; background: var(--strength-meter-bg); border-radius: 10px; overflow: hidden; }
-  .trend-bar-fill { height: 100%; width: 0%; transition: width 0.2s; }
-  .trend-bar-fill.even { background: var(--green); }
-  .trend-bar-fill.odd { background: var(--red); }
-  .trend-bar-fill.over { background: var(--green); }
-  .trend-bar-fill.under { background: var(--red); }
-  .trend-percent { width: 45px; text-align: right; font-family: monospace; }
-  .trend-arrow { width: 20px; text-align: center; font-size: 1rem; }
+  .batch-expect { margin-top: 3px; font-size: 0.55rem; text-align: center; }
+  
+  .trend-bars { background: var(--bg-panel); margin: 0.1rem 0.4rem 0.3rem 0.4rem; padding: 0.3rem; border-radius: 0.5rem; }
+  .trend-bar-item { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.3rem; font-size: 0.65rem; font-weight: bold; }
+  .trend-bar-label { width: 40px; }
+  .trend-bar-container { flex: 1; height: 14px; background: var(--strength-meter-bg); border-radius: 10px; overflow: hidden; }
+  .trend-bar-fill { height: 100%; width: 0%; transition: width 0.1s; }
+  .trend-bar-fill.even, .trend-bar-fill.over { background: var(--green); }
+  .trend-bar-fill.odd, .trend-bar-fill.under { background: var(--red); }
+  .trend-percent { width: 38px; text-align: right; font-family: monospace; font-size: 0.6rem; }
+  .trend-arrow { width: 20px; text-align: center; font-size: 0.8rem; }
   .arrow-up { color: var(--green); }
   .arrow-down { color: var(--red); transform: scaleX(-1); display: inline-block; }
-  .blink-agreement { animation: blinkAgreement 1s infinite; }
+  
+  .all-markets-container { flex: 0 0 230px; background: var(--bg-header); border-radius: 0.8rem; padding: 0.4rem; border-left: 2px solid var(--gold); overflow-y: auto; }
+  .all-markets-container h3 { font-size: 0.7rem; margin: 0 0 0.4rem 0; }
+  .markets-list { display: flex; flex-direction: column; gap: 0.2rem; }
+  .market-list-item { background: var(--bg-panel); padding: 0.2rem 0.4rem; border-radius: 0.6rem; font-weight: bold; cursor: pointer; font-size: 0.65rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid transparent; }
+  .market-list-item:hover { transform: translateX(2px); }
+  .blink-agreement { animation: blinkAgreement 0.9s infinite; background: rgba(250, 204, 21, 0.2); border-color: var(--gold); }
   @keyframes blinkAgreement { 0% { background: var(--bg-panel); } 50% { background: #facc15; color: #0f172a; } 100% { background: var(--bg-panel); } }
+  
   .hidden { display: none; }
   .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; }
-  .modal-content { background: var(--bg-card); border-radius: 0.8rem; padding: 0.8rem; max-width: 450px; width: 90%; max-height: 80vh; overflow-y: auto; font-size: 0.8rem; }
-  .close-modal { float: right; cursor: pointer; font-size: 1.2rem; }
+  .modal-content { background: var(--bg-card); border-radius: 0.8rem; padding: 0.8rem; max-width: 400px; width: 90%; max-height: 80vh; overflow-y: auto; font-size: 0.75rem; }
+  .close-modal { float: right; cursor: pointer; font-size: 1.1rem; }
   .settings-panel { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; }
   .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-  select, input[type="range"], input[type="number"] { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.2rem 0.4rem; color: var(--text-primary); }
-  @media (max-width: 800px) { .main-scroll-area { flex-direction: column; } .all-markets-container { flex: none; width: 100%; max-height: 160px; } }
+  select, input[type="range"], input[type="number"] { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.1rem 0.3rem; font-size: 0.7rem; color: var(--text-primary); }
+  
+  @media (max-width: 800px) {
+    .main-scroll-area { flex-direction: column; }
+    .all-markets-container { flex: none; width: 100%; max-height: 150px; }
+    .digits-row { gap: 4px; }
+    .digit-cell span.digit { font-size: 0.9rem; }
+    .last-digit-badge { font-size: 1.3rem; min-width: 40px; }
+  }
 </style>
 </head>
 <body>
@@ -177,26 +198,26 @@
   <div class="modal-content"><span class="close-modal" id="closeModal">&times;</span><h3>Settings</h3>
     <div class="settings-panel">
       <div class="setting-row"><label>🔊 Sound</label><select id="soundEnabled"><option value="true">ON</option><option value="false">OFF</option></select></div>
-      <div class="setting-row"><label>📊 Window Size (ticks)</label><input type="number" id="windowSize" value="1000" min="100" step="50" style="width:80px"></div>
-      <div class="setting-row"><label>🎯 Opposite Digit %</label><input type="number" id="oppositeThreshold" value="10" min="1" max="20" step="1" style="width:60px"></div>
+      <div class="setting-row"><label>📊 Window Size (ticks)</label><input type="number" id="windowSize" value="1000" min="100" step="50" style="width:70px"></div>
+      <div class="setting-row"><label>🎯 Opposite Digit %</label><input type="number" id="oppositeThreshold" value="10" min="1" max="20" step="1" style="width:55px"></div>
       <div class="setting-row"><label>📍 Tick Pointer Style</label>
         <select id="pointerStyle">
-          <option value="triangle">Triangle (▲)</option>
-          <option value="arrow">Arrow (›)</option>
+          <option value="triangle">Triangle</option>
+          <option value="arrow">Arrow</option>
           <option value="dot">Glowing Dot</option>
         </select>
       </div>
       <div class="setting-row"><label>🔍 Pointer Scale (1–20)</label>
-        <input type="range" id="pointerScale" min="1" max="20" step="0.5" value="3" style="width:120px">
+        <input type="range" id="pointerScale" min="1" max="20" step="0.5" value="3" style="width:100px">
         <span id="scaleValue">3.0</span>
       </div>
     </div>
-    <div style="font-size:0.7rem; margin-top:0.5rem;">✅ 20×50 batch cycles update every tick – shows last 20 blocks of 50 ticks each.<br>✅ Even digits: pointer top; Odd digits: pointer bottom.</div>
+    <div style="font-size:0.65rem; margin-top:0.5rem;">✅ 20×50 batch cycles update every tick.<br>✅ Even digits: pointer top; Odd digits: pointer bottom.<br>✅ Digit rank colors: green (most), blue (2nd most), red (least), orange (2nd least).</div>
   </div>
 </div>
 
 <script>
-  // ==================== FIXED BATCH ANALYSIS (UPDATES EVERY TICK) ====================
+  // ==================== ORIGINAL SCRIPT – NO HOT/COLD RANKS ====================
   const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,"1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
   const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Volatility 10 Index","R_25":"Volatility 25 Index","R_50":"Volatility 50 Index","R_75":"Volatility 75 Index","R_100":"Volatility 100 Index","JD10":"Jump 10 Index","JD25":"Jump 25 Index","JD50":"Jump 50 Index","JD75":"Jump 75 Index","JD100":"Jump 100 Index" };
   const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
@@ -229,7 +250,6 @@
 
   function lastDigitFromFormatted(str) { let digits = str.replace(/\./g,''); return digits.length ? parseInt(digits.charAt(digits.length-1),10) : 0; }
   function formatHistoryPrice(s,p) { return p.toFixed(DECIMAL_MAP[s]??2); }
-  function showToast(msg,type) { console.log(`[${type}] ${msg}`); }
   function updateBalanceDisplay(balance, currency) { let box=document.getElementById('balanceBox'), val=document.getElementById('balanceValue'); if(balance!==null){ box.style.display='flex'; val.textContent=(currency==='USD'?'$':currency+' ')+balance.toFixed(2); } else box.style.display='none'; }
 
   function updateTrends(sym) {
@@ -324,15 +344,15 @@
     if(!ptrElem) return;
     const style = ptrElem.style;
     if(ptrElem.classList.contains('triangle')) {
-      const borderSize = 6 * scale;
-      const height = 8 * scale;
+      const borderSize = 5 * scale;
+      const height = 7 * scale;
       style.borderLeftWidth = borderSize + 'px';
       style.borderRightWidth = borderSize + 'px';
       style.borderBottomWidth = height + 'px';
     } else if(ptrElem.classList.contains('arrow')) {
-      style.fontSize = (1 * scale) + 'rem';
+      style.fontSize = (0.9 * scale) + 'rem';
     } else if(ptrElem.classList.contains('dot')) {
-      const size = 8 * scale;
+      const size = 6 * scale;
       style.width = size + 'px';
       style.height = size + 'px';
     }
@@ -340,41 +360,34 @@
       if(digit % 2 === 0) {
         ptrElem.classList.add('pointer-top');
         ptrElem.classList.remove('pointer-bottom');
-        if(ptrElem.classList.contains('triangle')) style.top = (-4 * scale) + 'px';
-        else if(ptrElem.classList.contains('arrow')) style.top = (-6 * scale) + 'px';
-        else if(ptrElem.classList.contains('dot')) style.top = (-4 * scale) + 'px';
+        if(ptrElem.classList.contains('triangle')) style.top = (-3.5 * scale) + 'px';
+        else if(ptrElem.classList.contains('arrow')) style.top = (-5 * scale) + 'px';
+        else if(ptrElem.classList.contains('dot')) style.top = (-3 * scale) + 'px';
         style.bottom = 'auto';
       } else {
         ptrElem.classList.add('pointer-bottom');
         ptrElem.classList.remove('pointer-top');
-        if(ptrElem.classList.contains('triangle')) style.bottom = (-4 * scale) + 'px';
-        else if(ptrElem.classList.contains('arrow')) style.bottom = (-6 * scale) + 'px';
-        else if(ptrElem.classList.contains('dot')) style.bottom = (-4 * scale) + 'px';
+        if(ptrElem.classList.contains('triangle')) style.bottom = (-3.5 * scale) + 'px';
+        else if(ptrElem.classList.contains('arrow')) style.bottom = (-5 * scale) + 'px';
+        else if(ptrElem.classList.contains('dot')) style.bottom = (-3 * scale) + 'px';
         style.top = 'auto';
       }
     } else {
       ptrElem.classList.add('pointer-bottom');
       ptrElem.classList.remove('pointer-top');
-      if(ptrElem.classList.contains('triangle')) style.bottom = (-4 * scale) + 'px';
-      else if(ptrElem.classList.contains('arrow')) style.bottom = (-6 * scale) + 'px';
-      else if(ptrElem.classList.contains('dot')) style.bottom = (-4 * scale) + 'px';
+      if(ptrElem.classList.contains('triangle')) style.bottom = (-3.5 * scale) + 'px';
+      else if(ptrElem.classList.contains('arrow')) style.bottom = (-5 * scale) + 'px';
+      else if(ptrElem.classList.contains('dot')) style.bottom = (-3 * scale) + 'px';
       style.top = 'auto';
     }
   }
 
+  // REBUILD DIGIT GRID – NO HOT/COLD CLASSES
   function rebuildDigitGrid(sym) {
     let s=getSettings(), win=s.windowSize, scale=s.pointerScale, styleName=s.pointerStyle;
     let cnts=getDigitCounts(sym,win);
     if(!cnts) return;
-    let pct=cnts.pct, tr=rawTrend[sym]||{}, data=marketData[sym], last50=data.last50Array;
-    let opct=pct.map(c=>c/100), lc=new Array(10).fill(0);
-    last50.forEach(dd=>lc[dd]++);
-    let hot=new Set(), cold=new Set();
-    if(last50.length>=20) {
-      let diff=lc.map((c,i)=>(c/last50.length - opct[i]));
-      let sd=diff.map((v,i)=>({dig:i,diff:v})).sort((a,b)=>b.diff-a.diff);
-      hot=new Set(sd.slice(0,2).map(x=>x.dig)); cold=new Set(sd.slice(-2).map(x=>x.dig));
-    }
+    let pct=cnts.pct, tr=rawTrend[sym]||{}, data=marketData[sym];
     let arr=pct.map((_,i)=>({digit:i, count:Math.round(pct[i]*win/100)}));
     let srt=[...arr].sort((a,b)=>b.count-a.count);
     let max=srt[0].count, most=new Set(srt.filter(i=>i.count===max).map(i=>i.digit));
@@ -394,7 +407,6 @@
       if(second.has(dig)) cell.classList.add('second');
       if(least.has(dig)) cell.classList.add('least');
       if(sleast.has(dig)) cell.classList.add('secondleast');
-      if(hot.has(dig)) cell.classList.add('hot'); if(cold.has(dig)) cell.classList.add('cold');
       let arrow=tr[dig]===1?'↑':(tr[dig]===-1?'↓':'•');
       cell.innerHTML=`<span class="digit">${dig}</span><div class="percent">${pct[dig].toFixed(1)}%</div><span class="trend">${arrow}</span>`;
       if(data.lastDigit===dig){
@@ -414,7 +426,6 @@
       if(second.has(dig)) cell.classList.add('second');
       if(least.has(dig)) cell.classList.add('least');
       if(sleast.has(dig)) cell.classList.add('secondleast');
-      if(hot.has(dig)) cell.classList.add('hot'); if(cold.has(dig)) cell.classList.add('cold');
       let arrow=tr[dig]===1?'↑':(tr[dig]===-1?'↓':'•');
       cell.innerHTML=`<span class="digit">${dig}</span><div class="percent">${pct[dig].toFixed(1)}%</div><span class="trend">${arrow}</span>`;
       if(data.lastDigit===dig){
@@ -451,11 +462,10 @@
       lines.push(`<div class="tf-line"><span>>${w}t</span><span style="color:${col}">${info.direction}</span><span>${info.pct.toFixed(0)}%</span></div>`);
       if(first===null) first=info.direction; else if(info.direction!==first) allAgree=false;
     }
-    let strong=allAgree&&first!==null?`<div style="font-size:0.6rem;color:${first==='EVEN'||first==='OVER'?'#4ade80':'#f87171'};">🔥 ALL AGREED</div>`:'';
+    let strong=allAgree&&first!==null?`<div style="font-size:0.55rem;color:${first==='EVEN'||first==='OVER'?'#4ade80':'#f87171'};">🔥 ALL AGREED</div>`:'';
     div.innerHTML=`<div class="multi-tf-progress"><div>📊 Agreement (25,50,100,200t)</div>${lines.join('')}${strong}</div>`;
   }
 
-  // FIXED: batch analysis rebuilds every tick from the full rolling array
   function updateBatchAnalysis(sym) {
     let container = document.getElementById(`batchContainer_${sym}`);
     if(!container) return;
@@ -465,10 +475,9 @@
       container.innerHTML = '<div class="batch-analysis">Need at least 50 ticks</div>';
       return;
     }
-    let arr = data.rollingArray.slice(); // copy
+    let arr = data.rollingArray.slice();
     let batches = [];
     let batchSize = 50;
-    // take up to 20 batches from the END of the array (most recent)
     let startIdx = Math.max(0, arr.length - 20 * batchSize);
     for(let i = startIdx; i + batchSize <= arr.length && batches.length < 20; i += batchSize) {
       let batch = arr.slice(i, i + batchSize);
@@ -484,7 +493,6 @@
         else batches.push('=');
       }
     }
-    // current 50‑tick state (last 50 ticks)
     let lastBatch = arr.slice(-50);
     let currentState = null;
     if(mt === 'evenodd') {
@@ -504,7 +512,7 @@
     }
     let elapsed = Math.floor((Date.now() - start) / 1000);
     let timer = `${Math.floor(elapsed/60)}m ${elapsed%60}s`;
-    let gridHtml = `<div class="batch-analysis"><div class="batch-title">📦 20x50 TICK CYCLES (old → new)</div><div class="batch-grid">`;
+    let gridHtml = `<div class="batch-analysis"><div class="batch-title">📦 20x50 TICK CYCLES</div><div class="batch-grid">`;
     batches.forEach(b => {
       let cls = '';
       if(mt === 'evenodd') {
@@ -518,7 +526,7 @@
       }
       gridHtml += `<div class="batch-cell ${cls}">${b}</div>`;
     });
-    gridHtml += `</div><div class="batch-expect">📌 CURRENT MARKET (50‑batch): <span style="color:${stateClass === 'even' ? '#10b981' : stateClass === 'odd' ? '#ef4444' : stateClass === 'over' ? '#10b981' : stateClass === 'under' ? '#ef4444' : '#facc15'}">${stateText}</span> ${timer}</div></div>`;
+    gridHtml += `</div><div class="batch-expect">📌 CURRENT: <span style="color:${stateClass === 'even' ? '#10b981' : stateClass === 'odd' ? '#ef4444' : '#facc15'}">${stateText}</span> ${timer}</div></div>`;
     container.innerHTML = gridHtml;
   }
 
@@ -546,7 +554,7 @@
       document.getElementById(`streakStats_${sym}`).innerHTML=`📊 Streak: ${streak}x ${last}`;
     }
     let pred=(()=>{ if(last50.length<10) return {digit:null}; let w=new Array(10).fill(0); for(let i=0;i<last50.length;i++) w[last50[i]]+=(i>=last50.length-10?3:1); let best=w.indexOf(Math.max(...w)); return {digit:best, prob:(w[best]/w.reduce((a,b)=>a+b,0)*100).toFixed(0)}; })();
-    document.getElementById(`prediction_${sym}`).innerHTML=`🔮 NEXT DIGIT: ${pred.digit!==null?`${pred.digit} (${pred.prob}%)`:'—'}`;
+    document.getElementById(`prediction_${sym}`).innerHTML=`🔮 NEXT: ${pred.digit!==null?`${pred.digit} (${pred.prob}%)`:'—'}`;
     let signal=getOppositeFilterSignal(sym);
     let sigDiv=document.getElementById(`signalDisplay_${sym}`);
     if(signal){
@@ -558,7 +566,7 @@
     let domDiv=document.getElementById(`dominanceMeter_${sym}`);
     if(domStats) domDiv.innerHTML=`<div class="dom-group"><span>${domStats.label1}</span><span class="dom-up">↑${domStats.stats1.up}</span><span class="dom-down">↓${domStats.stats1.down}</span><span class="dom-avg">(${domStats.stats1.avg.toFixed(1)})</span></div><div class="dom-group"><span>${domStats.label2}</span><span class="dom-up">↑${domStats.stats2.up}</span><span class="dom-down">↓${domStats.stats2.down}</span><span class="dom-avg">(${domStats.stats2.avg.toFixed(1)})</span></div>`;
     updateTrendBars(sym);
-    updateBatchAnalysis(sym); // ensure it runs every tick
+    updateBatchAnalysis(sym);
   }
 
   function playSignalSound(){ let s=getSettings(); if(s.soundEnabled&&audioCtx){ let osc=audioCtx.createOscillator(), gain=audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.frequency.value=880; gain.gain.value=0.15; osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime+0.3); osc.stop(audioCtx.currentTime+0.3); } }
@@ -702,7 +710,7 @@
   document.getElementById('closeModal').onclick=()=>settingsModal.style.display='none';
   window.onclick=e=>{ if(e.target===settingsModal) settingsModal.style.display='none'; };
   document.body.addEventListener('click',()=>{ if(audioCtx===null) audioCtx=new AudioContext(); if(audioCtx.state==='suspended') audioCtx.resume(); requestNotificationPermission(); });
-  console.log("TAJIRI TRADERS – 20×50 batch cycles fixed: now recalculated every tick and shows the last 20 complete 50‑tick blocks.");
+  console.log("TAJIRI TRADERS – Only four rank colors (green, blue, red, orange). No hot/cold overlays.");
 </script>
 </body>
 </html>
