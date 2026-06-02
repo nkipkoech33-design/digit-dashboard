@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<title>TAJIRI TRADERS – Compact Colors</title>
+<title>TAJIRI TRADERS – Dual Strategy</title>
 <style>
   /* ==================== COMPACT LAYOUT – ONLY 4 RANK COLORS ==================== */
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -44,6 +44,9 @@
   .market-type-selector { display: flex; gap: 0.3rem; background: var(--bg-panel); padding: 0.1rem 0.4rem; border-radius: 1.5rem; }
   .market-btn { background: none; border: none; font-size: 0.75rem; padding: 0.2rem 0.8rem; border-radius: 1.2rem; cursor: pointer; opacity: 0.6; font-weight: bold; color: var(--text-primary); }
   .market-btn.active { opacity: 1; background: var(--trade-active); }
+  .strategy-selector { display: flex; gap: 0.3rem; background: var(--bg-panel); padding: 0.1rem 0.4rem; border-radius: 1.5rem; margin-left: 0.5rem; }
+  .strategy-btn { background: none; border: none; font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 1.2rem; cursor: pointer; opacity: 0.6; font-weight: bold; color: var(--text-primary); }
+  .strategy-btn.active { opacity: 1; background: var(--trade-active); }
   
   .focus-bar { background: var(--bg-header); padding: 0.2rem 0.6rem; margin-bottom: 0.3rem; border-radius: 1.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; }
   .focus-bar button { background: var(--btn-bg); border: none; padding: 0.1rem 0.5rem; border-radius: 1rem; color: white; cursor: pointer; font-size: 0.65rem; }
@@ -69,11 +72,11 @@
   .digit-cell .trend { font-size: 0.6rem; margin-left: 0; display: inline-block; }
   .digit-cell.last-digit-highlight { border: 2px solid var(--gold); box-shadow: 0 0 6px var(--gold); transform: scale(1.01); }
   
-  /* ONLY FOUR RANK COLORS – NO GRADIENTS, NO HOT/COLD */
-  .most { background: #10b981; }      /* green */
-  .second { background: #3b82f6; }    /* blue */
-  .least { background: #ef4444; }     /* red */
-  .secondleast { background: #f97316; } /* orange */
+  /* ONLY FOUR RANK COLORS */
+  .most { background: #10b981; }
+  .second { background: #3b82f6; }
+  .least { background: #ef4444; }
+  .secondleast { background: #f97316; }
   
   .pointer-marker { position: absolute; left: 50%; transform: translateX(-50%); z-index: 2; }
   .pointer-marker.triangle { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 7px solid var(--gold); background: none; }
@@ -177,6 +180,10 @@
       <button class="market-btn active" data-market="evenodd">🎲 Even/Odd</button>
       <button class="market-btn" data-market="overunder">📊 Over/Under</button>
     </div>
+    <div class="strategy-selector" id="strategySelector">
+      <button class="strategy-btn active" data-strategy="opposite">📉 Opp %</button>
+      <button class="strategy-btn" data-strategy="ranked">🎯 All Ranked Same</button>
+    </div>
   </div>
 
   <div class="main-scroll-area">
@@ -199,7 +206,7 @@
     <div class="settings-panel">
       <div class="setting-row"><label>🔊 Sound</label><select id="soundEnabled"><option value="true">ON</option><option value="false">OFF</option></select></div>
       <div class="setting-row"><label>📊 Window Size (ticks)</label><input type="number" id="windowSize" value="1000" min="100" step="50" style="width:70px"></div>
-      <div class="setting-row"><label>🎯 Opposite Digit %</label><input type="number" id="oppositeThreshold" value="10" min="1" max="20" step="1" style="width:55px"></div>
+      <div class="setting-row"><label>🎯 Opposite Digit % (Opp % strategy)</label><input type="number" id="oppositeThreshold" value="10" min="1" max="20" step="1" style="width:55px"></div>
       <div class="setting-row"><label>📍 Tick Pointer Style</label>
         <select id="pointerStyle">
           <option value="triangle">Triangle</option>
@@ -212,12 +219,12 @@
         <span id="scaleValue">3.0</span>
       </div>
     </div>
-    <div style="font-size:0.65rem; margin-top:0.5rem;">✅ 20×50 batch cycles update every tick.<br>✅ Even digits: pointer top; Odd digits: pointer bottom.<br>✅ Digit rank colors: green (most), blue (2nd most), red (least), orange (2nd least).</div>
+    <div style="font-size:0.65rem; margin-top:0.5rem;">✅ Two strategies: <strong>Opp %</strong> (classic) and <strong>All Ranked Same</strong> (new).<br>✅ New strategy triggers when the 4 colored digits are all odd/even or all over/under – trades the opposite side.</div>
   </div>
 </div>
 
 <script>
-  // ==================== ORIGINAL SCRIPT – NO HOT/COLD RANKS ====================
+  // ==================== DUAL STRATEGY – OPPOSITE % + ALL RANKED SAME SIDE ====================
   const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,"1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
   const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Volatility 10 Index","R_25":"Volatility 25 Index","R_50":"Volatility 50 Index","R_75":"Volatility 75 Index","R_100":"Volatility 100 Index","JD10":"Jump 10 Index","JD25":"Jump 25 Index","JD50":"Jump 50 Index","JD75":"Jump 75 Index","JD100":"Jump 100 Index" };
   const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
@@ -228,6 +235,7 @@
   let balanceCurrency = 'USD';
   let focusedSymbol = null;
   let prevPercentages = {};
+  let currentStrategy = 'opposite'; // 'opposite' or 'ranked'
 
   const scaleSlider = document.getElementById('pointerScale');
   const scaleValue = document.getElementById('scaleValue');
@@ -272,6 +280,7 @@
     return {cnt, pct, total};
   }
 
+  // -------- OPPOSITE % STRATEGY ----------
   function getOppositeFilterSignal(sym) {
     let s=getSettings(), win=s.windowSize, thresh=s.oppositeThreshold;
     let cnts=getDigitCounts(sym,win);
@@ -287,6 +296,56 @@
       if(high.every(d=>pct[d]<=thresh)) return "UNDER";
     }
     return null;
+  }
+
+  // -------- NEW: ALL 4 RANKED DIGITS SAME SIDE ----------
+  function getAllRankedSameSideSignal(sym) {
+    let win = getSettings().windowSize;
+    let cnts = getDigitCounts(sym, win);
+    if(!cnts) return null;
+    let pct = cnts.pct;
+    // compute ranks (most, second, least, secondleast)
+    let arr = pct.map((_,i)=>({digit:i, count:Math.round(pct[i]*win/100)}));
+    let sorted = [...arr].sort((a,b)=>b.count - a.count);
+    let max = sorted[0].count;
+    let mostSet = new Set(sorted.filter(i=>i.count===max).map(i=>i.digit));
+    let sec = null;
+    for(let i of sorted) if(i.count!==max){ sec=i.count; break; }
+    let secondSet = sec!==null ? new Set(sorted.filter(i=>i.count===sec).map(i=>i.digit)) : new Set();
+    let min = sorted[sorted.length-1].count;
+    let leastSet = new Set(sorted.filter(i=>i.count===min).map(i=>i.digit));
+    let sm = null;
+    for(let i=sorted.length-2;i>=0;i--) if(sorted[i].count!==min){ sm=sorted[i].count; break; }
+    let secondLeastSet = sm!==null ? new Set(sorted.filter(i=>i.count===sm).map(i=>i.digit)) : new Set();
+
+    // collect the four ranked digits (if duplicate counts cause more than 4, we take the ones that appear, but the condition should apply to the digits that actually got colored)
+    let rankedDigits = new Set([...mostSet, ...secondSet, ...leastSet, ...secondLeastSet]);
+    if(rankedDigits.size === 0) return null;
+
+    if(currentMarket === 'evenodd') {
+      let allOdd = true, allEven = true;
+      for(let d of rankedDigits) {
+        if(d % 2 === 0) allOdd = false;
+        else allEven = false;
+      }
+      if(allOdd) return "EVEN";   // all odd -> trade even
+      if(allEven) return "ODD";   // all even -> trade odd
+    } else {
+      let allOver = true, allUnder = true;
+      for(let d of rankedDigits) {
+        if(d < 5) allOver = false;
+        else allUnder = false;
+      }
+      if(allOver) return "UNDER";   // all over (>=5) -> trade under
+      if(allUnder) return "OVER";   // all under (<=4) -> trade over
+    }
+    return null;
+  }
+
+  // Main signal function – chooses strategy
+  function getSignal(sym) {
+    if(currentStrategy === 'opposite') return getOppositeFilterSignal(sym);
+    else return getAllRankedSameSideSignal(sym);
   }
 
   function getGroupArrowStats(sym) {
@@ -382,7 +441,7 @@
     }
   }
 
-  // REBUILD DIGIT GRID – NO HOT/COLD CLASSES
+  // rebuild digit grid – same as before, with rank colors
   function rebuildDigitGrid(sym) {
     let s=getSettings(), win=s.windowSize, scale=s.pointerScale, styleName=s.pointerStyle;
     let cnts=getDigitCounts(sym,win);
@@ -555,11 +614,12 @@
     }
     let pred=(()=>{ if(last50.length<10) return {digit:null}; let w=new Array(10).fill(0); for(let i=0;i<last50.length;i++) w[last50[i]]+=(i>=last50.length-10?3:1); let best=w.indexOf(Math.max(...w)); return {digit:best, prob:(w[best]/w.reduce((a,b)=>a+b,0)*100).toFixed(0)}; })();
     document.getElementById(`prediction_${sym}`).innerHTML=`🔮 NEXT: ${pred.digit!==null?`${pred.digit} (${pred.prob}%)`:'—'}`;
-    let signal=getOppositeFilterSignal(sym);
+    let signal=getSignal(sym);
     let sigDiv=document.getElementById(`signalDisplay_${sym}`);
     if(signal){
       let col=(signal==='EVEN'||signal==='OVER')?'#4ade80':'#f87171';
-      sigDiv.innerHTML=`<div class="signal-flash" style="color:${col}">🎯 OPPOSITE ≤${getSettings().oppositeThreshold}% → ${signal}</div><div><button class="vote-btn" onclick="playSignalSound()">🔊</button></div>`;
+      let strategyLabel = currentStrategy === 'opposite' ? `Opp % ≤${getSettings().oppositeThreshold}%` : 'All Ranked Same';
+      sigDiv.innerHTML=`<div class="signal-flash" style="color:${col}">🎯 ${strategyLabel} → ${signal}</div><div><button class="vote-btn" onclick="playSignalSound()">🔊</button></div>`;
     } else sigDiv.innerHTML='<div class="no-signal-placeholder"></div>';
     rebuildDigitGrid(sym);
     let domStats=getGroupArrowStats(sym);
@@ -605,7 +665,7 @@
 
   function updateAllMarketsList(){
     let items=ALL_SYMBOLS.map(sym=>{
-      let signal=getOppositeFilterSignal(sym);
+      let signal=getSignal(sym);
       let cls=signal?'blink-agreement':'';
       let suffix=signal?` → ${signal}`:'';
       return `<div class="market-list-item ${cls}" data-symbol="${sym}"><span>${MARKET_NAMES[sym]}${suffix}</span></div>`;
@@ -699,10 +759,12 @@
   }
 
   function toggleMode(){ document.body.classList.toggle('light'); }
-  function setMarket(m){ currentMarket=m; document.querySelectorAll('.market-btn').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('data-market')===m)); for(let s in marketData) if(marketData[s]?.rollingArray?.length) renderMarket(s); document.getElementById('connectionStatus').innerHTML=`✅ ${m.toUpperCase()}`; }
+  function setMarket(m){ currentMarket=m; document.querySelectorAll('.market-btn').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('data-market')===m)); for(let s in marketData) if(marketData[s]?.rollingArray?.length) renderMarket(s); updateAllMarketsList(); document.getElementById('connectionStatus').innerHTML=`✅ ${m.toUpperCase()}`; }
+  function setStrategy(strategy){ currentStrategy=strategy; document.querySelectorAll('.strategy-btn').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('data-strategy')===strategy)); for(let s in marketData) if(marketData[s]?.rollingArray?.length) renderMarket(s); updateAllMarketsList(); }
 
-  window.connectWebSocket=connectWebSocket; window.toggleMode=toggleMode; window.setMarket=setMarket; window.playSignalSound=playSignalSound; window.setFocus=setFocus; window.showAllMarkets=showAllMarkets;
+  window.connectWebSocket=connectWebSocket; window.toggleMode=toggleMode; window.setMarket=setMarket; window.setStrategy=setStrategy; window.playSignalSound=playSignalSound; window.setFocus=setFocus; window.showAllMarkets=showAllMarkets;
   document.querySelectorAll('.market-btn').forEach(btn=>btn.onclick=()=>setMarket(btn.getAttribute('data-market')));
+  document.querySelectorAll('.strategy-btn').forEach(btn=>btn.onclick=()=>setStrategy(btn.getAttribute('data-strategy')));
   document.getElementById('showAllBtn')?.addEventListener('click',showAllMarkets);
 
   let settingsModal=document.getElementById('settingsModal');
@@ -710,7 +772,7 @@
   document.getElementById('closeModal').onclick=()=>settingsModal.style.display='none';
   window.onclick=e=>{ if(e.target===settingsModal) settingsModal.style.display='none'; };
   document.body.addEventListener('click',()=>{ if(audioCtx===null) audioCtx=new AudioContext(); if(audioCtx.state==='suspended') audioCtx.resume(); requestNotificationPermission(); });
-  console.log("TAJIRI TRADERS – Only four rank colors (green, blue, red, orange). No hot/cold overlays.");
+  console.log("TAJIRI TRADERS – Dual strategy: Opposite % (classic) and All Ranked Same Side (new). Switch using the selector.");
 </script>
 </body>
 </html>
