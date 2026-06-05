@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<title>TAJIRI TRADERS – Dual Strategy</title>
+<title>TAJIRI TRADERS – Full Feature Dual Strategy (Fixed Percentages)</title>
 <style>
-  /* ==================== COMPACT LAYOUT – ONLY 4 RANK COLORS ==================== */
   * { margin: 0; padding: 0; box-sizing: border-box; }
   :root {
     --bg-body: #0b1120; --bg-card: #111827; --bg-header: #1e293b; --bg-panel: #0a0f1c;
@@ -28,7 +27,6 @@
   .top-spacer { height: var(--external-nav-height); width: 100%; background: transparent; flex-shrink: 0; }
   .app-container { display: flex; flex-direction: column; height: calc(100vh - var(--external-nav-height)); overflow: hidden; }
   
-  /* top bar compact */
   .top-slim-bar { background: var(--bg-header); border-bottom: 1px solid var(--border-color); padding: 0.3rem 0.8rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.4rem; flex-shrink: 0; }
   .logo-area h1 { font-size: 1.1rem; margin: 0; background: linear-gradient(135deg, var(--gold), #38bdf8); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .right-controls { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
@@ -61,7 +59,7 @@
   .focus-icon { cursor: pointer; font-size: 0.9rem; opacity: 0.7; }
   .live-price-big { font-size: 0.75rem; background: var(--bg-body); padding: 0.1rem 0.4rem; border-radius: 0.8rem; }
   .market-status { font-size: 0.6rem; padding: 0.1rem 0.3rem; border-radius: 0.8rem; background: var(--bg-panel); }
-  .last-digit-badge { font-size: 1.6rem; font-weight: 800; background: var(--last-digit-bg); padding: 0 0.3rem; border-radius: 0.8rem; min-width: 50px; text-align: center; color: var(--gold); line-height: 1.1; }
+  .last-digit-badge { font-size: 1.6rem; font-weight: 800; background: var(--last-digit-bg); padding: 0 0.3rem; border-radius: 0.8rem; min-width: 50px; text-align: center; color: var(--gold); line-height: 1.1; position: relative; }
   
   .card-content { display: flex; flex-direction: column; gap: 0.2rem; }
   .digits-grid { display: flex; flex-direction: column; gap: 4px; padding: 0.3rem 0.5rem; background: var(--bg-body); }
@@ -70,9 +68,8 @@
   .digit-cell span.digit { font-size: 1.1rem; font-weight: 800; display: block; line-height: 1.1; }
   .digit-cell .percent { font-size: 0.55rem; font-weight: 800; color: var(--percent-accent); margin-top: 1px; }
   .digit-cell .trend { font-size: 0.6rem; margin-left: 0; display: inline-block; }
-  .digit-cell.last-digit-highlight { border: 2px solid var(--gold); box-shadow: 0 0 6px var(--gold); transform: scale(1.01); }
+  .digit-cell.last-digit-highlight { border: 2px solid var(--gold); box-shadow: 0 0 6px var(--gold); transform: scale(1.01); background: var(--bg-digit); }
   
-  /* ONLY FOUR RANK COLORS */
   .most { background: #10b981; }
   .second { background: #3b82f6; }
   .least { background: #ef4444; }
@@ -96,10 +93,12 @@
   
   .letter-sequence-wrapper { padding: 0.2rem 0.4rem; background: var(--bg-body); border-bottom: 1px solid var(--border-color); overflow-x: auto; text-align: center; }
   .letter-sequence { font-size: 0.85rem; font-family: monospace; letter-spacing: 2px; white-space: nowrap; }
-  .seq-u, .seq-m, .seq-o { display: inline-block; padding: 0 2px; border-radius: 4px; margin: 0 1px; font-weight: bold; }
+  .seq-u, .seq-m, .seq-o, .seq-e, .seq-odd { display: inline-block; padding: 0 2px; border-radius: 4px; margin: 0 1px; font-weight: bold; }
   .seq-u { background: #ef4444; color: white; }
   .seq-m { background: #3b82f6; color: white; }
   .seq-o { background: #10b981; color: white; }
+  .seq-e { background: #10b981; color: white; }
+  .seq-odd { background: #f97316; color: white; }
   
   .signal-area { padding: 0.2rem 0.4rem; text-align: center; background: var(--bg-body); border-bottom: 1px solid var(--border-color); min-height: 1.8rem; font-size: 0.65rem; display: flex; justify-content: center; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
   .vote-btn { background: var(--btn-bg); border: none; padding: 0.1rem 0.5rem; border-radius: 1rem; color: white; cursor: pointer; font-size: 0.6rem; }
@@ -181,8 +180,8 @@
       <button class="market-btn" data-market="overunder">📊 Over/Under</button>
     </div>
     <div class="strategy-selector" id="strategySelector">
-      <button class="strategy-btn active" data-strategy="opposite">📉 Opp %</button>
-      <button class="strategy-btn" data-strategy="ranked">🎯 All Ranked Same</button>
+      <button class="strategy-btn active" data-strategy="reversal">📉 Reversal (Opp %)</button>
+      <button class="strategy-btn" data-strategy="trend">🎯 Trend (Strict Sets)</button>
     </div>
   </div>
 
@@ -205,8 +204,10 @@
   <div class="modal-content"><span class="close-modal" id="closeModal">&times;</span><h3>Settings</h3>
     <div class="settings-panel">
       <div class="setting-row"><label>🔊 Sound</label><select id="soundEnabled"><option value="true">ON</option><option value="false">OFF</option></select></div>
-      <div class="setting-row"><label>📊 Window Size (ticks)</label><input type="number" id="windowSize" value="1000" min="100" step="50" style="width:70px"></div>
-      <div class="setting-row"><label>🎯 Opposite Digit % (Opp % strategy)</label><input type="number" id="oppositeThreshold" value="10" min="1" max="20" step="1" style="width:55px"></div>
+      <div class="setting-row"><label>📊 Reversal Window (ticks) – also used for displayed percentages</label><input type="number" id="windowSize" value="1000" min="100" step="50" style="width:70px"></div>
+      <div class="setting-row"><label>🎯 Opp % Threshold (reversal)</label><input type="number" id="oppositeThreshold" value="10" min="1" max="20" step="1" style="width:55px"></div>
+      <div class="setting-row"><label>⚡ Trend Rank Window (ticks) – for trend signal only</label><input type="number" id="trendRankWindow" value="100" min="30" max="500" step="10" style="width:70px"></div>
+      <div class="setting-row"><label>🟢 Green Bar Min % (trend)</label><input type="number" id="greenMinPct" value="11" min="0" max="30" step="1" style="width:55px"></div>
       <div class="setting-row"><label>📍 Tick Pointer Style</label>
         <select id="pointerStyle">
           <option value="triangle">Triangle</option>
@@ -219,12 +220,12 @@
         <span id="scaleValue">3.0</span>
       </div>
     </div>
-    <div style="font-size:0.65rem; margin-top:0.5rem;">✅ Two strategies: <strong>Opp %</strong> (classic) and <strong>All Ranked Same</strong> (new).<br>✅ New strategy triggers when the 4 colored digits are all odd/even or all over/under – trades the opposite side.</div>
+    <div style="font-size:0.65rem; margin-top:0.5rem;">✅ <strong>Displayed percentages and rank colors (most, second, least, secondleast) use the Reversal Window (default 1000 ticks)</strong> – realistic values.<br>✅ Trend signal uses its own smaller Trend Rank Window (default 100 ticks) for fast detection.<br>✅ All original features restored: batch cycles, multi‑TF agreement, DOM meter, trend bars, letter sequence, pointer on last digit, focus mode, sound.</div>
   </div>
 </div>
 
 <script>
-  // ==================== DUAL STRATEGY – OPPOSITE % + ALL RANKED SAME SIDE ====================
+  // ==================== DUAL STRATEGY – DISPLAY USING LARGE WINDOW, TREND USING SMALL WINDOW ====================
   const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,"1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
   const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Volatility 10 Index","R_25":"Volatility 25 Index","R_50":"Volatility 50 Index","R_75":"Volatility 75 Index","R_100":"Volatility 100 Index","JD10":"Jump 10 Index","JD25":"Jump 25 Index","JD50":"Jump 50 Index","JD75":"Jump 75 Index","JD100":"Jump 100 Index" };
   const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
@@ -235,7 +236,8 @@
   let balanceCurrency = 'USD';
   let focusedSymbol = null;
   let prevPercentages = {};
-  let currentStrategy = 'opposite'; // 'opposite' or 'ranked'
+  let currentStrategy = 'reversal';
+  let lastSignalMap = new Map();
 
   const scaleSlider = document.getElementById('pointerScale');
   const scaleValue = document.getElementById('scaleValue');
@@ -249,8 +251,10 @@
   function getSettings() {
     return {
       soundEnabled: document.getElementById('soundEnabled').value === 'true',
-      windowSize: parseInt(document.getElementById('windowSize').value) || 1000,
+      reversalWindow: parseInt(document.getElementById('windowSize').value) || 1000,
       oppositeThreshold: parseFloat(document.getElementById('oppositeThreshold').value) || 10,
+      trendRankWindow: parseInt(document.getElementById('trendRankWindow').value) || 100,
+      greenMinPct: parseFloat(document.getElementById('greenMinPct').value) || 11,
       pointerStyle: document.getElementById('pointerStyle').value,
       pointerScale: parseFloat(scaleSlider ? scaleSlider.value : 3),
     };
@@ -271,6 +275,7 @@
     rawTrend[sym]=trends;
   }
 
+  // Get counts for a given window size
   function getDigitCounts(sym, win) {
     let data=marketData[sym];
     if(!data||data.rollingArray.length<win) return null;
@@ -280,9 +285,45 @@
     return {cnt, pct, total};
   }
 
-  // -------- OPPOSITE % STRATEGY ----------
-  function getOppositeFilterSignal(sym) {
-    let s=getSettings(), win=s.windowSize, thresh=s.oppositeThreshold;
+  // Get ranked digits and percentages using a specified window (for display: large window)
+  function getRankedDigitsAndPctForDisplay(sym) {
+    let win = getSettings().reversalWindow;
+    let cnts = getDigitCounts(sym, win);
+    if(!cnts) return null;
+    let pct = cnts.pct;
+    let arr = pct.map((_,i)=>({digit:i, count:Math.round(pct[i]*win/100), pct:pct[i]}));
+    let sorted = [...arr].sort((a,b)=>b.count - a.count);
+    let mostSet = new Set([sorted[0].digit]);
+    let secondSet = new Set([sorted[1].digit]);
+    let leastSet = new Set([sorted[9].digit]);
+    let secondLeastSet = new Set([sorted[8].digit]);
+    return { most: mostSet, second: secondSet, least: leastSet, secondLeast: secondLeastSet, pct: pct };
+  }
+
+  // Get ranked digits and percentages for trend signal (small window)
+  function getRankedDigitsAndPctForTrend(sym) {
+    let win = getSettings().trendRankWindow;
+    let cnts = getDigitCounts(sym, win);
+    if(!cnts) return null;
+    let pct = cnts.pct;
+    let arr = pct.map((_,i)=>({digit:i, count:Math.round(pct[i]*win/100), pct:pct[i]}));
+    let sorted = [...arr].sort((a,b)=>b.count - a.count);
+    let mostSet = new Set([sorted[0].digit]);
+    let mostPct = sorted[0].pct;
+    let secondSet = new Set([sorted[1].digit]);
+    let leastSet = new Set([sorted[9].digit]);
+    let secondLeastSet = new Set([sorted[8].digit]);
+    return { most: mostSet, second: secondSet, least: leastSet, secondLeast: secondLeastSet, mostPct };
+  }
+
+  function isIn(set, allowed) {
+    let digit = Array.from(set)[0];
+    return allowed.includes(digit);
+  }
+
+  // -------- REVERSAL STRATEGY (uses reversalWindow) ----------
+  function getReversalSignal(sym) {
+    let s=getSettings(), win=s.reversalWindow, thresh=s.oppositeThreshold;
     let cnts=getDigitCounts(sym,win);
     if(!cnts) return null;
     let pct=cnts.pct;
@@ -298,54 +339,154 @@
     return null;
   }
 
-  // -------- NEW: ALL 4 RANKED DIGITS SAME SIDE ----------
-  function getAllRankedSameSideSignal(sym) {
-    let win = getSettings().windowSize;
-    let cnts = getDigitCounts(sym, win);
-    if(!cnts) return null;
-    let pct = cnts.pct;
-    // compute ranks (most, second, least, secondleast)
-    let arr = pct.map((_,i)=>({digit:i, count:Math.round(pct[i]*win/100)}));
-    let sorted = [...arr].sort((a,b)=>b.count - a.count);
-    let max = sorted[0].count;
-    let mostSet = new Set(sorted.filter(i=>i.count===max).map(i=>i.digit));
-    let sec = null;
-    for(let i of sorted) if(i.count!==max){ sec=i.count; break; }
-    let secondSet = sec!==null ? new Set(sorted.filter(i=>i.count===sec).map(i=>i.digit)) : new Set();
-    let min = sorted[sorted.length-1].count;
-    let leastSet = new Set(sorted.filter(i=>i.count===min).map(i=>i.digit));
-    let sm = null;
-    for(let i=sorted.length-2;i>=0;i--) if(sorted[i].count!==min){ sm=sorted[i].count; break; }
-    let secondLeastSet = sm!==null ? new Set(sorted.filter(i=>i.count===sm).map(i=>i.digit)) : new Set();
-
-    // collect the four ranked digits (if duplicate counts cause more than 4, we take the ones that appear, but the condition should apply to the digits that actually got colored)
-    let rankedDigits = new Set([...mostSet, ...secondSet, ...leastSet, ...secondLeastSet]);
-    if(rankedDigits.size === 0) return null;
+  // -------- TREND STRATEGY (uses small trendRankWindow for signal) ----------
+  function getTrendSignal(sym) {
+    let s = getSettings();
+    let ranks = getRankedDigitsAndPctForTrend(sym);
+    if(!ranks) return null;
+    if(ranks.mostPct < s.greenMinPct) return null;
 
     if(currentMarket === 'evenodd') {
-      let allOdd = true, allEven = true;
-      for(let d of rankedDigits) {
-        if(d % 2 === 0) allOdd = false;
-        else allEven = false;
-      }
-      if(allOdd) return "EVEN";   // all odd -> trade even
-      if(allEven) return "ODD";   // all even -> trade odd
+      let mostEven = isIn(ranks.most, [0,2,4,6,8]);
+      let secondEven = isIn(ranks.second, [0,2,4,6,8]);
+      let leastOdd = isIn(ranks.least, [1,3,5,7,9]);
+      let secondLeastOdd = isIn(ranks.secondLeast, [1,3,5,7,9]);
+      let mostOdd = isIn(ranks.most, [1,3,5,7,9]);
+      let secondOdd = isIn(ranks.second, [1,3,5,7,9]);
+      let leastEven = isIn(ranks.least, [0,2,4,6,8]);
+      let secondLeastEven = isIn(ranks.secondLeast, [0,2,4,6,8]);
+      if(mostEven && secondEven && leastOdd && secondLeastOdd) return "EVEN";
+      if(mostOdd && secondOdd && leastEven && secondLeastEven) return "ODD";
     } else {
-      let allOver = true, allUnder = true;
-      for(let d of rankedDigits) {
-        if(d < 5) allOver = false;
-        else allUnder = false;
-      }
-      if(allOver) return "UNDER";   // all over (>=5) -> trade under
-      if(allUnder) return "OVER";   // all under (<=4) -> trade over
+      let mostOver = isIn(ranks.most, [7,8,9]);
+      let secondOver = isIn(ranks.second, [7,8,9]);
+      let leastUnder = isIn(ranks.least, [0,1,2,3]);
+      let secondLeastUnder = isIn(ranks.secondLeast, [0,1,2,3]);
+      let mostUnder = isIn(ranks.most, [0,1,2]);
+      let secondUnder = isIn(ranks.second, [0,1,2]);
+      let leastOver = isIn(ranks.least, [6,7,8,9]);
+      let secondLeastOver = isIn(ranks.secondLeast, [6,7,8,9]);
+      if(mostOver && secondOver && leastUnder && secondLeastUnder) return "OVER";
+      if(mostUnder && secondUnder && leastOver && secondLeastOver) return "UNDER";
     }
     return null;
   }
 
-  // Main signal function – chooses strategy
   function getSignal(sym) {
-    if(currentStrategy === 'opposite') return getOppositeFilterSignal(sym);
-    else return getAllRankedSameSideSignal(sym);
+    if(currentStrategy === 'reversal') return getReversalSignal(sym);
+    else return getTrendSignal(sym);
+  }
+
+  function playSignalSoundIfNew(sym, signal) {
+    let last = lastSignalMap.get(sym);
+    if(signal && last !== signal) {
+      lastSignalMap.set(sym, signal);
+      let s=getSettings();
+      if(s.soundEnabled && audioCtx) {
+        try {
+          let osc = audioCtx.createOscillator();
+          let gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.frequency.value = 880;
+          gain.gain.value = 0.15;
+          osc.start();
+          gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
+          osc.stop(audioCtx.currentTime + 0.3);
+        } catch(e) { console.warn("sound error", e); }
+      }
+    } else if(!signal) {
+      lastSignalMap.set(sym, null);
+    }
+  }
+
+  // ------------------ ALL UI COMPONENTS ------------------
+  function rebuildDigitGrid(sym, ranks, pct, lastDigit, scale, styleName, tr) {
+    let container = document.getElementById(`digitsContainer_${sym}`);
+    if(!container) return;
+    let evens=[0,2,4,6,8], odds=[1,3,5,7,9];
+    let row1=document.createElement('div'); row1.className='digits-row';
+    evens.forEach(d=>{
+      let cell=document.createElement('div'); cell.className='digit-cell';
+      if(ranks.most.has(d)) cell.classList.add('most');
+      if(ranks.second.has(d)) cell.classList.add('second');
+      if(ranks.least.has(d)) cell.classList.add('least');
+      if(ranks.secondLeast.has(d)) cell.classList.add('secondleast');
+      let arrow=tr[d]===1?'↑':(tr[d]===-1?'↓':'•');
+      cell.innerHTML=`<span class="digit">${d}</span><div class="percent">${pct[d].toFixed(1)}%</div><span class="trend">${arrow}</span>`;
+      if(lastDigit===d){
+        cell.classList.add('last-digit-highlight');
+        let ptr=document.createElement('div');
+        ptr.className=`pointer-marker ${styleName}`;
+        if(styleName==='arrow') ptr.innerHTML='›';
+        applyPointerSettings(ptr, d, scale);
+        cell.appendChild(ptr);
+      }
+      row1.appendChild(cell);
+    });
+    let row2=document.createElement('div'); row2.className='digits-row';
+    odds.forEach(d=>{
+      let cell=document.createElement('div'); cell.className='digit-cell';
+      if(ranks.most.has(d)) cell.classList.add('most');
+      if(ranks.second.has(d)) cell.classList.add('second');
+      if(ranks.least.has(d)) cell.classList.add('least');
+      if(ranks.secondLeast.has(d)) cell.classList.add('secondleast');
+      let arrow=tr[d]===1?'↑':(tr[d]===-1?'↓':'•');
+      cell.innerHTML=`<span class="digit">${d}</span><div class="percent">${pct[d].toFixed(1)}%</div><span class="trend">${arrow}</span>`;
+      if(lastDigit===d){
+        cell.classList.add('last-digit-highlight');
+        let ptr=document.createElement('div');
+        ptr.className=`pointer-marker ${styleName}`;
+        if(styleName==='arrow') ptr.innerHTML='›';
+        applyPointerSettings(ptr, d, scale);
+        cell.appendChild(ptr);
+      }
+      row2.appendChild(cell);
+    });
+    container.innerHTML='';
+    container.appendChild(row1); container.appendChild(row2);
+  }
+
+  function applyPointerSettings(ptr, digit, scale) {
+    if(!ptr) return;
+    const style = ptr.style;
+    if(ptr.classList.contains('triangle')) {
+      const borderSize = 5 * scale;
+      const height = 7 * scale;
+      style.borderLeftWidth = borderSize + 'px';
+      style.borderRightWidth = borderSize + 'px';
+      style.borderBottomWidth = height + 'px';
+    } else if(ptr.classList.contains('arrow')) {
+      style.fontSize = (0.9 * scale) + 'rem';
+    } else if(ptr.classList.contains('dot')) {
+      const size = 6 * scale;
+      style.width = size + 'px';
+      style.height = size + 'px';
+    }
+    if(currentMarket === 'evenodd') {
+      if(digit % 2 === 0) {
+        ptr.classList.add('pointer-top');
+        ptr.classList.remove('pointer-bottom');
+        if(ptr.classList.contains('triangle')) style.top = (-3.5 * scale) + 'px';
+        else if(ptr.classList.contains('arrow')) style.top = (-5 * scale) + 'px';
+        else if(ptr.classList.contains('dot')) style.top = (-3 * scale) + 'px';
+        style.bottom = 'auto';
+      } else {
+        ptr.classList.add('pointer-bottom');
+        ptr.classList.remove('pointer-top');
+        if(ptr.classList.contains('triangle')) style.bottom = (-3.5 * scale) + 'px';
+        else if(ptr.classList.contains('arrow')) style.bottom = (-5 * scale) + 'px';
+        else if(ptr.classList.contains('dot')) style.bottom = (-3 * scale) + 'px';
+        style.top = 'auto';
+      }
+    } else {
+      ptr.classList.add('pointer-bottom');
+      ptr.classList.remove('pointer-top');
+      if(ptr.classList.contains('triangle')) style.bottom = (-3.5 * scale) + 'px';
+      else if(ptr.classList.contains('arrow')) style.bottom = (-5 * scale) + 'px';
+      else if(ptr.classList.contains('dot')) style.bottom = (-3 * scale) + 'px';
+      style.top = 'auto';
+    }
   }
 
   function getGroupArrowStats(sym) {
@@ -359,7 +500,7 @@
   }
 
   function updateTrendBars(sym) {
-    let s=getSettings(), win=s.windowSize;
+    let s=getSettings(), win=s.reversalWindow;
     let cnts=getDigitCounts(sym, win);
     if(!cnts) return;
     let pct = cnts.pct;
@@ -397,107 +538,6 @@
         <div class="trend-arrow ${arrow2==='→'?'arrow-up':(arrow2==='←'?'arrow-down':'')}">${arrow2}</div>
       </div>
     `;
-  }
-
-  function applyPointerSettings(ptrElem, digit, scale) {
-    if(!ptrElem) return;
-    const style = ptrElem.style;
-    if(ptrElem.classList.contains('triangle')) {
-      const borderSize = 5 * scale;
-      const height = 7 * scale;
-      style.borderLeftWidth = borderSize + 'px';
-      style.borderRightWidth = borderSize + 'px';
-      style.borderBottomWidth = height + 'px';
-    } else if(ptrElem.classList.contains('arrow')) {
-      style.fontSize = (0.9 * scale) + 'rem';
-    } else if(ptrElem.classList.contains('dot')) {
-      const size = 6 * scale;
-      style.width = size + 'px';
-      style.height = size + 'px';
-    }
-    if(currentMarket === 'evenodd') {
-      if(digit % 2 === 0) {
-        ptrElem.classList.add('pointer-top');
-        ptrElem.classList.remove('pointer-bottom');
-        if(ptrElem.classList.contains('triangle')) style.top = (-3.5 * scale) + 'px';
-        else if(ptrElem.classList.contains('arrow')) style.top = (-5 * scale) + 'px';
-        else if(ptrElem.classList.contains('dot')) style.top = (-3 * scale) + 'px';
-        style.bottom = 'auto';
-      } else {
-        ptrElem.classList.add('pointer-bottom');
-        ptrElem.classList.remove('pointer-top');
-        if(ptrElem.classList.contains('triangle')) style.bottom = (-3.5 * scale) + 'px';
-        else if(ptrElem.classList.contains('arrow')) style.bottom = (-5 * scale) + 'px';
-        else if(ptrElem.classList.contains('dot')) style.bottom = (-3 * scale) + 'px';
-        style.top = 'auto';
-      }
-    } else {
-      ptrElem.classList.add('pointer-bottom');
-      ptrElem.classList.remove('pointer-top');
-      if(ptrElem.classList.contains('triangle')) style.bottom = (-3.5 * scale) + 'px';
-      else if(ptrElem.classList.contains('arrow')) style.bottom = (-5 * scale) + 'px';
-      else if(ptrElem.classList.contains('dot')) style.bottom = (-3 * scale) + 'px';
-      style.top = 'auto';
-    }
-  }
-
-  // rebuild digit grid – same as before, with rank colors
-  function rebuildDigitGrid(sym) {
-    let s=getSettings(), win=s.windowSize, scale=s.pointerScale, styleName=s.pointerStyle;
-    let cnts=getDigitCounts(sym,win);
-    if(!cnts) return;
-    let pct=cnts.pct, tr=rawTrend[sym]||{}, data=marketData[sym];
-    let arr=pct.map((_,i)=>({digit:i, count:Math.round(pct[i]*win/100)}));
-    let srt=[...arr].sort((a,b)=>b.count-a.count);
-    let max=srt[0].count, most=new Set(srt.filter(i=>i.count===max).map(i=>i.digit));
-    let sec=null; for(let i of srt) if(i.count!==max){sec=i.count;break;}
-    let second=sec!==null?new Set(srt.filter(i=>i.count===sec).map(i=>i.digit)):new Set();
-    let min=srt[srt.length-1].count, least=new Set(srt.filter(i=>i.count===min).map(i=>i.digit));
-    let sm=null; for(let i=srt.length-2;i>=0;i--) if(srt[i].count!==min){sm=srt[i].count;break;}
-    let sleast=sm!==null?new Set(srt.filter(i=>i.count===sm).map(i=>i.digit)):new Set();
-    let container=document.getElementById(`digitsContainer_${sym}`);
-    if(!container) return;
-    container.innerHTML='';
-    let evens=[0,2,4,6,8], odds=[1,3,5,7,9];
-    let row1=document.createElement('div'); row1.className='digits-row';
-    evens.forEach(dig=>{
-      let cell=document.createElement('div'); cell.className='digit-cell';
-      if(most.has(dig)) cell.classList.add('most');
-      if(second.has(dig)) cell.classList.add('second');
-      if(least.has(dig)) cell.classList.add('least');
-      if(sleast.has(dig)) cell.classList.add('secondleast');
-      let arrow=tr[dig]===1?'↑':(tr[dig]===-1?'↓':'•');
-      cell.innerHTML=`<span class="digit">${dig}</span><div class="percent">${pct[dig].toFixed(1)}%</div><span class="trend">${arrow}</span>`;
-      if(data.lastDigit===dig){
-        cell.classList.add('last-digit-highlight');
-        let ptr=document.createElement('div');
-        ptr.className=`pointer-marker ${styleName}`;
-        if(styleName==='arrow') ptr.innerHTML='›';
-        applyPointerSettings(ptr, dig, scale);
-        cell.appendChild(ptr);
-      }
-      row1.appendChild(cell);
-    });
-    let row2=document.createElement('div'); row2.className='digits-row';
-    odds.forEach(dig=>{
-      let cell=document.createElement('div'); cell.className='digit-cell';
-      if(most.has(dig)) cell.classList.add('most');
-      if(second.has(dig)) cell.classList.add('second');
-      if(least.has(dig)) cell.classList.add('least');
-      if(sleast.has(dig)) cell.classList.add('secondleast');
-      let arrow=tr[dig]===1?'↑':(tr[dig]===-1?'↓':'•');
-      cell.innerHTML=`<span class="digit">${dig}</span><div class="percent">${pct[dig].toFixed(1)}%</div><span class="trend">${arrow}</span>`;
-      if(data.lastDigit===dig){
-        cell.classList.add('last-digit-highlight');
-        let ptr=document.createElement('div');
-        ptr.className=`pointer-marker ${styleName}`;
-        if(styleName==='arrow') ptr.innerHTML='›';
-        applyPointerSettings(ptr, dig, scale);
-        cell.appendChild(ptr);
-      }
-      row2.appendChild(cell);
-    });
-    container.appendChild(row1); container.appendChild(row2);
   }
 
   function getWindowInfo(sym, win) {
@@ -590,62 +630,102 @@
   }
 
   function renderMarket(sym) {
-    let data=marketData[sym]; if(!data||!data.rollingArray.length) return;
-    document.getElementById(`livePriceBig_${sym}`).innerText=data.lastPriceDisplay;
-    document.getElementById(`lastDigit_${sym}`).innerText=data.lastDigit;
-    let last50=data.last50Array;
-    let parityDiv=document.getElementById(`paritySeq_${sym}`), ouDiv=document.getElementById(`ouSeq_${sym}`);
-    if(currentMarket==='evenodd'){
-      parityDiv.classList.remove('hidden'); ouDiv.classList.add('hidden');
-      parityDiv.innerHTML=last50.map(d=>d%2===0?'<span style="color:#4ade80;">E</span>':'<span style="color:#f87171;">O</span>').join('');
-      let even=last50.filter(d=>d%2===0).length;
-      document.getElementById(`parityStats_${sym}`).innerHTML=`🎲 E:${(even/last50.length*100).toFixed(0)}% O:${(100-even/last50.length*100).toFixed(0)}%`;
+    let data = marketData[sym];
+    if(!data || !data.rollingArray || data.rollingArray.length === 0) return;
+    let last50 = data.rollingArray.slice(-50);
+    let s = getSettings();
+    // For display: use large window (reversalWindow)
+    let displayRanks = getRankedDigitsAndPctForDisplay(sym);
+    if(!displayRanks) return;
+    let pct = displayRanks.pct;
+    let tr = rawTrend[sym] || {};
+    document.getElementById(`livePriceBig_${sym}`).innerText = data.lastPriceDisplay;
+    document.getElementById(`lastDigit_${sym}`).innerText = data.lastDigit;
+    // parity stats (based on last 50 ticks)
+    if(currentMarket === 'evenodd'){
+      let even = last50.filter(d=>d%2===0).length;
+      document.getElementById(`parityStats_${sym}`).innerHTML = `🎲 E:${(even/50*100).toFixed(0)}% O:${(100-even/50*100).toFixed(0)}%`;
       let streak=1, last=last50[last50.length-1]%2===0?'E':'O';
       for(let i=last50.length-2;i>=0;i--) if((last50[i]%2===0?'E':'O')===last) streak++; else break;
-      document.getElementById(`streakStats_${sym}`).innerHTML=`📊 Streak: ${streak}x ${last}`;
+      document.getElementById(`streakStats_${sym}`).innerHTML = `📊 Streak: ${streak}x ${last}`;
     } else {
-      ouDiv.classList.remove('hidden'); parityDiv.classList.add('hidden');
-      ouDiv.innerHTML=last50.map(d=>d<=3?'<span class="seq-u">U</span>':(d<=5?'<span class="seq-m">M</span>':'<span class="seq-o">O</span>')).join('');
-      let over=last50.filter(d=>d>=5).length;
-      document.getElementById(`parityStats_${sym}`).innerHTML=`📈 Over:${(over/last50.length*100).toFixed(0)}% Under:${(100-over/last50.length*100).toFixed(0)}%`;
+      let over = last50.filter(d=>d>=5).length;
+      document.getElementById(`parityStats_${sym}`).innerHTML = `📈 Over:${(over/50*100).toFixed(0)}% Under:${(100-over/50*100).toFixed(0)}%`;
       let streak=1, last=last50[last50.length-1]>=5?'O':'U';
       for(let i=last50.length-2;i>=0;i--) if((last50[i]>=5?'O':'U')===last) streak++; else break;
-      document.getElementById(`streakStats_${sym}`).innerHTML=`📊 Streak: ${streak}x ${last}`;
+      document.getElementById(`streakStats_${sym}`).innerHTML = `📊 Streak: ${streak}x ${last}`;
     }
-    let pred=(()=>{ if(last50.length<10) return {digit:null}; let w=new Array(10).fill(0); for(let i=0;i<last50.length;i++) w[last50[i]]+=(i>=last50.length-10?3:1); let best=w.indexOf(Math.max(...w)); return {digit:best, prob:(w[best]/w.reduce((a,b)=>a+b,0)*100).toFixed(0)}; })();
-    document.getElementById(`prediction_${sym}`).innerHTML=`🔮 NEXT: ${pred.digit!==null?`${pred.digit} (${pred.prob}%)`:'—'}`;
-    let signal=getSignal(sym);
-    let sigDiv=document.getElementById(`signalDisplay_${sym}`);
+    // prediction (based on last 50 ticks with weighting)
+    let pred = (()=>{ if(last50.length<10) return {digit:null}; let w=new Array(10).fill(0); for(let i=0;i<last50.length;i++) w[last50[i]]+=(i>=last50.length-10?3:1); let best=w.indexOf(Math.max(...w)); return {digit:best, prob:(w[best]/w.reduce((a,b)=>a+b,0)*100).toFixed(0)}; })();
+    document.getElementById(`prediction_${sym}`).innerHTML = `🔮 NEXT: ${pred.digit!==null?`${pred.digit} (${pred.prob}%)`:'—'}`;
+    // signal
+    let signal = getSignal(sym);
+    playSignalSoundIfNew(sym, signal);
+    let sigDiv = document.getElementById(`signalDisplay_${sym}`);
     if(signal){
       let col=(signal==='EVEN'||signal==='OVER')?'#4ade80':'#f87171';
-      let strategyLabel = currentStrategy === 'opposite' ? `Opp % ≤${getSettings().oppositeThreshold}%` : 'All Ranked Same';
-      sigDiv.innerHTML=`<div class="signal-flash" style="color:${col}">🎯 ${strategyLabel} → ${signal}</div><div><button class="vote-btn" onclick="playSignalSound()">🔊</button></div>`;
-    } else sigDiv.innerHTML='<div class="no-signal-placeholder"></div>';
-    rebuildDigitGrid(sym);
-    let domStats=getGroupArrowStats(sym);
-    let domDiv=document.getElementById(`dominanceMeter_${sym}`);
-    if(domStats) domDiv.innerHTML=`<div class="dom-group"><span>${domStats.label1}</span><span class="dom-up">↑${domStats.stats1.up}</span><span class="dom-down">↓${domStats.stats1.down}</span><span class="dom-avg">(${domStats.stats1.avg.toFixed(1)})</span></div><div class="dom-group"><span>${domStats.label2}</span><span class="dom-up">↑${domStats.stats2.up}</span><span class="dom-down">↓${domStats.stats2.down}</span><span class="dom-avg">(${domStats.stats2.avg.toFixed(1)})</span></div>`;
+      let strategyLabel = currentStrategy === 'reversal' ? `Reversal (Opp ≤${s.oppositeThreshold}%)` : `Trend (Green ≥${s.greenMinPct}%)`;
+      let sideInfo = currentMarket === 'evenodd' ? (signal==='EVEN'?'Even':'Odd') : (signal==='OVER'?'Over':'Under');
+      sigDiv.innerHTML = `<div class="signal-flash" style="color:${col}; font-weight:bold;">🎯 ${strategyLabel} → ${sideInfo}</div><div><button class="vote-btn" onclick="manualPlaySound()">🔊</button></div>`;
+    } else sigDiv.innerHTML = '<div class="no-signal-placeholder"></div>';
+    // digit grid with pointer (using display ranks from large window)
+    rebuildDigitGrid(sym, displayRanks, pct, data.lastDigit, s.pointerScale, s.pointerStyle, tr);
+    // DOM meter
+    let domStats = getGroupArrowStats(sym);
+    let domDiv = document.getElementById(`dominanceMeter_${sym}`);
+    if(domStats){
+      domDiv.innerHTML = `<div class="dom-group"><span>${domStats.label1}</span><span class="dom-up">↑${domStats.stats1.up}</span><span class="dom-down">↓${domStats.stats1.down}</span><span class="dom-avg">(${domStats.stats1.avg.toFixed(1)})</span></div>
+                          <div class="dom-group"><span>${domStats.label2}</span><span class="dom-up">↑${domStats.stats2.up}</span><span class="dom-down">↓${domStats.stats2.down}</span><span class="dom-avg">(${domStats.stats2.avg.toFixed(1)})</span></div>`;
+    } else domDiv.innerHTML = '';
+    // trend bars (using reversalWindow for consistency)
     updateTrendBars(sym);
+    // multi-TF (uses its own windows)
+    updateMultiTFProgress(sym);
+    // batch analysis
     updateBatchAnalysis(sym);
+    // letter sequence (based on last 50 ticks)
+    let seqDiv = document.getElementById(`letterSeq_${sym}`);
+    if(seqDiv){
+      if(currentMarket === 'evenodd'){
+        let seq = last50.map(d=> d%2===0 ? '<span class="seq-e">E</span>' : '<span class="seq-odd">O</span>').join('');
+        seqDiv.innerHTML = seq;
+      } else {
+        let seq = last50.map(d=> d<=3 ? '<span class="seq-u">U</span>' : (d<=5 ? '<span class="seq-m">M</span>' : '<span class="seq-o">O</span>')).join('');
+        seqDiv.innerHTML = seq;
+      }
+    }
   }
 
-  function playSignalSound(){ let s=getSettings(); if(s.soundEnabled&&audioCtx){ let osc=audioCtx.createOscillator(), gain=audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.frequency.value=880; gain.gain.value=0.15; osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime+0.3); osc.stop(audioCtx.currentTime+0.3); } }
+  function manualPlaySound() {
+    if(audioCtx) {
+      try {
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.value = 880;
+        gain.gain.value = 0.15;
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
+        osc.stop(audioCtx.currentTime + 0.3);
+      } catch(e) {}
+    }
+  }
 
   function processTick(sym, price, quoteDisplay){
-    if(!marketData[sym]) marketData[sym]={rollingArray:[], last50Array:[], lastDigit:null, lastPriceDisplay:"—"};
+    if(!marketData[sym]) marketData[sym] = { rollingArray:[], last50Array:[], lastDigit:null, lastPriceDisplay:"—" };
     let data=marketData[sym];
     let display=quoteDisplay||formatHistoryPrice(sym,price);
     data.lastPriceDisplay=display;
     let digit=lastDigitFromFormatted(display);
     data.lastDigit=digit;
     data.rollingArray.push(digit);
-    let winSize=getSettings().windowSize;
-    while(data.rollingArray.length>winSize) data.rollingArray.shift();
+    let maxWin = Math.max(getSettings().reversalWindow, getSettings().trendRankWindow);
+    while(data.rollingArray.length > maxWin) data.rollingArray.shift();
     data.last50Array.push(digit);
     if(data.last50Array.length>50) data.last50Array.shift();
     updateTrends(sym);
     renderMarket(sym);
-    updateMultiTFProgress(sym);
     applyFocusVisibility();
   }
 
@@ -690,7 +770,8 @@
     if(document.getElementById(`market_${sym}`)) return;
     let container=document.getElementById('marketsContainer');
     let card=document.createElement('div'); card.className='market-card'; card.id=`market_${sym}`;
-    card.innerHTML=`<div class="market-header">
+    card.innerHTML = `
+      <div class="market-header">
         <div class="market-title"><span>📈 ${name}</span><span class="focus-icon" onclick="setFocus('${sym}')">👁️</span></div>
         <div><span class="live-price-big" id="livePriceBig_${sym}">—</span></div>
         <div class="market-status" id="status_${sym}">${isInvalid?'🔴 BLOCKED':'🔴 no data'}</div>
@@ -699,13 +780,14 @@
       <div class="card-content">
         <div id="digitsContainer_${sym}" class="digits-grid"></div>
         <div class="info-row"><div class="parity-stats" id="parityStats_${sym}">--</div><div class="streak-stats" id="streakStats_${sym}">Streak:0</div><div class="prediction-box" id="prediction_${sym}">—</div></div>
-        <div class="letter-sequence-wrapper"><div class="letter-sequence" id="paritySeq_${sym}">⏳</div><div class="letter-sequence hidden" id="ouSeq_${sym}"></div></div>
+        <div class="letter-sequence-wrapper"><div class="letter-sequence" id="letterSeq_${sym}">⏳</div></div>
         <div class="signal-area" id="signalDisplay_${sym}"></div>
         <div id="multiTFProgress_${sym}" class="multi-tf-progress">⏳</div>
         <div id="batchContainer_${sym}" class="batch-analysis">⏳</div>
         <div class="dom-row" id="dominanceMeter_${sym}"></div>
         <div id="trendBars_${sym}" class="trend-bars"></div>
-      </div>`;
+      </div>
+    `;
     container.appendChild(card);
   }
 
@@ -746,7 +828,6 @@
           let sym=msg.echo_req.ticks_history;
           if(MARKET_NAMES[sym]&&!invalidSymbols.has(sym)){
             msg.history.prices.forEach(p=>processTick(sym,p,null));
-            updateTrendBars(sym);
           }
         } else if(msg.error&&msg.error.code==='InvalidSymbol'&&msg.echo_req?.ticks_history){
           let sym=msg.echo_req.ticks_history;
@@ -762,7 +843,7 @@
   function setMarket(m){ currentMarket=m; document.querySelectorAll('.market-btn').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('data-market')===m)); for(let s in marketData) if(marketData[s]?.rollingArray?.length) renderMarket(s); updateAllMarketsList(); document.getElementById('connectionStatus').innerHTML=`✅ ${m.toUpperCase()}`; }
   function setStrategy(strategy){ currentStrategy=strategy; document.querySelectorAll('.strategy-btn').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('data-strategy')===strategy)); for(let s in marketData) if(marketData[s]?.rollingArray?.length) renderMarket(s); updateAllMarketsList(); }
 
-  window.connectWebSocket=connectWebSocket; window.toggleMode=toggleMode; window.setMarket=setMarket; window.setStrategy=setStrategy; window.playSignalSound=playSignalSound; window.setFocus=setFocus; window.showAllMarkets=showAllMarkets;
+  window.connectWebSocket=connectWebSocket; window.toggleMode=toggleMode; window.setMarket=setMarket; window.setStrategy=setStrategy; window.manualPlaySound=manualPlaySound; window.setFocus=setFocus; window.showAllMarkets=showAllMarkets;
   document.querySelectorAll('.market-btn').forEach(btn=>btn.onclick=()=>setMarket(btn.getAttribute('data-market')));
   document.querySelectorAll('.strategy-btn').forEach(btn=>btn.onclick=()=>setStrategy(btn.getAttribute('data-strategy')));
   document.getElementById('showAllBtn')?.addEventListener('click',showAllMarkets);
@@ -772,7 +853,7 @@
   document.getElementById('closeModal').onclick=()=>settingsModal.style.display='none';
   window.onclick=e=>{ if(e.target===settingsModal) settingsModal.style.display='none'; };
   document.body.addEventListener('click',()=>{ if(audioCtx===null) audioCtx=new AudioContext(); if(audioCtx.state==='suspended') audioCtx.resume(); requestNotificationPermission(); });
-  console.log("TAJIRI TRADERS – Dual strategy: Opposite % (classic) and All Ranked Same Side (new). Switch using the selector.");
+  console.log("Fully restored UI: displayed percentages use 1000‑tick window (realistic values). Trend signal uses its own small window for fast detection.");
 </script>
 </body>
 </html>
