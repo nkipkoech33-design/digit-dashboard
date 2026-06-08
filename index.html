@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<title>TAJIRI TRADERS – Full Feature Dual Strategy (Fixed Percentages)</title>
+<title>TAJIRI TRADERS – Signal Blink & Over/Under Ranking Filter</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   :root {
@@ -14,6 +14,8 @@
     --batch-equal: #6b7280; --batch-even: #10b981; --batch-odd: #ef4444;
     --batch-over: #10b981; --batch-under: #ef4444;
     --external-nav-height: 60px; --green: #10b981; --red: #ef4444; --gold: #facc15;
+    --up-color: #4ade80; --down-color: #f87171;
+    --signal-blink-color: #3b82f6; /* default blue */
   }
   body.light {
     --bg-body: #f8fafc; --bg-card: #ffffff; --bg-header: #e2e8f0; --bg-panel: #f1f5f9;
@@ -22,6 +24,7 @@
     --btn-bg: #2563eb; --trade-active: #059669; --percent-accent: #b45309; --last-digit-bg: #e2e8f0;
     --batch-even: #059669; --batch-odd: #dc2626; --batch-over: #059669; --batch-under: #dc2626;
     --gold: #eab308;
+    --up-color: #15803d; --down-color: #b91c1c;
   }
   body { font-family: 'Segoe UI', Roboto, system-ui, sans-serif; background: var(--bg-body); color: var(--text-primary); height: 100vh; overflow: hidden; margin: 0; padding: 0; }
   .top-spacer { height: var(--external-nav-height); width: 100%; background: transparent; flex-shrink: 0; }
@@ -42,8 +45,8 @@
   .market-type-selector { display: flex; gap: 0.3rem; background: var(--bg-panel); padding: 0.1rem 0.4rem; border-radius: 1.5rem; }
   .market-btn { background: none; border: none; font-size: 0.75rem; padding: 0.2rem 0.8rem; border-radius: 1.2rem; cursor: pointer; opacity: 0.6; font-weight: bold; color: var(--text-primary); }
   .market-btn.active { opacity: 1; background: var(--trade-active); }
-  .strategy-selector { display: flex; gap: 0.3rem; background: var(--bg-panel); padding: 0.1rem 0.4rem; border-radius: 1.5rem; margin-left: 0.5rem; }
-  .strategy-btn { background: none; border: none; font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 1.2rem; cursor: pointer; opacity: 0.6; font-weight: bold; color: var(--text-primary); }
+  .strategy-selector { display: flex; gap: 0.3rem; background: var(--bg-panel); padding: 0.1rem 0.4rem; border-radius: 1.5rem; margin-left: 0.5rem; flex-wrap: wrap; }
+  .strategy-btn { background: none; border: none; font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 1.2rem; cursor: pointer; opacity: 0.6; font-weight: bold; color: var(--text-primary); white-space: nowrap; }
   .strategy-btn.active { opacity: 1; background: var(--trade-active); }
   
   .focus-bar { background: var(--bg-header); padding: 0.2rem 0.6rem; margin-bottom: 0.3rem; border-radius: 1.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; }
@@ -91,7 +94,7 @@
   .dom-up { color: var(--green); }
   .dom-down { color: var(--red); }
   
-  .letter-sequence-wrapper { padding: 0.2rem 0.4rem; background: var(--bg-body); border-bottom: 1px solid var(--border-color); overflow-x: auto; text-align: center; }
+  .letter-sequence-wrapper { padding: 0.2rem 0.4rem; background: var(--bg-body); border-bottom: 1px solid var(--border-color); overflow-x: auto; text-align: center; margin-bottom: 2px; }
   .letter-sequence { font-size: 0.85rem; font-family: monospace; letter-spacing: 2px; white-space: nowrap; }
   .seq-u, .seq-m, .seq-o, .seq-e, .seq-odd { display: inline-block; padding: 0 2px; border-radius: 4px; margin: 0 1px; font-weight: bold; }
   .seq-u { background: #ef4444; color: white; }
@@ -100,8 +103,10 @@
   .seq-e { background: #10b981; color: white; }
   .seq-odd { background: #f97316; color: white; }
   
-  .signal-area { padding: 0.2rem 0.4rem; text-align: center; background: var(--bg-body); border-bottom: 1px solid var(--border-color); min-height: 1.8rem; font-size: 0.65rem; display: flex; justify-content: center; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
-  .vote-btn { background: var(--btn-bg); border: none; padding: 0.1rem 0.5rem; border-radius: 1rem; color: white; cursor: pointer; font-size: 0.6rem; }
+  .signal-area { padding: 0.2rem 0.4rem; text-align: center; background: var(--bg-body); border-bottom: 1px solid var(--border-color); min-height: 2rem; font-size: 0.65rem; display: flex; justify-content: center; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
+  .signal-flash { font-weight: bold; }
+  .momentum-meter { display: inline-flex; align-items: center; gap: 0.2rem; background: var(--bg-panel); padding: 0.1rem 0.4rem; border-radius: 1rem; font-size: 0.65rem; font-weight: bold; }
+  .trend-quality { background: #1e293b; padding: 0.1rem 0.4rem; border-radius: 1rem; font-size: 0.6rem; }
   
   .multi-tf-progress { background: var(--bg-panel); border-radius: 0.5rem; padding: 0.2rem; margin: 0.1rem 0.4rem; font-size: 0.6rem; text-align: center; }
   .tf-line { display: flex; justify-content: space-between; padding: 0.05rem 0.1rem; }
@@ -132,18 +137,26 @@
   .all-markets-container { flex: 0 0 230px; background: var(--bg-header); border-radius: 0.8rem; padding: 0.4rem; border-left: 2px solid var(--gold); overflow-y: auto; }
   .all-markets-container h3 { font-size: 0.7rem; margin: 0 0 0.4rem 0; }
   .markets-list { display: flex; flex-direction: column; gap: 0.2rem; }
-  .market-list-item { background: var(--bg-panel); padding: 0.2rem 0.4rem; border-radius: 0.6rem; font-weight: bold; cursor: pointer; font-size: 0.65rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid transparent; }
+  .market-list-item { background: var(--bg-panel); padding: 0.2rem 0.4rem; border-radius: 0.6rem; font-weight: bold; cursor: pointer; font-size: 0.65rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid transparent; transition: all 0.1s; }
   .market-list-item:hover { transform: translateX(2px); }
-  .blink-agreement { animation: blinkAgreement 0.9s infinite; background: rgba(250, 204, 21, 0.2); border-color: var(--gold); }
-  @keyframes blinkAgreement { 0% { background: var(--bg-panel); } 50% { background: #facc15; color: #0f172a; } 100% { background: var(--bg-panel); } }
+  /* Blinking animation - the colour is set dynamically via inline style */
+  .market-list-item.blinking {
+    animation: blinkAnimation 0.6s infinite;
+  }
+  @keyframes blinkAnimation {
+    0% { background: var(--bg-panel); border-color: transparent; color: var(--text-primary); }
+    50% { background: var(--signal-blink-color, #3b82f6); color: white; border-color: var(--signal-blink-color, #3b82f6); }
+    100% { background: var(--bg-panel); border-color: transparent; color: var(--text-primary); }
+  }
   
   .hidden { display: none; }
   .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; }
-  .modal-content { background: var(--bg-card); border-radius: 0.8rem; padding: 0.8rem; max-width: 400px; width: 90%; max-height: 80vh; overflow-y: auto; font-size: 0.75rem; }
+  .modal-content { background: var(--bg-card); border-radius: 0.8rem; padding: 0.8rem; max-width: 450px; width: 90%; max-height: 80vh; overflow-y: auto; font-size: 0.75rem; }
   .close-modal { float: right; cursor: pointer; font-size: 1.1rem; }
   .settings-panel { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; }
   .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-  select, input[type="range"], input[type="number"] { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.1rem 0.3rem; font-size: 0.7rem; color: var(--text-primary); }
+  select, input[type="range"], input[type="number"], input[type="color"] { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.1rem 0.3rem; font-size: 0.7rem; color: var(--text-primary); }
+  input[type="color"] { width: 40px; height: 25px; cursor: pointer; }
   
   @media (max-width: 800px) {
     .main-scroll-area { flex-direction: column; }
@@ -151,6 +164,7 @@
     .digits-row { gap: 4px; }
     .digit-cell span.digit { font-size: 0.9rem; }
     .last-digit-badge { font-size: 1.3rem; min-width: 40px; }
+    .strategy-selector { flex-wrap: wrap; }
   }
 </style>
 </head>
@@ -180,8 +194,9 @@
       <button class="market-btn" data-market="overunder">📊 Over/Under</button>
     </div>
     <div class="strategy-selector" id="strategySelector">
-      <button class="strategy-btn active" data-strategy="reversal">📉 Reversal (Opp %)</button>
-      <button class="strategy-btn" data-strategy="trend">🎯 Trend (Strict Sets)</button>
+      <button class="strategy-btn active" data-strategy="reversal">📉 Reversal</button>
+      <button class="strategy-btn" data-strategy="trending">🔥 Trending</button>
+      <button class="strategy-btn" data-strategy="streak">⚡ 13-Streak</button>
     </div>
   </div>
 
@@ -204,10 +219,8 @@
   <div class="modal-content"><span class="close-modal" id="closeModal">&times;</span><h3>Settings</h3>
     <div class="settings-panel">
       <div class="setting-row"><label>🔊 Sound</label><select id="soundEnabled"><option value="true">ON</option><option value="false">OFF</option></select></div>
-      <div class="setting-row"><label>📊 Reversal Window (ticks) – also used for displayed percentages</label><input type="number" id="windowSize" value="1000" min="100" step="50" style="width:70px"></div>
+      <div class="setting-row"><label>📊 Base Window (ticks)</label><input type="number" id="windowSize" value="1000" min="100" step="50" style="width:70px"></div>
       <div class="setting-row"><label>🎯 Opp % Threshold (reversal)</label><input type="number" id="oppositeThreshold" value="10" min="1" max="20" step="1" style="width:55px"></div>
-      <div class="setting-row"><label>⚡ Trend Rank Window (ticks) – for trend signal only</label><input type="number" id="trendRankWindow" value="100" min="30" max="500" step="10" style="width:70px"></div>
-      <div class="setting-row"><label>🟢 Green Bar Min % (trend)</label><input type="number" id="greenMinPct" value="11" min="0" max="30" step="1" style="width:55px"></div>
       <div class="setting-row"><label>📍 Tick Pointer Style</label>
         <select id="pointerStyle">
           <option value="triangle">Triangle</option>
@@ -219,13 +232,35 @@
         <input type="range" id="pointerScale" min="1" max="20" step="0.5" value="3" style="width:100px">
         <span id="scaleValue">3.0</span>
       </div>
+      <div class="setting-row"><label>📈 Trend Strength Min %</label>
+        <input type="number" id="trendStrengthMin" value="65" min="50" max="85" step="2" style="width:55px">
+      </div>
+      <div class="setting-row"><label>⏱️ Trend Lookback (ticks)</label>
+        <input type="number" id="trendLookback" value="40" min="25" max="80" step="5" style="width:55px">
+      </div>
+      <div class="setting-row"><label>🧹 Batch Purity Required (out of 10)</label>
+        <input type="number" id="batchPurity" value="8" min="6" max="10" step="1" style="width:55px">
+      </div>
+      <div class="setting-row"><label>⚡ Streak Threshold (ticks)</label>
+        <input type="number" id="streakThreshold" value="13" min="8" max="25" step="1" style="width:55px">
+      </div>
+      <div class="setting-row"><label>🔔 Signal Blink</label>
+        <input type="checkbox" id="blinkEnabled" checked> Enable
+      </div>
+      <div class="setting-row"><label>🎨 Blink Colour</label>
+        <input type="color" id="blinkColor" value="#3b82f6">
+        <span id="blinkColorPreview">Blue</span>
+      </div>
+      <div class="setting-row"><label>⏱️ Blink Duration (seconds)</label>
+        <input type="number" id="blinkDuration" value="5" min="1" max="10" step="0.5" style="width:55px">
+      </div>
     </div>
-    <div style="font-size:0.65rem; margin-top:0.5rem;">✅ <strong>Displayed percentages and rank colors (most, second, least, secondleast) use the Reversal Window (default 1000 ticks)</strong> – realistic values.<br>✅ Trend signal uses its own smaller Trend Rank Window (default 100 ticks) for fast detection.<br>✅ All original features restored: batch cycles, multi‑TF agreement, DOM meter, trend bars, letter sequence, pointer on last digit, focus mode, sound.</div>
+    <div style="font-size:0.65rem; margin-top:0.5rem;">✅ Over/Under signals filtered by digit ranking (most/secondmost/least/secondleast).</div>
   </div>
 </div>
 
 <script>
-  // ==================== DUAL STRATEGY – DISPLAY USING LARGE WINDOW, TREND USING SMALL WINDOW ====================
+  // ==================== THREE STRATEGIES + OVER/UNDER RANKING FILTER ====================
   const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":3,"1HZ25V":2,"1HZ30V":3,"1HZ50V":2,"1HZ75V":2,"1HZ90V":3,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
   const MARKET_NAMES = { "1HZ10V":"Vol 10 (1s)","1HZ15V":"Vol 15 (1s)","1HZ25V":"Vol 25 (1s)","1HZ30V":"Vol 30 (1s)","1HZ50V":"Vol 50 (1s)","1HZ75V":"Vol 75 (1s)","1HZ90V":"Vol 90 (1s)","1HZ100V":"Vol 100 (1s)","R_10":"Volatility 10 Index","R_25":"Volatility 25 Index","R_50":"Volatility 50 Index","R_75":"Volatility 75 Index","R_100":"Volatility 100 Index","JD10":"Jump 10 Index","JD25":"Jump 25 Index","JD50":"Jump 50 Index","JD75":"Jump 75 Index","JD100":"Jump 100 Index" };
   const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
@@ -238,6 +273,10 @@
   let prevPercentages = {};
   let currentStrategy = 'reversal';
   let lastSignalMap = new Map();
+  let momentumHistory = new Map();
+  
+  let falseSignalBlock = new Map(); // for trending only
+  let streakCooldown = new Map();   // for streak strategy
 
   const scaleSlider = document.getElementById('pointerScale');
   const scaleValue = document.getElementById('scaleValue');
@@ -250,13 +289,18 @@
 
   function getSettings() {
     return {
-      soundEnabled: document.getElementById('soundEnabled').value === 'true',
-      reversalWindow: parseInt(document.getElementById('windowSize').value) || 1000,
-      oppositeThreshold: parseFloat(document.getElementById('oppositeThreshold').value) || 10,
-      trendRankWindow: parseInt(document.getElementById('trendRankWindow').value) || 100,
-      greenMinPct: parseFloat(document.getElementById('greenMinPct').value) || 11,
-      pointerStyle: document.getElementById('pointerStyle').value,
+      soundEnabled: document.getElementById('soundEnabled')?.value === 'true',
+      reversalWindow: parseInt(document.getElementById('windowSize')?.value) || 1000,
+      oppositeThreshold: parseFloat(document.getElementById('oppositeThreshold')?.value) || 10,
+      pointerStyle: document.getElementById('pointerStyle')?.value || 'triangle',
       pointerScale: parseFloat(scaleSlider ? scaleSlider.value : 3),
+      trendStrengthMin: parseFloat(document.getElementById('trendStrengthMin')?.value) || 65,
+      trendLookback: parseInt(document.getElementById('trendLookback')?.value) || 40,
+      batchPurity: parseInt(document.getElementById('batchPurity')?.value) || 8,
+      streakThreshold: parseInt(document.getElementById('streakThreshold')?.value) || 13,
+      blinkEnabled: document.getElementById('blinkEnabled')?.checked === true,
+      blinkColor: document.getElementById('blinkColor')?.value || '#3b82f6',
+      blinkDuration: parseFloat(document.getElementById('blinkDuration')?.value) || 5
     };
   }
 
@@ -275,7 +319,6 @@
     rawTrend[sym]=trends;
   }
 
-  // Get counts for a given window size
   function getDigitCounts(sym, win) {
     let data=marketData[sym];
     if(!data||data.rollingArray.length<win) return null;
@@ -285,7 +328,6 @@
     return {cnt, pct, total};
   }
 
-  // Get ranked digits and percentages using a specified window (for display: large window)
   function getRankedDigitsAndPctForDisplay(sym) {
     let win = getSettings().reversalWindow;
     let cnts = getDigitCounts(sym, win);
@@ -300,28 +342,40 @@
     return { most: mostSet, second: secondSet, least: leastSet, secondLeast: secondLeastSet, pct: pct };
   }
 
-  // Get ranked digits and percentages for trend signal (small window)
-  function getRankedDigitsAndPctForTrend(sym) {
-    let win = getSettings().trendRankWindow;
-    let cnts = getDigitCounts(sym, win);
-    if(!cnts) return null;
-    let pct = cnts.pct;
-    let arr = pct.map((_,i)=>({digit:i, count:Math.round(pct[i]*win/100), pct:pct[i]}));
-    let sorted = [...arr].sort((a,b)=>b.count - a.count);
-    let mostSet = new Set([sorted[0].digit]);
-    let mostPct = sorted[0].pct;
-    let secondSet = new Set([sorted[1].digit]);
-    let leastSet = new Set([sorted[9].digit]);
-    let secondLeastSet = new Set([sorted[8].digit]);
-    return { most: mostSet, second: secondSet, least: leastSet, secondLeast: secondLeastSet, mostPct };
+  // ========== OVER/UNDER SIGNAL VALIDATION BASED ON RANKING ==========
+  function isValidOverUnderSignal(sym, signalSide) {
+    if(currentMarket !== 'overunder') return true; // no filter for even/odd
+    let ranks = getRankedDigitsAndPctForDisplay(sym);
+    if(!ranks) return false;
+    let mostDigit = Array.from(ranks.most)[0];
+    let secondDigit = Array.from(ranks.second)[0];
+    let leastDigit = Array.from(ranks.least)[0];
+    let secondLeastDigit = Array.from(ranks.secondLeast)[0];
+    
+    if(signalSide === 'OVER') {
+      // most and second most must be in {7,8,9}
+      let highDigits = [7,8,9];
+      if(!highDigits.includes(mostDigit) || !highDigits.includes(secondDigit)) return false;
+      // least must be in {0,1,2}
+      if(![0,1,2].includes(leastDigit)) return false;
+      // second least must be in {0,1,2,3}
+      if(![0,1,2,3].includes(secondLeastDigit)) return false;
+      return true;
+    } 
+    else if(signalSide === 'UNDER') {
+      // most and second most must be in {0,1,2}
+      let lowDigits = [0,1,2];
+      if(!lowDigits.includes(mostDigit) || !lowDigits.includes(secondDigit)) return false;
+      // least must be in {7,8,9}
+      if(![7,8,9].includes(leastDigit)) return false;
+      // second least must be in {6,7,8,9}
+      if(![6,7,8,9].includes(secondLeastDigit)) return false;
+      return true;
+    }
+    return false; // unknown side
   }
 
-  function isIn(set, allowed) {
-    let digit = Array.from(set)[0];
-    return allowed.includes(digit);
-  }
-
-  // -------- REVERSAL STRATEGY (uses reversalWindow) ----------
+  // -------- REVERSAL STRATEGY (unchanged) ----------
   function getReversalSignal(sym) {
     let s=getSettings(), win=s.reversalWindow, thresh=s.oppositeThreshold;
     let cnts=getDigitCounts(sym,win);
@@ -339,68 +393,246 @@
     return null;
   }
 
-  // -------- TREND STRATEGY (uses small trendRankWindow for signal) ----------
-  function getTrendSignal(sym) {
+  // ---------- TRENDING STRATEGY (sustained 50-100 tick runs) ----------
+  function getTrendingSignalWithQuality(sym) {
     let s = getSettings();
-    let ranks = getRankedDigitsAndPctForTrend(sym);
-    if(!ranks) return null;
-    if(ranks.mostPct < s.greenMinPct) return null;
-
+    let lookback = s.trendLookback;
+    let minStrength = s.trendStrengthMin;
+    let requiredPurity = s.batchPurity;
+    let data = marketData[sym];
+    if(!data || data.rollingArray.length < lookback + 50) return null;
+    
+    let arr = data.rollingArray;
+    let recent = arr.slice(-lookback);
+    let earlier = arr.slice(-lookback*2, -lookback);
+    
+    let sideA, sideB, sideADigits, sideBDigits;
     if(currentMarket === 'evenodd') {
-      let mostEven = isIn(ranks.most, [0,2,4,6,8]);
-      let secondEven = isIn(ranks.second, [0,2,4,6,8]);
-      let leastOdd = isIn(ranks.least, [1,3,5,7,9]);
-      let secondLeastOdd = isIn(ranks.secondLeast, [1,3,5,7,9]);
-      let mostOdd = isIn(ranks.most, [1,3,5,7,9]);
-      let secondOdd = isIn(ranks.second, [1,3,5,7,9]);
-      let leastEven = isIn(ranks.least, [0,2,4,6,8]);
-      let secondLeastEven = isIn(ranks.secondLeast, [0,2,4,6,8]);
-      if(mostEven && secondEven && leastOdd && secondLeastOdd) return "EVEN";
-      if(mostOdd && secondOdd && leastEven && secondLeastEven) return "ODD";
+      sideA = "EVEN"; sideADigits = [0,2,4,6,8];
+      sideB = "ODD"; sideBDigits = [1,3,5,7,9];
     } else {
-      let mostOver = isIn(ranks.most, [7,8,9]);
-      let secondOver = isIn(ranks.second, [7,8,9]);
-      let leastUnder = isIn(ranks.least, [0,1,2,3]);
-      let secondLeastUnder = isIn(ranks.secondLeast, [0,1,2,3]);
-      let mostUnder = isIn(ranks.most, [0,1,2]);
-      let secondUnder = isIn(ranks.second, [0,1,2]);
-      let leastOver = isIn(ranks.least, [6,7,8,9]);
-      let secondLeastOver = isIn(ranks.secondLeast, [6,7,8,9]);
-      if(mostOver && secondOver && leastUnder && secondLeastUnder) return "OVER";
-      if(mostUnder && secondUnder && leastOver && secondLeastOver) return "UNDER";
+      sideA = "OVER"; sideADigits = [5,6,7,8,9];
+      sideB = "UNDER"; sideBDigits = [0,1,2,3,4];
+    }
+    
+    let recentCountA = recent.filter(d => sideADigits.includes(d)).length;
+    let recentPctA = (recentCountA / lookback) * 100;
+    let recentPctB = 100 - recentPctA;
+    let earlierCountA = earlier.filter(d => sideADigits.includes(d)).length;
+    let earlierPctA = (earlierCountA / lookback) * 100;
+    
+    let dominantSide = recentPctA > recentPctB ? sideA : sideB;
+    let dominantPct = Math.max(recentPctA, recentPctB);
+    let previousDominantPct = (dominantSide === sideA) ? earlierPctA : (100 - earlierPctA);
+    let strengthIncrease = dominantPct - previousDominantPct;
+    
+    let inSweetSpot = (dominantPct >= minStrength && dominantPct <= 85);
+    let isIncreasing = strengthIncrease >= 8;
+    let notChoppy = Math.abs(recentPctA - recentPctB) >= 14;
+    
+    let batchSide = [];
+    let batchSize = 50;
+    let maxBatches = Math.min(10, Math.floor(arr.length / batchSize));
+    for(let i = maxBatches; i > 0; i--) {
+      let batch = arr.slice(-i*batchSize, -(i-1)*batchSize);
+      if(batch.length < batchSize) continue;
+      let countA = batch.filter(d => sideADigits.includes(d)).length;
+      let side = (countA > batchSize/2) ? sideA : (countA < batchSize/2 ? sideB : null);
+      if(side) batchSide.push(side);
+    }
+    let sameSideCount = batchSide.filter(s => s === dominantSide).length;
+    let purityOk = (sameSideCount >= requiredPurity);
+    
+    let blockUntil = falseSignalBlock.get(sym) || 0;
+    if(Date.now() < blockUntil) return null;
+    
+    let last10Ticks = recent.slice(-10);
+    let last5CountA = last10Ticks.slice(0,5).filter(d => sideADigits.includes(d)).length;
+    let first5CountA = last10Ticks.slice(5).filter(d => sideADigits.includes(d)).length;
+    let slopeIncreasing = (dominantSide === sideA) ? (last5CountA >= first5CountA) : (last5CountA <= first5CountA);
+    
+    let allConditions = inSweetSpot && isIncreasing && notChoppy && purityOk && slopeIncreasing;
+    
+    if(allConditions) {
+      let timeoutId = setTimeout(() => {
+        let dataNow = marketData[sym];
+        if(dataNow && dataNow.rollingArray.length >= 40) {
+          let afterTicks = dataNow.rollingArray.slice(-40);
+          let afterCountA = afterTicks.filter(d => sideADigits.includes(d)).length;
+          let afterPct = (afterCountA / 40) * 100;
+          if(afterPct < 58) {
+            falseSignalBlock.set(sym, Date.now() + 90000);
+          }
+        }
+      }, 40000);
+      if(marketData[sym]._sustainTimeout) clearTimeout(marketData[sym]._sustainTimeout);
+      marketData[sym]._sustainTimeout = timeoutId;
+      let quality = `${sameSideCount}/10 batches pure, +${strengthIncrease.toFixed(0)}% inc`;
+      return { signal: dominantSide, quality };
+    }
+    return null;
+  }
+  
+  function getTrendingSignal(sym) {
+    let res = getTrendingSignalWithQuality(sym);
+    return res ? res.signal : null;
+  }
+  function getTrendingQuality(sym) {
+    let res = getTrendingSignalWithQuality(sym);
+    return res ? res.quality : null;
+  }
+
+  // ---------- STREAK STRATEGY (13+ consecutive) ----------
+  function getStreakSignal(sym) {
+    let s = getSettings();
+    let threshold = s.streakThreshold;
+    let data = marketData[sym];
+    if(!data || data.rollingArray.length < threshold) return null;
+    
+    let lastStreakTime = streakCooldown.get(sym) || 0;
+    if(Date.now() < lastStreakTime) return null;
+    
+    let arr = data.rollingArray;
+    let recentTicks = arr.slice(-threshold);
+    
+    let isEvenStreak = false, isOddStreak = false, isOverStreak = false, isUnderStreak = false;
+    if(currentMarket === 'evenodd') {
+      let allEven = recentTicks.every(d => d % 2 === 0);
+      let allOdd = recentTicks.every(d => d % 2 === 1);
+      if(allEven) isEvenStreak = true;
+      else if(allOdd) isOddStreak = true;
+      else return null;
+    } else {
+      let allOver = recentTicks.every(d => d >= 5);
+      let allUnder = recentTicks.every(d => d <= 4);
+      if(allOver) isOverStreak = true;
+      else if(allUnder) isUnderStreak = true;
+      else return null;
+    }
+    
+    let signalSide = null;
+    if(currentMarket === 'evenodd') {
+      if(isEvenStreak) signalSide = "ODD";
+      if(isOddStreak) signalSide = "EVEN";
+    } else {
+      if(isOverStreak) signalSide = "UNDER";
+      if(isUnderStreak) signalSide = "OVER";
+    }
+    
+    if(signalSide) {
+      streakCooldown.set(sym, Date.now() + 30000);
+      return signalSide;
     }
     return null;
   }
 
+  // ========== SIGNAL DISPATCHER WITH OVER/UNDER FILTER ==========
   function getSignal(sym) {
-    if(currentStrategy === 'reversal') return getReversalSignal(sym);
-    else return getTrendSignal(sym);
+    let rawSignal = null;
+    if(currentStrategy === 'reversal') rawSignal = getReversalSignal(sym);
+    else if(currentStrategy === 'trending') rawSignal = getTrendingSignal(sym);
+    else if(currentStrategy === 'streak') rawSignal = getStreakSignal(sym);
+    
+    if(!rawSignal) return null;
+    // Apply ranking filter for Over/Under
+    if(currentMarket === 'overunder' && (rawSignal === 'OVER' || rawSignal === 'UNDER')) {
+      if(!isValidOverUnderSignal(sym, rawSignal)) return null;
+    }
+    return rawSignal;
+  }
+  
+  function getExtraQuality(sym) {
+    if(currentStrategy === 'trending') return getTrendingQuality(sym);
+    if(currentStrategy === 'streak') {
+      let s = getSettings();
+      let thresh = s.streakThreshold;
+      let data = marketData[sym];
+      if(data && data.rollingArray.length >= thresh) {
+        let last = data.rollingArray.slice(-thresh);
+        let first = last[0];
+        let isConsistent = last.every(d => (currentMarket === 'evenodd') ? (d%2 === first%2) : ((d>=5) === (first>=5)));
+        if(isConsistent) return `⚡ ${thresh}+ streak detected`;
+      }
+      return null;
+    }
+    return null;
   }
 
-  function playSignalSoundIfNew(sym, signal) {
-    let last = lastSignalMap.get(sym);
-    if(signal && last !== signal) {
-      lastSignalMap.set(sym, signal);
-      let s=getSettings();
-      if(s.soundEnabled && audioCtx) {
-        try {
-          let osc = audioCtx.createOscillator();
-          let gain = audioCtx.createGain();
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          osc.frequency.value = 880;
-          gain.gain.value = 0.15;
-          osc.start();
-          gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
-          osc.stop(audioCtx.currentTime + 0.3);
-        } catch(e) { console.warn("sound error", e); }
+  // ========== BLINK FUNCTION ==========
+  let activeBlinkTimers = new Map(); // sym -> timeout ID
+  function blinkMarketListItem(sym, durationSec, color) {
+    let items = document.querySelectorAll('.market-list-item');
+    let targetItem = null;
+    for(let item of items) {
+      if(item.getAttribute('data-symbol') === sym) {
+        targetItem = item;
+        break;
       }
-    } else if(!signal) {
-      lastSignalMap.set(sym, null);
+    }
+    if(!targetItem) return;
+    
+    // Clear any existing blink timer for this symbol
+    if(activeBlinkTimers.has(sym)) {
+      clearTimeout(activeBlinkTimers.get(sym));
+      targetItem.classList.remove('blinking');
+      // Remove inline style
+      targetItem.style.removeProperty('--signal-blink-color');
+    }
+    
+    // Apply the colour to the element (CSS variable)
+    targetItem.style.setProperty('--signal-blink-color', color);
+    targetItem.classList.add('blinking');
+    
+    // Set timer to remove blink after duration
+    let timer = setTimeout(() => {
+      if(targetItem) {
+        targetItem.classList.remove('blinking');
+        targetItem.style.removeProperty('--signal-blink-color');
+      }
+      activeBlinkTimers.delete(sym);
+    }, durationSec * 1000);
+    activeBlinkTimers.set(sym, timer);
+  }
+
+  // Helper for momentum display
+  function getStrongSideSum(sym, signal) {
+    if(!signal) return 0;
+    let win = currentStrategy === 'trending' ? getSettings().trendLookback : 100;
+    let cnts = getDigitCounts(sym, win);
+    if(!cnts) return 0;
+    let pct = cnts.pct;
+    if(currentMarket === 'evenodd') {
+      if(signal === 'EVEN') return pct[0]+pct[2]+pct[4]+pct[6]+pct[8];
+      else return pct[1]+pct[3]+pct[5]+pct[7]+pct[9];
+    } else {
+      if(signal === 'OVER') return pct[5]+pct[6]+pct[7]+pct[8]+pct[9];
+      else return pct[0]+pct[1]+pct[2]+pct[3]+pct[4];
     }
   }
+  function getOpposingSum(sym, signal) { return 100 - getStrongSideSum(sym, signal); }
+  function updateMomentumHistory(sym, signal, strongVal, weakVal) {
+    if(!signal) return;
+    let keyStrong = `${sym}_${currentStrategy}_${signal}_strong`;
+    let keyWeak = `${sym}_${currentStrategy}_${signal}_weak`;
+    if(!momentumHistory.has(keyStrong)) momentumHistory.set(keyStrong, []);
+    if(!momentumHistory.has(keyWeak)) momentumHistory.set(keyWeak, []);
+    let arrStrong = momentumHistory.get(keyStrong);
+    let arrWeak = momentumHistory.get(keyWeak);
+    arrStrong.push(strongVal);
+    arrWeak.push(weakVal);
+    if(arrStrong.length > 11) arrStrong.shift();
+    if(arrWeak.length > 11) arrWeak.shift();
+  }
+  function getMomentumChange(sym, signal, currentVal, type) {
+    let key = `${sym}_${currentStrategy}_${signal}_${type}`;
+    let arr = momentumHistory.get(key);
+    if(!arr || arr.length < 2) return null;
+    let prevVal = arr[arr.length-2];
+    let change = currentVal - prevVal;
+    return { change, previous: prevVal, current: currentVal };
+  }
 
-  // ------------------ ALL UI COMPONENTS ------------------
+  // ------------------ UI COMPONENTS ------------------
   function rebuildDigitGrid(sym, ranks, pct, lastDigit, scale, styleName, tr) {
     let container = document.getElementById(`digitsContainer_${sym}`);
     if(!container) return;
@@ -629,19 +861,45 @@
     container.innerHTML = gridHtml;
   }
 
+  function playSignalSoundIfNew(sym, signal) {
+    let last = lastSignalMap.get(sym);
+    if(signal && last !== signal) {
+      lastSignalMap.set(sym, signal);
+      let s=getSettings();
+      if(s.soundEnabled && audioCtx) {
+        try {
+          let osc = audioCtx.createOscillator();
+          let gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.frequency.value = 880;
+          gain.gain.value = 0.15;
+          osc.start();
+          gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
+          osc.stop(audioCtx.currentTime + 0.3);
+        } catch(e) { console.warn("sound error", e); }
+      }
+      // Trigger blink if enabled
+      if(s.blinkEnabled) {
+        blinkMarketListItem(sym, s.blinkDuration, s.blinkColor);
+      }
+    } else if(!signal) {
+      lastSignalMap.set(sym, null);
+    }
+  }
+
   function renderMarket(sym) {
     let data = marketData[sym];
     if(!data || !data.rollingArray || data.rollingArray.length === 0) return;
-    let last50 = data.rollingArray.slice(-50);
+    let last100 = data.rollingArray.slice(-100);
+    let last50 = last100.slice(-50);
     let s = getSettings();
-    // For display: use large window (reversalWindow)
     let displayRanks = getRankedDigitsAndPctForDisplay(sym);
     if(!displayRanks) return;
     let pct = displayRanks.pct;
     let tr = rawTrend[sym] || {};
     document.getElementById(`livePriceBig_${sym}`).innerText = data.lastPriceDisplay;
     document.getElementById(`lastDigit_${sym}`).innerText = data.lastDigit;
-    // parity stats (based on last 50 ticks)
     if(currentMarket === 'evenodd'){
       let even = last50.filter(d=>d%2===0).length;
       document.getElementById(`parityStats_${sym}`).innerHTML = `🎲 E:${(even/50*100).toFixed(0)}% O:${(100-even/50*100).toFixed(0)}%`;
@@ -655,44 +913,66 @@
       for(let i=last50.length-2;i>=0;i--) if((last50[i]>=5?'O':'U')===last) streak++; else break;
       document.getElementById(`streakStats_${sym}`).innerHTML = `📊 Streak: ${streak}x ${last}`;
     }
-    // prediction (based on last 50 ticks with weighting)
     let pred = (()=>{ if(last50.length<10) return {digit:null}; let w=new Array(10).fill(0); for(let i=0;i<last50.length;i++) w[last50[i]]+=(i>=last50.length-10?3:1); let best=w.indexOf(Math.max(...w)); return {digit:best, prob:(w[best]/w.reduce((a,b)=>a+b,0)*100).toFixed(0)}; })();
     document.getElementById(`prediction_${sym}`).innerHTML = `🔮 NEXT: ${pred.digit!==null?`${pred.digit} (${pred.prob}%)`:'—'}`;
-    // signal
+    
     let signal = getSignal(sym);
     playSignalSoundIfNew(sym, signal);
+    let strongSum = 0, weakSum = 0;
+    if(signal) {
+      strongSum = getStrongSideSum(sym, signal);
+      weakSum = getOpposingSum(sym, signal);
+      updateMomentumHistory(sym, signal, strongSum, weakSum);
+    }
+    let strongChange = signal ? getMomentumChange(sym, signal, strongSum, 'strong') : null;
+    let weakChange = signal ? getMomentumChange(sym, signal, weakSum, 'weak') : null;
+    
     let sigDiv = document.getElementById(`signalDisplay_${sym}`);
+    let extraQuality = getExtraQuality(sym);
+    let qualityHtml = extraQuality ? `<span class="trend-quality">${extraQuality}</span>` : "";
     if(signal){
       let col=(signal==='EVEN'||signal==='OVER')?'#4ade80':'#f87171';
-      let strategyLabel = currentStrategy === 'reversal' ? `Reversal (Opp ≤${s.oppositeThreshold}%)` : `Trend (Green ≥${s.greenMinPct}%)`;
+      let strategyLabel = "";
+      if(currentStrategy === 'reversal') strategyLabel = `Reversal (Opp ≤${s.oppositeThreshold}%)`;
+      else if(currentStrategy === 'trending') strategyLabel = `Trending (≥${s.trendStrengthMin}%, purity ${s.batchPurity}/10)`;
+      else strategyLabel = `Streak (≥${s.streakThreshold} consecutive) → opposite`;
       let sideInfo = currentMarket === 'evenodd' ? (signal==='EVEN'?'Even':'Odd') : (signal==='OVER'?'Over':'Under');
-      sigDiv.innerHTML = `<div class="signal-flash" style="color:${col}; font-weight:bold;">🎯 ${strategyLabel} → ${sideInfo}</div><div><button class="vote-btn" onclick="manualPlaySound()">🔊</button></div>`;
-    } else sigDiv.innerHTML = '<div class="no-signal-placeholder"></div>';
-    // digit grid with pointer (using display ranks from large window)
+      let strongArrow = strongChange ? (strongChange.change >= 0 ? '↑' : '↓') : '';
+      let weakArrow = weakChange ? (weakChange.change >= 0 ? '↑' : '↓') : '';
+      let momentumHtml = `<span class="momentum-meter">💪 ${strongArrow} ${strongSum.toFixed(1)}%</span><span class="momentum-meter">🪫 ${weakArrow} ${weakSum.toFixed(1)}%</span>`;
+      sigDiv.innerHTML = `<div class="signal-flash" style="color:${col}; font-weight:bold;">🎯 ${strategyLabel} → ${sideInfo}</div>${momentumHtml} ${qualityHtml}<div><button class="vote-btn" onclick="manualPlaySound()">🔊</button></div>`;
+    } else {
+      sigDiv.innerHTML = `<div class="no-signal-placeholder">${qualityHtml}</div>`;
+    }
     rebuildDigitGrid(sym, displayRanks, pct, data.lastDigit, s.pointerScale, s.pointerStyle, tr);
-    // DOM meter
     let domStats = getGroupArrowStats(sym);
     let domDiv = document.getElementById(`dominanceMeter_${sym}`);
     if(domStats){
       domDiv.innerHTML = `<div class="dom-group"><span>${domStats.label1}</span><span class="dom-up">↑${domStats.stats1.up}</span><span class="dom-down">↓${domStats.stats1.down}</span><span class="dom-avg">(${domStats.stats1.avg.toFixed(1)})</span></div>
                           <div class="dom-group"><span>${domStats.label2}</span><span class="dom-up">↑${domStats.stats2.up}</span><span class="dom-down">↓${domStats.stats2.down}</span><span class="dom-avg">(${domStats.stats2.avg.toFixed(1)})</span></div>`;
     } else domDiv.innerHTML = '';
-    // trend bars (using reversalWindow for consistency)
     updateTrendBars(sym);
-    // multi-TF (uses its own windows)
     updateMultiTFProgress(sym);
-    // batch analysis
     updateBatchAnalysis(sym);
-    // letter sequence (based on last 50 ticks)
-    let seqDiv = document.getElementById(`letterSeq_${sym}`);
-    if(seqDiv){
+    let seqDiv1 = document.getElementById(`letterSeq1_${sym}`);
+    let seqDiv2 = document.getElementById(`letterSeq2_${sym}`);
+    if(seqDiv1 && seqDiv2 && last100.length >= 100) {
+      let older50 = last100.slice(0, 50);
+      let newer50 = last100.slice(50, 100);
       if(currentMarket === 'evenodd'){
-        let seq = last50.map(d=> d%2===0 ? '<span class="seq-e">E</span>' : '<span class="seq-odd">O</span>').join('');
-        seqDiv.innerHTML = seq;
+        let olderSeq = older50.map(d=> d%2===0 ? '<span class="seq-e">E</span>' : '<span class="seq-odd">O</span>').join('');
+        let newerSeq = newer50.map(d=> d%2===0 ? '<span class="seq-e">E</span>' : '<span class="seq-odd">O</span>').join('');
+        seqDiv1.innerHTML = olderSeq;
+        seqDiv2.innerHTML = newerSeq;
       } else {
-        let seq = last50.map(d=> d<=3 ? '<span class="seq-u">U</span>' : (d<=5 ? '<span class="seq-m">M</span>' : '<span class="seq-o">O</span>')).join('');
-        seqDiv.innerHTML = seq;
+        let olderSeq = older50.map(d=> d<=3 ? '<span class="seq-u">U</span>' : (d<=5 ? '<span class="seq-m">M</span>' : '<span class="seq-o">O</span>')).join('');
+        let newerSeq = newer50.map(d=> d<=3 ? '<span class="seq-u">U</span>' : (d<=5 ? '<span class="seq-m">M</span>' : '<span class="seq-o">O</span>')).join('');
+        seqDiv1.innerHTML = olderSeq;
+        seqDiv2.innerHTML = newerSeq;
       }
+    } else if(seqDiv1 && seqDiv2) {
+      seqDiv1.innerHTML = '⏳';
+      seqDiv2.innerHTML = '⏳';
     }
   }
 
@@ -720,7 +1000,7 @@
     let digit=lastDigitFromFormatted(display);
     data.lastDigit=digit;
     data.rollingArray.push(digit);
-    let maxWin = Math.max(getSettings().reversalWindow, getSettings().trendRankWindow);
+    let maxWin = getSettings().reversalWindow;
     while(data.rollingArray.length > maxWin) data.rollingArray.shift();
     data.last50Array.push(digit);
     if(data.last50Array.length>50) data.last50Array.shift();
@@ -746,8 +1026,8 @@
   function updateAllMarketsList(){
     let items=ALL_SYMBOLS.map(sym=>{
       let signal=getSignal(sym);
-      let cls=signal?'blink-agreement':'';
       let suffix=signal?` → ${signal}`:'';
+      let cls = ''; // no persistent class, blink is added dynamically
       return `<div class="market-list-item ${cls}" data-symbol="${sym}"><span>${MARKET_NAMES[sym]}${suffix}</span></div>`;
     }).join('');
     document.getElementById('marketsListContainer').innerHTML=items;
@@ -780,7 +1060,8 @@
       <div class="card-content">
         <div id="digitsContainer_${sym}" class="digits-grid"></div>
         <div class="info-row"><div class="parity-stats" id="parityStats_${sym}">--</div><div class="streak-stats" id="streakStats_${sym}">Streak:0</div><div class="prediction-box" id="prediction_${sym}">—</div></div>
-        <div class="letter-sequence-wrapper"><div class="letter-sequence" id="letterSeq_${sym}">⏳</div></div>
+        <div class="letter-sequence-wrapper"><div class="letter-sequence" id="letterSeq1_${sym}" style="margin-bottom: 2px;"></div></div>
+        <div class="letter-sequence-wrapper"><div class="letter-sequence" id="letterSeq2_${sym}"></div></div>
         <div class="signal-area" id="signalDisplay_${sym}"></div>
         <div id="multiTFProgress_${sym}" class="multi-tf-progress">⏳</div>
         <div id="batchContainer_${sym}" class="batch-analysis">⏳</div>
@@ -841,7 +1122,28 @@
 
   function toggleMode(){ document.body.classList.toggle('light'); }
   function setMarket(m){ currentMarket=m; document.querySelectorAll('.market-btn').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('data-market')===m)); for(let s in marketData) if(marketData[s]?.rollingArray?.length) renderMarket(s); updateAllMarketsList(); document.getElementById('connectionStatus').innerHTML=`✅ ${m.toUpperCase()}`; }
-  function setStrategy(strategy){ currentStrategy=strategy; document.querySelectorAll('.strategy-btn').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('data-strategy')===strategy)); for(let s in marketData) if(marketData[s]?.rollingArray?.length) renderMarket(s); updateAllMarketsList(); }
+  function setStrategy(strategy){ 
+    currentStrategy = strategy;
+    document.querySelectorAll('.strategy-btn').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('data-strategy')===strategy));
+    for(let s in marketData) if(marketData[s]?.rollingArray?.length) renderMarket(s);
+    updateAllMarketsList();
+  }
+
+  // Update blink colour preview and settings
+  document.getElementById('blinkColor')?.addEventListener('input', (e) => {
+    let preview = document.getElementById('blinkColorPreview');
+    if(preview) preview.innerText = e.target.value;
+    // No need to re-render, affects future blinks
+  });
+  document.getElementById('blinkColorPreview')?.addEventListener('click', () => {
+    document.getElementById('blinkColor')?.click();
+  });
+
+  // Attach event listeners for settings changes
+  document.getElementById('trendStrengthMin')?.addEventListener('input', () => { if(currentStrategy === 'trending') for(let s in marketData) renderMarket(s); });
+  document.getElementById('trendLookback')?.addEventListener('input', () => { if(currentStrategy === 'trending') for(let s in marketData) renderMarket(s); });
+  document.getElementById('batchPurity')?.addEventListener('input', () => { if(currentStrategy === 'trending') for(let s in marketData) renderMarket(s); });
+  document.getElementById('streakThreshold')?.addEventListener('input', () => { if(currentStrategy === 'streak') for(let s in marketData) renderMarket(s); });
 
   window.connectWebSocket=connectWebSocket; window.toggleMode=toggleMode; window.setMarket=setMarket; window.setStrategy=setStrategy; window.manualPlaySound=manualPlaySound; window.setFocus=setFocus; window.showAllMarkets=showAllMarkets;
   document.querySelectorAll('.market-btn').forEach(btn=>btn.onclick=()=>setMarket(btn.getAttribute('data-market')));
@@ -853,7 +1155,7 @@
   document.getElementById('closeModal').onclick=()=>settingsModal.style.display='none';
   window.onclick=e=>{ if(e.target===settingsModal) settingsModal.style.display='none'; };
   document.body.addEventListener('click',()=>{ if(audioCtx===null) audioCtx=new AudioContext(); if(audioCtx.state==='suspended') audioCtx.resume(); requestNotificationPermission(); });
-  console.log("Fully restored UI: displayed percentages use 1000‑tick window (realistic values). Trend signal uses its own small window for fast detection.");
+  console.log("Over/Under signals now filtered by digit ranking (most, second, least, secondLeast). Blink colour/duration configurable.");
 </script>
 </body>
 </html>
