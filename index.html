@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>TAJIRI TRADERS – Vanilla SMA10 + RSI</title>
+    <title>TAJIRI TRADERS – Big R/F Letters</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -106,16 +106,16 @@
         .panel-box .un { color: var(--batch-under); }
         
         .letter-sequence-wrapper { padding: 0.2rem 0.4rem; background: var(--bg-body); border-bottom: 1px solid var(--border-color); overflow-x: auto; text-align: center; margin-bottom: 2px; }
-        .letter-sequence { font-size: 0.85rem; font-family: monospace; letter-spacing: 2px; white-space: nowrap; display: flex; align-items: center; justify-content: center; }
-        .seq-u, .seq-m, .seq-o, .seq-e, .seq-odd { display: inline-block; padding: 0 2px; border-radius: 4px; margin: 0 1px; font-weight: bold; }
+        .letter-sequence { font-size: 0.85rem; font-family: monospace; letter-spacing: 4px; white-space: nowrap; display: flex; align-items: center; justify-content: center; }
+        .seq-u, .seq-m, .seq-o, .seq-e, .seq-odd { display: inline-block; padding: 0 2px; border-radius: 4px; margin: 0 2px; font-weight: bold; }
         .seq-u { background: #ef4444; color: white; }
         .seq-m { background: #3b82f6; color: white; }
         .seq-o { background: #10b981; color: white; }
         .seq-e { background: #10b981; color: white; }
         .seq-odd { background: #f97316; color: white; }
-        .arrow-up { color: #4ade80; font-weight: bold; margin: 0 1px; }
-        .arrow-down { color: #f87171; font-weight: bold; margin: 0 1px; }
-        .arrow-flat { color: #6b7280; margin: 0 1px; }
+        .arrow-up { color: #4ade80; font-weight: bold; font-size: 1rem; margin: 0 4px; display: inline-block; }
+        .arrow-down { color: #f87171; font-weight: bold; font-size: 1rem; margin: 0 4px; display: inline-block; }
+        .arrow-flat { color: #6b7280; font-size: 1rem; margin: 0 4px; display: inline-block; }
         
         .signal-area { padding: 0.2rem 0.4rem; text-align: center; background: var(--bg-body); border-bottom: 1px solid var(--border-color); min-height: 2rem; font-size: 0.65rem; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
         .signal-flash { font-weight: bold; margin: 0.1rem 0; }
@@ -199,7 +199,7 @@
             <div class="setting-row"><label>⚡ 3‑Streak Threshold %</label><input type="number" id="streakThreshold" value="70" min="50" max="95" step="5"></div>
             <div class="setting-row"><label>🎨 Signal Highlight Colour</label><input type="color" id="highlightColor" value="#7e22ce"><span id="highlightColorPreview">Purple</span></div>
         </div>
-        <div style="font-size:0.65rem; margin-top:0.5rem;">✅ Vanilla: SMA10 close + RSI cross 50 signal.</div>
+        <div style="font-size:0.65rem; margin-top:0.5rem;">✅ Bigger R/F letters, no candles.</div>
     </div>
 </div>
 
@@ -221,7 +221,6 @@ const DECIMAL_MAP = {
 
 let marketData = {}, ws = null, invalidSymbols = new Set(), focusedSymbol = null;
 let currentMarket = 'predict', currentStrategy = 'reversal';
-let tickStore = {};
 
 function getSettings(){
     return {
@@ -238,7 +237,7 @@ function getSettings(){
 function lastDigitFromFormatted(s){ let d=s.replace(/\./g,''); return d.length?parseInt(d.charAt(d.length-1),10):0; }
 function formatHistoryPrice(s,p){ return p.toFixed(DECIMAL_MAP[s]??2); }
 
-// --- shared helpers ---
+// --- shared helpers (identical to original) ---
 function getTransitionStats(sym, windowSize){
     let data=marketData[sym];
     if(!data||data.rollingArray.length<windowSize+1) return null;
@@ -324,32 +323,7 @@ function getOverUnderSignal(sym){
     return null;
 }
 
-// ===================== CANDLE / VANILLA =====================
-function storeTickData(sym, price, epoch){
-    if(!tickStore[sym]) tickStore[sym] = [];
-    tickStore[sym].push({price, epoch: epoch || Date.now()});
-    if(tickStore[sym].length > 3000) tickStore[sym].splice(0, 500);
-}
-
-function getCandles(sym, timeframeMin = 1){
-    let ticks = tickStore[sym];
-    if(!ticks || ticks.length < 2) return [];
-    let candles = [], currentCandle = null;
-    for(let t of ticks){
-        let minute = Math.floor(t.epoch / (timeframeMin * 60000)) * (timeframeMin * 60000);
-        if(!currentCandle || currentCandle.time !== minute){
-            if(currentCandle) candles.push(currentCandle);
-            currentCandle = {time: minute, open: t.price, high: t.price, low: t.price, close: t.price};
-        } else {
-            if(t.price > currentCandle.high) currentCandle.high = t.price;
-            if(t.price < currentCandle.low) currentCandle.low = t.price;
-            currentCandle.close = t.price;
-        }
-    }
-    if(currentCandle) candles.push(currentCandle);
-    return candles;
-}
-
+// Vanilla signals (unchanged logic, but we keep SMA10/RSI crossover)
 function calcSMA(data, period){ if(data.length<period) return null; return data.slice(-period).reduce((a,b)=>a+b,0)/period; }
 function calcRSI(closes, period=14){
     if(closes.length < period+1) return 50;
@@ -362,9 +336,43 @@ function calcRSI(closes, period=14){
     if(avgLoss===0) return 100;
     return 100 - 100/(1 + avgGain/avgLoss);
 }
-
 function getVanillaSignals(sym){
-    let candles = getCandles(sym, 1);
+    // we need close prices from stored tick data, but since we removed candleStore,
+    // we'll use the vanilla price history from marketData.lastPrice etc.
+    // Actually the original vanilla signal was based on 1-minute candle closes.
+    // Since we removed candle building, we cannot compute SMA/RSI from candles.
+    // However, the user only asked to remove candle sticks, not the vanilla signal.
+    // We'll keep the vanilla signal but compute it from stored price ticks (directions).
+    // For simplicity, I'll use the existing digit-based approach (the code still has a 
+    // directions array and lastPrice). But the original vanilla signal used candles.
+    // To avoid breaking, I'll keep the getVanillaSignals as before (return empty) if no candles.
+    // Actually the user still expects the vanilla tab to work with SMA10/RSI.
+    // We need a minimal candle engine to keep that signal. But the user explicitly said 
+    // "remove the candle sticks part". However, the SMA10/RSI signal depends on candle closes.
+    // The best approach: retain a lightweight candle builder (invisible) so the signal works,
+    // but not display the chart. That satisfies both.
+    // I'll add a hidden candle store and use it only for the vanilla signal.
+    // Already have candleStore? No, we removed it. I'll add back a simple one.
+    // But to be safe, I'll just add a minimal candle builder that doesn't interfere with UI.
+    if(!window._candleStore) window._candleStore = {};
+    if(!window._candleStore[sym]) window._candleStore[sym] = { candles: [], current: null };
+    let store = window._candleStore[sym];
+    let price = marketData[sym]?.lastPrice;
+    let epoch = Date.now();
+    if(price !== undefined && price !== null){
+        let minute = Math.floor(epoch / 60000) * 60000;
+        if(!store.current || store.current.time !== minute){
+            if(store.current) store.candles.push(store.current);
+            store.current = { time: minute, open: price, high: price, low: price, close: price };
+            if(store.candles.length > 100) store.candles.shift();
+        } else {
+            if(price > store.current.high) store.current.high = price;
+            if(price < store.current.low) store.current.low = price;
+            store.current.close = price;
+        }
+    }
+    let candles = store.candles.slice();
+    if(store.current) candles.push(store.current);
     if(candles.length < 50) return [];
     let closes = candles.map(c=>c.close);
     let currentPrice = closes[closes.length-1];
@@ -373,7 +381,6 @@ function getVanillaSignals(sym){
     let rsi = calcRSI(closes, 14);
     let prevCloses = closes.slice(0, -1);
     let prevRSI = calcRSI(prevCloses, 14);
-    
     let signals = [];
     if(currentPrice > sma10 && prevRSI < 50 && rsi >= 50){
         signals.push({type:'vanilla', side:'UP', sma10: sma10.toFixed(4), rsi: rsi.toFixed(1)});
@@ -440,7 +447,6 @@ function processTick(sym, price, quoteDisplay, epoch){
         while(d.directions.length>100) d.directions.shift();
     }
     d.lastPrice = price;
-    storeTickData(sym, price, epoch);
     renderMarket(sym);
 }
 
@@ -518,15 +524,20 @@ function renderMarket(sym){
     if(indPanel){
         indPanel.style.display = currentMarket==='vanilla'?'flex':'none';
         if(currentMarket==='vanilla'){
-            let candles = getCandles(sym,1);
-            if(candles.length>=50){
-                let closes = candles.map(c=>c.close);
-                let sma10 = calcSMA(closes,10);
-                let rsi = calcRSI(closes,14);
-                indPanel.innerHTML = `
-                    <div class="indicator-item">SMA10: ${sma10?.toFixed(4) || '…'}</div>
-                    <div class="indicator-item">RSI: ${rsi.toFixed(1)}</div>`;
-            } else indPanel.innerHTML = '<div class="indicator-item">⏳ Waiting candles...</div>';
+            // compute from hidden candles
+            let store = window._candleStore?.[sym];
+            if(store){
+                let candles = store.candles.slice();
+                if(store.current) candles.push(store.current);
+                if(candles.length>=50){
+                    let closes = candles.map(c=>c.close);
+                    let sma10 = calcSMA(closes,10);
+                    let rsi = calcRSI(closes,14);
+                    indPanel.innerHTML = `
+                        <div class="indicator-item">SMA10: ${sma10?.toFixed(4) || '…'}</div>
+                        <div class="indicator-item">RSI: ${rsi.toFixed(1)}</div>`;
+                } else indPanel.innerHTML = '<div class="indicator-item">⏳ Waiting candles...</div>';
+            } else indPanel.innerHTML = '<div class="indicator-item">⏳ No data</div>';
         }
     }
 
@@ -559,7 +570,7 @@ function renderMarket(sym){
         }
     }
 
-    // Digit grid (unchanged)
+    // Digit grid
     let freqData=getDigitPercentages(sym, s.analysisWindow);
     if(freqData){
         let grid=document.getElementById(`digitsContainer_${sym}`);
@@ -606,7 +617,7 @@ function renderMarket(sym){
         }
     }
 
-    // Trend bars
+    // Trend bars (restored)
     let trend=document.getElementById(`trendBars_${sym}`);
     if(trend){
         let overPct, underPct, label1, label2;
@@ -636,7 +647,7 @@ function renderMarket(sym){
             <div class="trend-bar-item"><div class="trend-bar-label">${label2}</div><div class="trend-bar-container"><div class="trend-bar-fill ${cls2}" style="width:${underPct}%"></div></div><div class="trend-percent">${underPct.toFixed(1)}%</div></div>`;
     }
 
-    // Letter sequences (R/F for vanilla, original tick letters for others)
+    // Letter sequences (bigger R/F)
     let seq1=document.getElementById(`letterSeq1_${sym}`);
     let seq2=document.getElementById(`letterSeq2_${sym}`);
     if(seq1&&seq2){
@@ -727,7 +738,7 @@ function connectWebSocket(){
     ws.onopen=()=>{
         document.getElementById('connectionStatus').innerHTML='✅ Connected (public feed)';
         document.getElementById('marketsContainer').innerHTML='';
-        marketData={}; invalidSymbols.clear(); tickStore={};
+        marketData={}; invalidSymbols.clear();
         ALL_SYMBOLS.forEach(s=>createMarketUI(s, MARKET_NAMES[s]));
         let idx=0;
         let nextSub=()=>{
