@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>TAJIRI TRADERS – Big R/F Letters</title>
+    <title>TAJIRI TRADERS – Tie Coloring</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -199,7 +199,7 @@
             <div class="setting-row"><label>⚡ 3‑Streak Threshold %</label><input type="number" id="streakThreshold" value="70" min="50" max="95" step="5"></div>
             <div class="setting-row"><label>🎨 Signal Highlight Colour</label><input type="color" id="highlightColor" value="#7e22ce"><span id="highlightColorPreview">Purple</span></div>
         </div>
-        <div style="font-size:0.65rem; margin-top:0.5rem;">✅ Bigger R/F letters, no candles.</div>
+        <div style="font-size:0.65rem; margin-top:0.5rem;">✅ Ties colored together – no overlapping.</div>
     </div>
 </div>
 
@@ -237,7 +237,7 @@ function getSettings(){
 function lastDigitFromFormatted(s){ let d=s.replace(/\./g,''); return d.length?parseInt(d.charAt(d.length-1),10):0; }
 function formatHistoryPrice(s,p){ return p.toFixed(DECIMAL_MAP[s]??2); }
 
-// --- shared helpers (identical to original) ---
+// --- shared helpers ---
 function getTransitionStats(sym, windowSize){
     let data=marketData[sym];
     if(!data||data.rollingArray.length<windowSize+1) return null;
@@ -258,6 +258,7 @@ function getTransitionStats(sym, windowSize){
     return list;
 }
 
+// *** UPDATED: handle ties in digit ranking ***
 function getDigitPercentages(sym, windowSize){
     let data=marketData[sym];
     if(!data||data.rollingArray.length<windowSize) return null;
@@ -266,8 +267,55 @@ function getDigitPercentages(sym, windowSize){
     for(let d of arr) cnt[d]++;
     let total=arr.length;
     let pct=cnt.map(c=>(c/total)*100);
-    let sortedIdx=[...Array(10).keys()].sort((a,b)=>cnt[b]-cnt[a]);
-    return {pct, most:new Set([sortedIdx[0]]), second:new Set([sortedIdx[1]]), least:new Set([sortedIdx[9]]), secondLeast:new Set([sortedIdx[8]])};
+    
+    // Group digits by count
+    let countMap = {};
+    for(let d=0; d<10; d++){
+        let c = cnt[d];
+        if(!countMap[c]) countMap[c] = [];
+        countMap[c].push(d);
+    }
+    let distinctCounts = Object.keys(countMap).map(Number).sort((a,b)=>b-a); // descending
+    let assigned = new Set();
+    let most = new Set();
+    let second = new Set();
+    let least = new Set();
+    let secondLeast = new Set();
+    
+    // Most = highest count
+    if(distinctCounts.length > 0){
+        let highest = distinctCounts[0];
+        for(let d of countMap[highest]) { most.add(d); assigned.add(d); }
+    }
+    // Second = next highest count (if any unassigned digits left)
+    if(distinctCounts.length > 1){
+        for(let i=1; i<distinctCounts.length; i++){
+            let c = distinctCounts[i];
+            let digits = countMap[c].filter(d=>!assigned.has(d));
+            if(digits.length > 0){
+                for(let d of digits) { second.add(d); assigned.add(d); }
+                break;
+            }
+        }
+    }
+    // Least = lowest count among remaining unassigned
+    let unassignedCounts = distinctCounts.filter(c=> countMap[c].some(d=>!assigned.has(d))).sort((a,b)=>a-b); // ascending
+    if(unassignedCounts.length > 0){
+        let lowest = unassignedCounts[0];
+        for(let d of countMap[lowest]){
+            if(!assigned.has(d)) { least.add(d); assigned.add(d); }
+        }
+    }
+    // SecondLeast = second lowest among remaining unassigned
+    unassignedCounts = distinctCounts.filter(c=> countMap[c].some(d=>!assigned.has(d))).sort((a,b)=>a-b);
+    if(unassignedCounts.length > 1){
+        let secondLowest = unassignedCounts[1];
+        for(let d of countMap[secondLowest]){
+            if(!assigned.has(d)) { secondLeast.add(d); assigned.add(d); }
+        }
+    }
+    
+    return {pct, most, second, least, secondLeast};
 }
 
 function getTopPrediction(sym, currentDigit){
@@ -323,7 +371,7 @@ function getOverUnderSignal(sym){
     return null;
 }
 
-// Vanilla signals (unchanged logic, but we keep SMA10/RSI crossover)
+// Vanilla (hidden candles + SMA10/RSI)
 function calcSMA(data, period){ if(data.length<period) return null; return data.slice(-period).reduce((a,b)=>a+b,0)/period; }
 function calcRSI(closes, period=14){
     if(closes.length < period+1) return 50;
@@ -337,23 +385,6 @@ function calcRSI(closes, period=14){
     return 100 - 100/(1 + avgGain/avgLoss);
 }
 function getVanillaSignals(sym){
-    // we need close prices from stored tick data, but since we removed candleStore,
-    // we'll use the vanilla price history from marketData.lastPrice etc.
-    // Actually the original vanilla signal was based on 1-minute candle closes.
-    // Since we removed candle building, we cannot compute SMA/RSI from candles.
-    // However, the user only asked to remove candle sticks, not the vanilla signal.
-    // We'll keep the vanilla signal but compute it from stored price ticks (directions).
-    // For simplicity, I'll use the existing digit-based approach (the code still has a 
-    // directions array and lastPrice). But the original vanilla signal used candles.
-    // To avoid breaking, I'll keep the getVanillaSignals as before (return empty) if no candles.
-    // Actually the user still expects the vanilla tab to work with SMA10/RSI.
-    // We need a minimal candle engine to keep that signal. But the user explicitly said 
-    // "remove the candle sticks part". However, the SMA10/RSI signal depends on candle closes.
-    // The best approach: retain a lightweight candle builder (invisible) so the signal works,
-    // but not display the chart. That satisfies both.
-    // I'll add a hidden candle store and use it only for the vanilla signal.
-    // Already have candleStore? No, we removed it. I'll add back a simple one.
-    // But to be safe, I'll just add a minimal candle builder that doesn't interfere with UI.
     if(!window._candleStore) window._candleStore = {};
     if(!window._candleStore[sym]) window._candleStore[sym] = { candles: [], current: null };
     let store = window._candleStore[sym];
@@ -524,7 +555,6 @@ function renderMarket(sym){
     if(indPanel){
         indPanel.style.display = currentMarket==='vanilla'?'flex':'none';
         if(currentMarket==='vanilla'){
-            // compute from hidden candles
             let store = window._candleStore?.[sym];
             if(store){
                 let candles = store.candles.slice();
@@ -570,7 +600,7 @@ function renderMarket(sym){
         }
     }
 
-    // Digit grid
+    // Digit grid (with updated tie handling)
     let freqData=getDigitPercentages(sym, s.analysisWindow);
     if(freqData){
         let grid=document.getElementById(`digitsContainer_${sym}`);
@@ -617,7 +647,7 @@ function renderMarket(sym){
         }
     }
 
-    // Trend bars (restored)
+    // Trend bars
     let trend=document.getElementById(`trendBars_${sym}`);
     if(trend){
         let overPct, underPct, label1, label2;
@@ -647,7 +677,7 @@ function renderMarket(sym){
             <div class="trend-bar-item"><div class="trend-bar-label">${label2}</div><div class="trend-bar-container"><div class="trend-bar-fill ${cls2}" style="width:${underPct}%"></div></div><div class="trend-percent">${underPct.toFixed(1)}%</div></div>`;
     }
 
-    // Letter sequences (bigger R/F)
+    // Letter sequences
     let seq1=document.getElementById(`letterSeq1_${sym}`);
     let seq2=document.getElementById(`letterSeq2_${sym}`);
     if(seq1&&seq2){
