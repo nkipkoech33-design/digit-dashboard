@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>TAJIRI TRADERS – Tie Coloring</title>
+    <title>TAJIRI TRADERS – Tie Coloring Fix</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -199,7 +199,7 @@
             <div class="setting-row"><label>⚡ 3‑Streak Threshold %</label><input type="number" id="streakThreshold" value="70" min="50" max="95" step="5"></div>
             <div class="setting-row"><label>🎨 Signal Highlight Colour</label><input type="color" id="highlightColor" value="#7e22ce"><span id="highlightColorPreview">Purple</span></div>
         </div>
-        <div style="font-size:0.65rem; margin-top:0.5rem;">✅ Ties colored together – no overlapping.</div>
+        <div style="font-size:0.65rem; margin-top:0.5rem;">✅ Second‑least now fixed for ties.</div>
     </div>
 </div>
 
@@ -258,7 +258,7 @@ function getTransitionStats(sym, windowSize){
     return list;
 }
 
-// *** UPDATED: handle ties in digit ranking ***
+// *** DIGIT RANKING WITH CORRECT SECOND-LEAST HANDLING ***
 function getDigitPercentages(sym, windowSize){
     let data=marketData[sym];
     if(!data||data.rollingArray.length<windowSize) return null;
@@ -287,7 +287,7 @@ function getDigitPercentages(sym, windowSize){
         let highest = distinctCounts[0];
         for(let d of countMap[highest]) { most.add(d); assigned.add(d); }
     }
-    // Second = next highest count (if any unassigned digits left)
+    // Second = next highest count (among remaining)
     if(distinctCounts.length > 1){
         for(let i=1; i<distinctCounts.length; i++){
             let c = distinctCounts[i];
@@ -298,7 +298,7 @@ function getDigitPercentages(sym, windowSize){
             }
         }
     }
-    // Least = lowest count among remaining unassigned
+    // Least = lowest count among remaining
     let unassignedCounts = distinctCounts.filter(c=> countMap[c].some(d=>!assigned.has(d))).sort((a,b)=>a-b); // ascending
     if(unassignedCounts.length > 0){
         let lowest = unassignedCounts[0];
@@ -306,10 +306,10 @@ function getDigitPercentages(sym, windowSize){
             if(!assigned.has(d)) { least.add(d); assigned.add(d); }
         }
     }
-    // SecondLeast = second lowest among remaining unassigned
+    // SecondLeast = next lowest count among remaining (FIX: length > 0 instead of > 1)
     unassignedCounts = distinctCounts.filter(c=> countMap[c].some(d=>!assigned.has(d))).sort((a,b)=>a-b);
-    if(unassignedCounts.length > 1){
-        let secondLowest = unassignedCounts[1];
+    if(unassignedCounts.length > 0){
+        let secondLowest = unassignedCounts[0]; // second lowest overall
         for(let d of countMap[secondLowest]){
             if(!assigned.has(d)) { secondLeast.add(d); assigned.add(d); }
         }
@@ -600,7 +600,7 @@ function renderMarket(sym){
         }
     }
 
-    // Digit grid (with updated tie handling)
+    // Digit grid (with corrected tie handling)
     let freqData=getDigitPercentages(sym, s.analysisWindow);
     if(freqData){
         let grid=document.getElementById(`digitsContainer_${sym}`);
