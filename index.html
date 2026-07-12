@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>TAJIRI TRADERS – Clean 2‑Box / 5‑Box Split</title>
+    <title>TAJIRI TRADERS – Final Layout</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -11,6 +11,7 @@
             --bg-digit: #1e293b; --border-color: #2d3a4e; --text-primary: #e2e8f0; --text-secondary: #94a3b8;
             --price-color: #facc15; --strength-meter-bg: #334155; --strength-fill: #4ade80;
             --btn-bg: #3b82f6; --trade-active: #10b981; --percent-accent: #facc15; --last-digit-bg: #0f172a;
+            --batch-even: #10b981; --batch-odd: #ef4444; --batch-over: #10b981; --batch-under: #ef4444;
             --external-nav-height: 60px; --green: #10b981; --red: #ef4444; --gold: #facc15;
             --up-color: #4ade80; --down-color: #f87171;
         }
@@ -19,7 +20,8 @@
             --bg-digit: #ffffff; --border-color: #cbd5e1; --text-primary: #0f172a; --text-secondary: #475569;
             --price-color: #eab308; --strength-meter-bg: #cbd5e1; --strength-fill: #15803d;
             --btn-bg: #2563eb; --trade-active: #059669; --percent-accent: #b45309; --last-digit-bg: #e2e8f0;
-            --green: #059669; --red: #dc2626; --gold: #eab308;
+            --batch-even: #059669; --batch-odd: #dc2626; --batch-over: #059669; --batch-under: #dc2626;
+            --gold: #eab308; --up-color: #15803d; --down-color: #b91c1c;
         }
         body { font-family: 'Segoe UI', Roboto, system-ui, sans-serif; background: var(--bg-body); color: var(--text-primary); height: 100vh; overflow: hidden; margin: 0; padding: 0; }
         .top-spacer { height: var(--external-nav-height); width: 100%; background: transparent; flex-shrink: 0; }
@@ -34,6 +36,7 @@
         .settings-icon, .mode-toggle-small { background: var(--bg-panel); border: none; font-size: 1rem; cursor: pointer; border-radius: 1.5rem; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; }
         .status-badge { background: var(--bg-panel); padding: 0.2rem 0.6rem; border-radius: 1.5rem; font-size: 0.7rem; }
         .balance-box { background: var(--bg-panel); padding: 0.2rem 0.6rem; border-radius: 1.5rem; font-size: 0.7rem; display: none; }
+        .balance-value { font-weight: 700; color: var(--price-color); }
         
         .selector-row { background: var(--bg-header); padding: 0.2rem 0.8rem; display: flex; gap: 0.8rem; flex-wrap: wrap; border-bottom: 1px solid var(--border-color); flex-shrink: 0; align-items: center; }
         .market-type-selector { display: flex; gap: 0.3rem; background: var(--bg-panel); padding: 0.1rem 0.4rem; border-radius: 1.5rem; }
@@ -79,27 +82,31 @@
         .info-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.3rem; padding: 0.2rem 0.5rem; background: var(--bg-body); font-size: 0.65rem; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
         .parity-stats, .streak-stats, .prediction-box { background: var(--bg-panel); padding: 0.1rem 0.4rem; border-radius: 0.8rem; }
         
-        /* Even/Odd 2‑box */
+        .tug-war-container { margin: 0.2rem 0; padding: 0.1rem 0.4rem; background: var(--bg-body); border-radius: 0.4rem; }
+        .tug-war-row { display: flex; align-items: center; height: 24px; background: #1a1f2e; border-radius: 4px; margin: 2px 0; position: relative; overflow: hidden; }
+        .tug-war-left-label, .tug-war-right-label { width: 55px; text-align: center; font-size: 0.55rem; font-weight: bold; color: #fff; z-index: 3; white-space: nowrap; }
+        .tug-war-left-label { margin-right: 4px; } .tug-war-right-label { margin-left: 4px; }
+        .tug-war-bar-area { flex: 1; position: relative; height: 100%; }
+        .tug-war-center { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: #fff; z-index: 2; }
+        .tug-war-scale { position: absolute; top: 0; bottom: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 2%; font-size: 0.45rem; color: #888; pointer-events: none; }
+        .tug-war-left-bar, .tug-war-right-bar { height: 100%; position: absolute; top: 0; border-radius: 4px; display: flex; align-items: center; font-size: 0.55rem; font-weight: bold; padding: 0 4px; white-space: nowrap; }
+        .tug-war-left-bar { left: 0; background: linear-gradient(90deg, #ef4444, #c0392b); justify-content: flex-end; padding-right: 8px; color: #fff; }
+        .tug-war-right-bar { right: 0; background: linear-gradient(90deg, #27ae60, #10b981); justify-content: flex-start; padding-left: 8px; color: #fff; }
+        
         .eo-two-container { display: flex; gap: 0.3rem; padding: 0.2rem 0.4rem; background: var(--bg-body); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); justify-content: center; position: relative; }
         .eo-two-box { flex: 1; background: var(--bg-panel); border-radius: 0.4rem; padding: 0.2rem; text-align: center; font-size: 0.6rem; position: relative; max-width: 150px; margin: 0 auto; }
         .eo-two-box .digits { font-size: 0.7rem; font-weight: bold; margin-bottom: 0.1rem; }
         .eo-two-box .pct { font-size: 0.8rem; font-weight: 800; color: var(--gold); }
-        .eo-two-box.most-pair { background: #10b981; }
-        .eo-two-box.least-pair { background: #ef4444; }
+        .eo-two-box.most-pair { background: #10b981; } .eo-two-box.least-pair { background: #ef4444; }
         .eo-two-cursor { position: absolute; top: -10px; z-index: 10; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 8px solid var(--gold); transition: left 0.3s; }
         
-        /* Over/Under 5‑pair */
         .pair-bias-container { display: flex; gap: 0.3rem; padding: 0.2rem 0.4rem; background: var(--bg-body); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); justify-content: center; position: relative; }
         .pair-box { flex: 1; background: var(--bg-panel); border-radius: 0.4rem; padding: 0.2rem; text-align: center; font-size: 0.6rem; position: relative; }
         .pair-box .digits { font-size: 0.7rem; font-weight: bold; margin-bottom: 0.1rem; }
         .pair-box .pct { font-size: 0.8rem; font-weight: 800; color: var(--gold); }
-        .pair-box.most-pair { background: #10b981; }
-        .pair-box.second-pair { background: #3b82f6; }
-        .pair-box.least-pair { background: #ef4444; }
-        .pair-box.secondleast-pair { background: #f97316; }
+        .pair-box.most-pair { background: #10b981; } .pair-box.second-pair { background: #3b82f6; } .pair-box.least-pair { background: #ef4444; } .pair-box.secondleast-pair { background: #f97316; }
         .pair-cursor { position: absolute; top: -10px; z-index: 10; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 8px solid var(--gold); transition: left 0.3s; }
         
-        /* Hybrid group bias */
         .group-bias-container { display: flex; gap: 0.3rem; padding: 0.2rem 0.4rem; background: var(--bg-body); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); justify-content: center; }
         .group-box { flex: 1; background: var(--bg-panel); border-radius: 0.4rem; padding: 0.2rem; text-align: center; font-size: 0.6rem; }
         .group-box .digits { font-size: 0.7rem; font-weight: bold; margin-bottom: 0.1rem; }
@@ -123,18 +130,6 @@
         
         .signal-area { padding: 0.2rem 0.4rem; text-align: center; background: var(--bg-body); border-bottom: 1px solid var(--border-color); min-height: 2rem; font-size: 0.65rem; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
         .signal-flash { font-weight: bold; margin: 0.1rem 0; }
-        
-        .tug-war-container { margin: 0.2rem 0; padding: 0.1rem 0.4rem; background: var(--bg-body); border-radius: 0.4rem; }
-        .tug-war-row { display: flex; align-items: center; height: 24px; background: #1a1f2e; border-radius: 4px; margin: 2px 0; position: relative; overflow: hidden; }
-        .tug-war-left-label, .tug-war-right-label { width: 55px; text-align: center; font-size: 0.55rem; font-weight: bold; color: #fff; z-index: 3; white-space: nowrap; }
-        .tug-war-left-label { margin-right: 4px; } .tug-war-right-label { margin-left: 4px; }
-        .tug-war-bar-area { flex: 1; position: relative; height: 100%; }
-        .tug-war-center { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: #fff; z-index: 2; }
-        .tug-war-scale { position: absolute; top: 0; bottom: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 2%; font-size: 0.45rem; color: #888; pointer-events: none; }
-        .tug-war-left-bar, .tug-war-right-bar { height: 100%; position: absolute; top: 0; border-radius: 4px; display: flex; align-items: center; font-size: 0.55rem; font-weight: bold; padding: 0 4px; white-space: nowrap; }
-        .tug-war-left-bar { left: 0; background: linear-gradient(90deg, #ef4444, #c0392b); justify-content: flex-end; padding-right: 8px; color: #fff; }
-        .tug-war-right-bar { right: 0; background: linear-gradient(90deg, #27ae60, #10b981); justify-content: flex-start; padding-left: 8px; color: #fff; }
-        .tug-war-label { font-size: 0.6rem; font-weight: bold; text-align: center; margin: 1px 0; }
         
         .all-markets-container { flex: 0 0 240px; background: var(--bg-header); border-radius: 0.8rem; padding: 0.4rem; border-left: 2px solid var(--gold); overflow-y: auto; }
         .all-markets-container h3 { font-size: 0.7rem; margin: 0 0 0.4rem 0; }
@@ -208,7 +203,7 @@
             <div class="setting-row"><label>🔀 Hybrid Threshold %</label><input type="number" id="hybridThreshold" value="65" min="50" max="90" step="1"></div>
             <div class="setting-row"><label>🎨 Signal Highlight Colour</label><input type="color" id="highlightColor" value="#7e22ce"><span id="highlightColorPreview">Purple</span></div>
         </div>
-        <div style="font-size:0.65rem; margin-top:0.5rem;">✅ 2‑box (Even/Odd) • 5‑box (Over/Under) • Original Hybrid.</div>
+        <div style="font-size:0.65rem; margin-top:0.5rem;">✅ All markets with dedicated tug‑of‑war & letters.</div>
     </div>
 </div>
 
@@ -509,26 +504,47 @@ function renderMarket(sym){
 
     // ===================== EVEN / ODD =====================
     if(currentMarket==='evenodd'){
-        let even=last50.filter(d=>d%2===0).length;
+        let even=last50.filter(d=>d%2===0).length, odd=50-even;
         document.getElementById(`parityStats_${sym}`).innerHTML=`🎲 E:${(even/50*100).toFixed(0)}% O:${(100-even/50*100).toFixed(0)}%`;
         let streak=1, la=last50[last50.length-1]%2===0?'E':'O';
         for(let i=last50.length-2;i>=0;i--) if((last50[i]%2===0?'E':'O')===la) streak++; else break;
         document.getElementById(`streakStats_${sym}`).innerHTML=`📊 Streak: ${streak}x ${la}`;
         document.getElementById(`prediction_${sym}`).innerHTML=`🔮 Next: ${last50.length<10?'?':(()=>{let w=Array(10).fill(0);for(let i=0;i<last50.length;i++)w[last50[i]]+=(i>=last50.length-10?3:1);return w.indexOf(Math.max(...w));})()}`;
 
+        // Tug-of-war Even vs Odd
+        let tugWarDiv = document.getElementById(`tugWar_${sym}`);
+        if(tugWarDiv){
+            let evenPct = (even/50*100), oddPct = (odd/50*100);
+            tugWarDiv.innerHTML = `
+                <div class="tug-war-container">
+                    <div style="font-size:0.65rem; font-weight:bold; text-align:center; margin-bottom:2px;">⚔️ Even vs Odd</div>
+                    <div class="tug-war-row">
+                        <span class="tug-war-left-label">← EVEN</span>
+                        <div class="tug-war-bar-area">
+                            <div class="tug-war-center"></div>
+                            <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+                            <div class="tug-war-left-bar" style="width:${evenPct}%;">${even} (${evenPct.toFixed(0)}%)</div>
+                            <div class="tug-war-right-bar" style="width:${oddPct}%;">${odd} (${oddPct.toFixed(0)}%)</div>
+                        </div>
+                        <span class="tug-war-right-label">ODD →</span>
+                    </div>
+                </div>`;
+        }
+
+        // Two boxes
         let freq = getDigitPercentages(sym, s.analysisWindow);
         let eoDiv = document.getElementById(`eoTwo_${sym}`);
         if(eoDiv){
             eoDiv.style.display = 'flex';
             if(freq){
-                let evenPct = freq.pct[0]+freq.pct[2]+freq.pct[4]+freq.pct[6]+freq.pct[8];
-                let oddPct = 100 - evenPct;
-                let mostIsEven = evenPct >= oddPct;
+                let evenPctBox = freq.pct[0]+freq.pct[2]+freq.pct[4]+freq.pct[6]+freq.pct[8];
+                let oddPctBox = 100 - evenPctBox;
+                let mostIsEven = evenPctBox >= oddPctBox;
                 let clsEven = mostIsEven ? 'most-pair' : 'least-pair';
                 let clsOdd = mostIsEven ? 'least-pair' : 'most-pair';
                 let boxesHTML = `
-                    <div class="eo-two-box ${clsEven}"><div class="digits">0 2 4 6 8</div><div class="pct">${evenPct.toFixed(1)}%</div></div>
-                    <div class="eo-two-box ${clsOdd}"><div class="digits">1 3 5 7 9</div><div class="pct">${oddPct.toFixed(1)}%</div></div>`;
+                    <div class="eo-two-box ${clsEven}"><div class="digits">0 2 4 6 8</div><div class="pct">${evenPctBox.toFixed(1)}%</div></div>
+                    <div class="eo-two-box ${clsOdd}"><div class="digits">1 3 5 7 9</div><div class="pct">${oddPctBox.toFixed(1)}%</div></div>`;
                 let lastDigit = data.lastDigit;
                 let cursorIdx = (lastDigit % 2 === 0) ? 0 : 1;
                 let cursorLeft = cursorIdx === 0 ? '15%' : '65%';
@@ -550,13 +566,34 @@ function renderMarket(sym){
 
     // ===================== OVER / UNDER =====================
     else if(currentMarket==='overunder'){
-        let over=last50.filter(d=>d>=5).length;
-        document.getElementById(`parityStats_${sym}`).innerHTML=`📈 Over:${(over/50*100).toFixed(0)}% Under:${(100-over/50*100).toFixed(0)}%`;
+        let over=last50.filter(d=>d>=5).length, under=50-over;
+        document.getElementById(`parityStats_${sym}`).innerHTML=`📈 Over:${(over/50*100).toFixed(0)}% Under:${(under/50*100).toFixed(0)}%`;
         let streak=1, la=last50[last50.length-1]>=5?'O':'U';
         for(let i=last50.length-2;i>=0;i--) if((last50[i]>=5?'O':'U')===la) streak++; else break;
         document.getElementById(`streakStats_${sym}`).innerHTML=`📊 Streak: ${streak}x ${la}`;
         document.getElementById(`prediction_${sym}`).innerHTML=`🔮 Next: ${last50.length<10?'?':(()=>{let w=Array(10).fill(0);for(let i=0;i<last50.length;i++)w[last50[i]]+=(i>=last50.length-10?3:1);return w.indexOf(Math.max(...w));})()}`;
 
+        // Tug-of-war Over vs Under
+        let tugWarDiv = document.getElementById(`tugWar_${sym}`);
+        if(tugWarDiv){
+            let underPct = (under/50*100), overPct = (over/50*100);
+            tugWarDiv.innerHTML = `
+                <div class="tug-war-container">
+                    <div style="font-size:0.65rem; font-weight:bold; text-align:center; margin-bottom:2px;">⚔️ Over vs Under</div>
+                    <div class="tug-war-row">
+                        <span class="tug-war-left-label">← UNDER</span>
+                        <div class="tug-war-bar-area">
+                            <div class="tug-war-center"></div>
+                            <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+                            <div class="tug-war-left-bar" style="width:${underPct}%;">${under} (${underPct.toFixed(0)}%)</div>
+                            <div class="tug-war-right-bar" style="width:${overPct}%;">${over} (${overPct.toFixed(0)}%)</div>
+                        </div>
+                        <span class="tug-war-right-label">OVER →</span>
+                    </div>
+                </div>`;
+        }
+
+        // Five pair boxes
         let freq = getDigitPercentages(sym, s.analysisWindow);
         let pairDiv = document.getElementById(`pairBias_${sym}`);
         if(pairDiv){
@@ -638,12 +675,86 @@ function renderMarket(sym){
         }
     }
 
+    // ===================== VANILLA =====================
+    else if(currentMarket==='vanilla'){
+        let dirs = data.directions || [];
+        let last50dirs = dirs.slice(-50);
+        let riseCount = last50dirs.filter(d=>d===1).length;
+        let fallCount = last50dirs.filter(d=>d===-1).length;
+        let total = last50dirs.length || 1;
+        document.getElementById(`parityStats_${sym}`).innerHTML=`📈 R:${(riseCount/total*100).toFixed(0)}% F:${(fallCount/total*100).toFixed(0)}%`;
+        let streak=0, dir=0;
+        if(dirs.length){
+            dir=dirs[dirs.length-1];
+            for(let i=dirs.length-1;i>=0;i--){ if(dirs[i]===dir) streak++; else break; }
+        }
+        document.getElementById(`streakStats_${sym}`).innerHTML=`📊 Streak: ${streak}x ${dir===1?'R':dir===-1?'F':'–'}`;
+        document.getElementById(`prediction_${sym}`).innerHTML=`🔮 Next: ${last50.length<10?'?':(()=>{let w=Array(10).fill(0);for(let i=0;i<last50.length;i++)w[last50[i]]+=(i>=last50.length-10?3:1);return w.indexOf(Math.max(...w));})()}`;
+
+        // Indicator panel
+        let indPanel = document.getElementById(`indicatorPanel_${sym}`);
+        if(indPanel){
+            let store = window._candleStore?.[sym];
+            if(store){
+                let candles = store.candles.slice();
+                if(store.current) candles.push(store.current);
+                if(candles.length>=50){
+                    let closes = candles.map(c=>c.close);
+                    let sma10 = calcSMA(closes,10);
+                    let rsi = calcRSI(closes,14);
+                    indPanel.innerHTML = `
+                        <div class="indicator-item">SMA10: ${sma10?.toFixed(4) || '…'}</div>
+                        <div class="indicator-item">RSI: ${rsi.toFixed(1)}</div>`;
+                } else indPanel.innerHTML = '<div class="indicator-item">⏳ Waiting candles...</div>';
+            } else indPanel.innerHTML = '<div class="indicator-item">⏳ No data</div>';
+            indPanel.style.display = 'flex';
+        } else { indPanel.style.display = 'none'; }
+
+        // Tug-of-war Rise vs Fall
+        let tugWarDiv = document.getElementById(`tugWar_${sym}`);
+        if(tugWarDiv){
+            let risePct = (riseCount/50*100), fallPct = (fallCount/50*100);
+            tugWarDiv.innerHTML = `
+                <div class="tug-war-container">
+                    <div style="font-size:0.65rem; font-weight:bold; text-align:center; margin-bottom:2px;">⚔️ Rise vs Fall</div>
+                    <div class="tug-war-row">
+                        <span class="tug-war-left-label">← FALL</span>
+                        <div class="tug-war-bar-area">
+                            <div class="tug-war-center"></div>
+                            <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+                            <div class="tug-war-left-bar" style="width:${fallPct}%;">${fallCount} (${fallPct.toFixed(0)}%)</div>
+                            <div class="tug-war-right-bar" style="width:${risePct}%;">${riseCount} (${risePct.toFixed(0)}%)</div>
+                        </div>
+                        <span class="tug-war-right-label">RISE →</span>
+                    </div>
+                </div>`;
+        }
+
+        // Signal
+        let signal = getVanillaSignals(sym);
+        let sigDiv = document.getElementById(`signalDisplay_${sym}`);
+        if(sigDiv){
+            if(Array.isArray(signal) && signal.length>0){
+                let html = '';
+                for(let sig of signal){
+                    let col = sig.side==='UP'?'#4ade80':'#f87171';
+                    html += `<div class="signal-flash" style="color:${col};">🎯 ${sig.side} (SMA10: ${sig.sma10}, RSI: ${sig.rsi})</div>`;
+                }
+                sigDiv.innerHTML = html;
+            } else sigDiv.innerHTML = `<div class="signal-flash">⏳ No signal</div>`;
+        }
+    }
+
     // ===================== HYBRID =====================
     else if(currentMarket==='hybrid'){
         let status = getHybridStatus(sym);
         let overCount = status ? status.overCount : last50.filter(d=>d>=5).length;
         let evenCount = status ? status.evenCount : last50.filter(d=>d%2===0).length;
         let underCount = 50 - overCount, oddCount = 50 - evenCount;
+        let dirs = data.directions || [];
+        let last50dirs = dirs.slice(-50);
+        let riseCount = last50dirs.filter(d=>d===1).length;
+        let fallCount = last50dirs.filter(d=>d===-1).length;
 
         let ouStreak=1, ouDir=last50[last50.length-1]>=5?'O':'U';
         for(let i=last50.length-2;i>=0;i--) if((last50[i]>=5?'O':'U')===ouDir) ouStreak++; else break;
@@ -653,6 +764,7 @@ function renderMarket(sym){
         document.getElementById(`streakStats_${sym}`).innerHTML = `EO Even:${(evenCount/50*100).toFixed(0)}% Str:${eoStreak}${eoDir}`;
         document.getElementById(`prediction_${sym}`).innerHTML=`🔮 Next: ${last50.length<10?'?':(()=>{let w=Array(10).fill(0);for(let i=0;i<last50.length;i++)w[last50[i]]+=(i>=last50.length-10?3:1);return w.indexOf(Math.max(...w));})()}`;
 
+        // Group bias (0-2,3-6,7-9)
         let freq = getDigitPercentages(sym, s.analysisWindow);
         let groupDiv = document.getElementById(`groupBias_${sym}`);
         if(groupDiv){
@@ -668,37 +780,31 @@ function renderMarket(sym){
             } else groupDiv.innerHTML = '<div class="group-box">⏳</div><div class="group-box">⏳</div><div class="group-box">⏳</div>';
         }
 
-        let latest50 = last100.slice(-50);
+        // Three sets of 50 tick letters
+        let latest50digits = last100.slice(-50);
         let seqOU = document.getElementById(`letterSeq1_${sym}`);
         let seqEO = document.getElementById(`letterSeq2_${sym}`);
-        if(seqOU && seqEO && latest50.length>=50){
-            seqOU.innerHTML = latest50.map(d=>d<=3?'<span class="seq-u">U</span>':(d<=5?'<span class="seq-m">M</span>':'<span class="seq-o">O</span>')).join('');
-            seqEO.innerHTML = latest50.map(d=>d%2===0?'<span class="seq-e">E</span>':'<span class="seq-odd">O</span>').join('');
-        } else if(seqOU && seqEO){
-            seqOU.innerHTML = '⏳'; seqEO.innerHTML = '⏳';
-        }
-
-        let sigDiv = document.getElementById(`signalDisplay_${sym}`);
-        if(sigDiv){
-            if(status){
-                let ouLabel = status.ouSide === 'OVER' ? 'Over' : 'Under';
-                let eoLabel = status.eoSide === 'EVEN' ? 'Even' : 'Odd';
-                if(status.bothConfirmed){
-                    sigDiv.innerHTML = `<div class="signal-flash" style="color:#4ade80; font-weight:bold;">🎯 ${ouLabel}/${eoLabel} confirmed (${ouLabel} ${status.ouValue.toFixed(0)}% / ${eoLabel} ${status.eoValue.toFixed(0)}%)</div>`;
-                } else {
-                    sigDiv.innerHTML = `
-                        <div class="signal-flash" style="color:${status.ouConfirmed?'#4ade80':'#facc15'};">${ouLabel}: ${status.ouValue.toFixed(0)}% ${status.ouConfirmed?'✅':'⏳'}</div>
-                        <div class="signal-flash" style="color:${status.eoConfirmed?'#4ade80':'#facc15'};">${eoLabel}: ${status.eoValue.toFixed(0)}% ${status.eoConfirmed?'✅':'⏳'}</div>`;
-                }
+        let seqRF = document.getElementById(`letterSeq3_${sym}`); // new row for Rise/Fall
+        if(seqOU && seqEO && seqRF && latest50digits.length>=50){
+            seqOU.innerHTML = latest50digits.map(d=>d<=3?'<span class="seq-u">U</span>':(d<=5?'<span class="seq-m">M</span>':'<span class="seq-o">O</span>')).join('');
+            seqEO.innerHTML = latest50digits.map(d=>d%2===0?'<span class="seq-e">E</span>':'<span class="seq-odd">O</span>').join('');
+            if(last50dirs.length>=50){
+                seqRF.innerHTML = last50dirs.map(d=>d===1?'<span class="arrow-up">R</span>':d===-1?'<span class="arrow-down">F</span>':'<span class="arrow-flat">–</span>').join('');
             } else {
-                sigDiv.innerHTML = `<div class="signal-flash">⏳ No direction identified</div>`;
+                seqRF.innerHTML = '⏳';
             }
+        } else {
+            if(seqOU) seqOU.innerHTML = '⏳';
+            if(seqEO) seqEO.innerHTML = '⏳';
+            if(seqRF) seqRF.innerHTML = '⏳';
         }
 
+        // Tug-of-war rows: Over/Under, Even/Odd, Rise/Fall
         let tugWarDiv = document.getElementById(`tugWar_${sym}`);
         if(tugWarDiv){
             let underPct = (underCount/50*100), overPct = (overCount/50*100);
             let oddPct = (oddCount/50*100), evenPct = (evenCount/50*100);
+            let risePct = (riseCount/50*100), fallPct = (fallCount/50*100);
             tugWarDiv.innerHTML = `
                 <div class="tug-war-container">
                     <div style="font-size:0.65rem; font-weight:bold; text-align:center; margin-bottom:2px;">⚔️ Tug of War</div>
@@ -722,67 +828,52 @@ function renderMarket(sym){
                         </div>
                         <span class="tug-war-right-label">EVEN →</span>
                     </div>
+                    <div class="tug-war-row">
+                        <span class="tug-war-left-label">← FALL</span>
+                        <div class="tug-war-bar-area">
+                            <div class="tug-war-center"></div>
+                            <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+                            <div class="tug-war-left-bar" style="width:${fallPct}%;">${fallCount} (${fallPct.toFixed(0)}%)</div>
+                            <div class="tug-war-right-bar" style="width:${risePct}%;">${riseCount} (${risePct.toFixed(0)}%)</div>
+                        </div>
+                        <span class="tug-war-right-label">RISE →</span>
+                    </div>
                 </div>`;
+        }
+
+        // Signal (partial confirmation)
+        let sigDiv = document.getElementById(`signalDisplay_${sym}`);
+        if(sigDiv){
+            if(status){
+                let ouLabel = status.ouSide === 'OVER' ? 'Over' : 'Under';
+                let eoLabel = status.eoSide === 'EVEN' ? 'Even' : 'Odd';
+                if(status.bothConfirmed){
+                    sigDiv.innerHTML = `<div class="signal-flash" style="color:#4ade80; font-weight:bold;">🎯 ${ouLabel}/${eoLabel} confirmed (${ouLabel} ${status.ouValue.toFixed(0)}% / ${eoLabel} ${status.eoValue.toFixed(0)}%)</div>`;
+                } else {
+                    sigDiv.innerHTML = `
+                        <div class="signal-flash" style="color:${status.ouConfirmed?'#4ade80':'#facc15'};">${ouLabel}: ${status.ouValue.toFixed(0)}% ${status.ouConfirmed?'✅':'⏳'}</div>
+                        <div class="signal-flash" style="color:${status.eoConfirmed?'#4ade80':'#facc15'};">${eoLabel}: ${status.eoValue.toFixed(0)}% ${status.eoConfirmed?'✅':'⏳'}</div>`;
+                }
+            } else {
+                sigDiv.innerHTML = `<div class="signal-flash">⏳ No direction identified</div>`;
+            }
         }
         let trendDiv = document.getElementById(`trendBars_${sym}`);
         if(trendDiv) trendDiv.innerHTML = '';
     }
 
-    // ===================== PREDICT / VANILLA =====================
-    else {
-        if(currentMarket==='predict'){
-            document.getElementById(`parityStats_${sym}`).innerHTML=`🔁 Last: ${data.lastDigit}`;
-            let pred=getTopPrediction(sym,data.lastDigit);
-            document.getElementById(`streakStats_${sym}`).innerHTML=pred?`🎯 Top next: ${pred.nextDigit} (${pred.percentage.toFixed(1)}%)`:'⏳';
-        } else if(currentMarket==='vanilla'){
-            let upCount = (data.directions||[]).filter(d=>d===1).length;
-            let total = data.directions?data.directions.length:0;
-            document.getElementById(`parityStats_${sym}`).innerHTML=`📈 R:${total?(upCount/total*100).toFixed(0):0}% F:${total?(100-upCount/total*100).toFixed(0):100}%`;
-            let streak=0, dir=0;
-            if(data.directions&&data.directions.length){
-                dir=data.directions[data.directions.length-1];
-                for(let i=data.directions.length-1;i>=0;i--){ if(data.directions[i]===dir) streak++; else break; }
-            }
-            document.getElementById(`streakStats_${sym}`).innerHTML=`📊 Streak: ${streak}x ${dir===1?'R':dir===-1?'F':'–'}`;
-        }
+    // ===================== PREDICT =====================
+    else if(currentMarket==='predict'){
+        document.getElementById(`parityStats_${sym}`).innerHTML=`🔁 Last: ${data.lastDigit}`;
+        let pred=getTopPrediction(sym,data.lastDigit);
+        document.getElementById(`streakStats_${sym}`).innerHTML=pred?`🎯 Top next: ${pred.nextDigit} (${pred.percentage.toFixed(1)}%)`:'⏳';
         document.getElementById(`prediction_${sym}`).innerHTML=`🔮 Next: ${last50.length<10?'?':(()=>{let w=Array(10).fill(0);for(let i=0;i<last50.length;i++)w[last50[i]]+=(i>=last50.length-10?3:1);return w.indexOf(Math.max(...w));})()}`;
 
-        let indPanel = document.getElementById(`indicatorPanel_${sym}`);
-        if(indPanel){
-            if(currentMarket==='vanilla'){
-                let store = window._candleStore?.[sym];
-                if(store){
-                    let candles = store.candles.slice();
-                    if(store.current) candles.push(store.current);
-                    if(candles.length>=50){
-                        let closes = candles.map(c=>c.close);
-                        let sma10 = calcSMA(closes,10);
-                        let rsi = calcRSI(closes,14);
-                        indPanel.innerHTML = `
-                            <div class="indicator-item">SMA10: ${sma10?.toFixed(4) || '…'}</div>
-                            <div class="indicator-item">RSI: ${rsi.toFixed(1)}</div>`;
-                    } else indPanel.innerHTML = '<div class="indicator-item">⏳ Waiting candles...</div>';
-                } else indPanel.innerHTML = '<div class="indicator-item">⏳ No data</div>';
-                indPanel.style.display = 'flex';
-            } else indPanel.style.display = 'none';
-        }
-
-        let signal = getSignal(sym);
+        let signal = getPredictSignal(sym);
         let sigDiv = document.getElementById(`signalDisplay_${sym}`);
         if(sigDiv){
-            if(currentMarket==='predict'){
-                if(signal) sigDiv.innerHTML=`<div class="signal-flash" style="color:#4ade80;">🎯 NEXT: ${signal.digit} (${signal.percentage.toFixed(1)}%)</div>`;
-                else sigDiv.innerHTML=`<div class="signal-flash">⏳ Below ${getSettings().predThreshold}%</div>`;
-            } else if(currentMarket==='vanilla'){
-                if(Array.isArray(signal) && signal.length>0){
-                    let html = '';
-                    for(let sig of signal){
-                        let col = sig.side==='UP'?'#4ade80':'#f87171';
-                        html += `<div class="signal-flash" style="color:${col};">🎯 ${sig.side} (SMA10: ${sig.sma10}, RSI: ${sig.rsi})</div>`;
-                    }
-                    sigDiv.innerHTML = html;
-                } else sigDiv.innerHTML = `<div class="signal-flash">⏳ No signal</div>`;
-            }
+            if(signal) sigDiv.innerHTML=`<div class="signal-flash" style="color:#4ade80;">🎯 NEXT: ${signal.digit} (${signal.percentage.toFixed(1)}%)</div>`;
+            else sigDiv.innerHTML=`<div class="signal-flash">⏳ Below ${getSettings().predThreshold}%</div>`;
         }
     }
 
@@ -833,39 +924,19 @@ function renderMarket(sym){
         }
     }
 
-    // ---- TREND BARS (EXCEPT HYBRID) ----
-    if(currentMarket!=='hybrid'){
+    // ---- TREND BARS (only for Predict) ----
+    if(currentMarket==='predict'){
         let trend=document.getElementById(`trendBars_${sym}`);
         if(trend){
-            let overPct, underPct, label1, label2;
-            if(currentMarket==='predict'){
-                let even=last50.filter(d=>d%2===0).length;
-                overPct=even/50*100; underPct=100-overPct;
-                label1='Even'; label2='Odd';
-            } else if(currentMarket==='evenodd'){
-                let even=last50.filter(d=>d%2===0).length;
-                overPct=even/50*100; underPct=100-overPct;
-                label1='Even'; label2='Odd';
-            } else if(currentMarket==='vanilla'){
-                let upCount = (data.directions||[]).filter(d=>d===1).length;
-                let total = data.directions?data.directions.length:0;
-                overPct = total ? (upCount/total*100) : 50;
-                underPct = 100 - overPct;
-                label1='Rise (R)'; label2='Fall (F)';
-            } else { // overunder
-                let over=last50.filter(d=>d>=5).length;
-                overPct=over/50*100; underPct=100-overPct;
-                label1='Over'; label2='Under';
-            }
-            let cls1=(currentMarket==='overunder')?'over':'even';
-            let cls2=(currentMarket==='overunder')?'under':'odd';
+            let even=last50.filter(d=>d%2===0).length;
+            let overPct=even/50*100, underPct=100-overPct;
             trend.innerHTML=`
-                <div class="trend-bar-item"><div class="trend-bar-label">${label1}</div><div class="trend-bar-container"><div class="trend-bar-fill ${cls1}" style="width:${overPct}%"></div></div><div class="trend-percent">${overPct.toFixed(1)}%</div></div>
-                <div class="trend-bar-item"><div class="trend-bar-label">${label2}</div><div class="trend-bar-container"><div class="trend-bar-fill ${cls2}" style="width:${underPct}%"></div></div><div class="trend-percent">${underPct.toFixed(1)}%</div></div>`;
+                <div class="trend-bar-item"><div class="trend-bar-label">Even</div><div class="trend-bar-container"><div class="trend-bar-fill even" style="width:${overPct}%"></div></div><div class="trend-percent">${overPct.toFixed(1)}%</div></div>
+                <div class="trend-bar-item"><div class="trend-bar-label">Odd</div><div class="trend-bar-container"><div class="trend-bar-fill odd" style="width:${underPct}%"></div></div><div class="trend-percent">${underPct.toFixed(1)}%</div></div>`;
         }
     }
 
-    // ---- LETTER SEQUENCES (EXCEPT HYBRID) ----
+    // ---- LETTER SEQUENCES (all markets except Hybrid, which is handled above) ----
     if(currentMarket!=='hybrid'){
         let seq1=document.getElementById(`letterSeq1_${sym}`);
         let seq2=document.getElementById(`letterSeq2_${sym}`);
@@ -893,7 +964,7 @@ function renderMarket(sym){
     }
 }
 
-// ---- UI mechanics (unchanged) ----
+// ---- UI mechanics ----
 function setFocus(sym){ focusedSymbol=sym; document.getElementById('focusBar').style.display=sym?'flex':'none'; applyFocusVisibility(); }
 function applyFocusVisibility(){ let cards=document.querySelectorAll('.market-card'); if(focusedSymbol){ cards.forEach(c=>c.style.display=c.id===`market_${focusedSymbol}`?'flex':'none'); } else cards.forEach(c=>c.style.display='flex'); }
 function showAllMarkets(){ setFocus(null); }
@@ -945,9 +1016,10 @@ function createMarketUI(sym, name){
             <div id="pairBias_${sym}" class="pair-bias-container" style="display:none;"></div>
             <div id="groupBias_${sym}" class="group-bias-container"></div>
             <div id="indicatorPanel_${sym}" class="indicator-panel"></div>
+            <div id="tugWar_${sym}"></div>
             <div class="letter-sequence-wrapper"><div class="letter-sequence" id="letterSeq1_${sym}"></div></div>
             <div class="letter-sequence-wrapper"><div class="letter-sequence" id="letterSeq2_${sym}"></div></div>
-            <div id="tugWar_${sym}"></div>
+            <div class="letter-sequence-wrapper" id="letterRow3_${sym}" style="display:none;"><div class="letter-sequence" id="letterSeq3_${sym}"></div></div>
             <div id="transitions_${sym}"></div>
             <div class="signal-area" id="signalDisplay_${sym}">⏳</div>
             <div id="trendBars_${sym}" class="trend-bars"></div>
@@ -1010,6 +1082,9 @@ function setMarket(m){
     currentMarket=m;
     document.querySelectorAll('.market-btn').forEach(b=>b.classList.toggle('active',b.dataset.market===m));
     document.getElementById('strategySelector').style.display = (m==='evenodd'||m==='hybrid')?'flex':'none';
+    // Show/hide the third letter row (RF) only in Hybrid
+    let thirdRow = document.querySelectorAll('[id^="letterRow3_"]');
+    thirdRow.forEach(el => el.style.display = (m==='hybrid')?'block':'none');
     for(let s in marketData) if(marketData[s]?.rollingArray?.length) renderMarket(s);
     updateAllMarketsList();
 }
