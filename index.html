@@ -43,6 +43,7 @@
             --zone-over: #ef4444;
             --seq-e: #10b981;
             --seq-o: #f97316;
+            --digit-num-color: #cbd5e1;
         }
         body.light {
             --bg-body: #f8fafc;
@@ -74,6 +75,7 @@
             --zone-over: #dc2626;
             --seq-e: #059669;
             --seq-o: #b45309;
+            --digit-num-color: #334155;
         }
         body {
             font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
@@ -448,9 +450,18 @@
             animation: pulse 1s infinite;
         }
         @keyframes pulse {
-            0% { opacity: 0.4; transform: scale(0.8) translateX(-50%); }
-            50% { opacity: 1; transform: scale(1.2) translateX(-50%); }
-            100% { opacity: 0.4; transform: scale(0.8) translateX(-50%); }
+            0% {
+                opacity: 0.4;
+                transform: scale(0.8) translateX(-50%);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.2) translateX(-50%);
+            }
+            100% {
+                opacity: 0.4;
+                transform: scale(0.8) translateX(-50%);
+            }
         }
 
         .info-row {
@@ -472,12 +483,24 @@
             align-items: center;
             gap: 0.3rem;
         }
-        .stat-box .stable { color: #4ade80; }
-        .stat-box .moderate { color: #facc15; }
-        .stat-box .erratic { color: #f87171; }
-        .stat-box .uptrend { color: #4ade80; }
-        .stat-box .downtrend { color: #f87171; }
-        .stat-box .ranging { color: #facc15; }
+        .stat-box .stable {
+            color: #4ade80;
+        }
+        .stat-box .moderate {
+            color: #facc15;
+        }
+        .stat-box .erratic {
+            color: #f87171;
+        }
+        .stat-box .uptrend {
+            color: #4ade80;
+        }
+        .stat-box .downtrend {
+            color: #f87171;
+        }
+        .stat-box .ranging {
+            color: #facc15;
+        }
 
         .zone-memory {
             background: var(--bg-body);
@@ -509,8 +532,14 @@
             color: var(--text-secondary);
             font-size: 0.65rem;
         }
-        .zone-memory .boundary-stat .breakout { color: #4ade80; font-weight: 700; }
-        .zone-memory .boundary-stat .bounce { color: #f87171; font-weight: 700; }
+        .zone-memory .boundary-stat .breakout {
+            color: #4ade80;
+            font-weight: 700;
+        }
+        .zone-memory .boundary-stat .bounce {
+            color: #f87171;
+            font-weight: 700;
+        }
 
         /* Zone Bar */
         .zone-bar-container {
@@ -538,12 +567,18 @@
             font-size: 0.7rem;
             font-weight: 700;
             color: #fff;
-            text-shadow: 0 0 4px rgba(0,0,0,0.6);
+            text-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
             position: relative;
         }
-        .zone-bar .zone-segment.under { background: var(--zone-under); }
-        .zone-bar .zone-segment.middle { background: var(--zone-middle); }
-        .zone-bar .zone-segment.over { background: var(--zone-over); }
+        .zone-bar .zone-segment.under {
+            background: var(--zone-under);
+        }
+        .zone-bar .zone-segment.middle {
+            background: var(--zone-middle);
+        }
+        .zone-bar .zone-segment.over {
+            background: var(--zone-over);
+        }
 
         .zone-bar .zone-pointer {
             position: absolute;
@@ -552,7 +587,7 @@
             height: 48px;
             background: #ffffff;
             border-radius: 4px;
-            box-shadow: 0 0 16px rgba(255,255,255,0.8), 0 0 32px rgba(255,255,255,0.4);
+            box-shadow: 0 0 16px rgba(255, 255, 255, 0.8), 0 0 32px rgba(255, 255, 255, 0.4);
             transition: left 0.15s ease-out;
             pointer-events: none;
             z-index: 5;
@@ -566,7 +601,7 @@
             border-left: 6px solid transparent;
             border-right: 6px solid transparent;
             border-top: 8px solid #ffffff;
-            filter: drop-shadow(0 0 6px rgba(255,255,255,0.6));
+            filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.6));
         }
 
         .zone-bar-labels {
@@ -581,9 +616,15 @@
             text-align: center;
             font-weight: 600;
         }
-        .zone-bar-labels .under-label { color: var(--zone-under); }
-        .zone-bar-labels .middle-label { color: var(--zone-middle); }
-        .zone-bar-labels .over-label { color: var(--zone-over); }
+        .zone-bar-labels .under-label {
+            color: var(--zone-under);
+        }
+        .zone-bar-labels .middle-label {
+            color: var(--zone-middle);
+        }
+        .zone-bar-labels .over-label {
+            color: var(--zone-over);
+        }
 
         .zone-density {
             display: flex;
@@ -604,9 +645,15 @@
             border-radius: 50%;
             display: inline-block;
         }
-        .zone-density .density-dot.under { background: var(--zone-under); }
-        .zone-density .density-dot.middle { background: var(--zone-middle); }
-        .zone-density .density-dot.over { background: var(--zone-over); }
+        .zone-density .density-dot.under {
+            background: var(--zone-under);
+        }
+        .zone-density .density-dot.middle {
+            background: var(--zone-middle);
+        }
+        .zone-density .density-dot.over {
+            background: var(--zone-over);
+        }
 
         .zone-memory-reminder {
             font-size: 0.7rem;
@@ -617,12 +664,18 @@
             animation: pulse-reminder 1.5s ease-in-out infinite;
         }
         @keyframes pulse-reminder {
-            0%, 100% { opacity: 0.7; }
-            50% { opacity: 1; }
+            0%,
+            100% {
+                opacity: 0.7;
+            }
+            50% {
+                opacity: 1;
+            }
         }
 
         /* Dominance */
-        .digit-dominance, .eo-zone-dominance {
+        .digit-dominance,
+        .eo-zone-dominance {
             display: flex;
             justify-content: center;
             gap: 0.8rem;
@@ -631,7 +684,8 @@
             flex-wrap: wrap;
             font-weight: 600;
         }
-        .digit-dominance .dom-item, .eo-zone-dominance .eo-zone-item {
+        .digit-dominance .dom-item,
+        .eo-zone-dominance .eo-zone-item {
             display: flex;
             align-items: center;
             gap: 0.2rem;
@@ -658,8 +712,12 @@
             height: 100%;
             transition: width 0.3s;
         }
-        .eo-zone-dominance .eo-bar .eo-fill.even-fill { background: var(--seq-e); }
-        .eo-zone-dominance .eo-bar .eo-fill.odd-fill { background: var(--seq-o); }
+        .eo-zone-dominance .eo-bar .eo-fill.even-fill {
+            background: var(--seq-e);
+        }
+        .eo-zone-dominance .eo-bar .eo-fill.odd-fill {
+            background: var(--seq-o);
+        }
         .eo-zone-dominance .eo-pct {
             font-weight: 600;
             min-width: 28px;
@@ -698,8 +756,12 @@
             font-weight: 800;
             color: var(--gold);
         }
-        .eo-two-box.most-pair { background: #10b981; }
-        .eo-two-box.least-pair { background: #ef4444; }
+        .eo-two-box.most-pair {
+            background: #10b981;
+        }
+        .eo-two-box.least-pair {
+            background: #ef4444;
+        }
         .eo-two-cursor {
             position: absolute;
             top: -12px;
@@ -739,8 +801,12 @@
             z-index: 3;
             white-space: nowrap;
         }
-        .tug-war-left-label { margin-right: 4px; }
-        .tug-war-right-label { margin-left: 4px; }
+        .tug-war-left-label {
+            margin-right: 4px;
+        }
+        .tug-war-right-label {
+            margin-left: 4px;
+        }
         .tug-war-bar-area {
             flex: 1;
             position: relative;
@@ -814,10 +880,18 @@
             font-weight: 800;
             color: var(--gold);
         }
-        .pair-box.most-pair { background: #10b981; }
-        .pair-box.second-pair { background: #3b82f6; }
-        .pair-box.least-pair { background: #ef4444; }
-        .pair-box.secondleast-pair { background: #f97316; }
+        .pair-box.most-pair {
+            background: #10b981;
+        }
+        .pair-box.second-pair {
+            background: #3b82f6;
+        }
+        .pair-box.least-pair {
+            background: #ef4444;
+        }
+        .pair-box.secondleast-pair {
+            background: #f97316;
+        }
         .pair-cursor {
             position: absolute;
             top: -12px;
@@ -879,8 +953,12 @@
             padding: 0.05rem 0.2rem;
             text-align: center;
         }
-        .panel-box .ov { color: var(--batch-over); }
-        .panel-box .un { color: var(--batch-under); }
+        .panel-box .ov {
+            color: var(--batch-over);
+        }
+        .panel-box .un {
+            color: var(--batch-under);
+        }
 
         .signal-area {
             padding: 0.3rem 0.2rem;
@@ -903,7 +981,7 @@
             font-size: 0.8rem;
         }
 
-        /* Letter sequences */
+        /* Letter sequences + digit sequences - FIXED for alignment */
         .letter-sequence-wrapper {
             padding: 0.2rem 0.2rem;
             background: var(--bg-body);
@@ -923,7 +1001,45 @@
             gap: 1px;
             padding: 0.15rem 0;
         }
-        .seq-u, .seq-m, .seq-o, .seq-e, .seq-odd, .seq-r, .seq-f {
+        /* Digit sequence - properly aligned and visible */
+        .letter-sequence.digit-sequence {
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
+            padding: 0.05rem 0 0.15rem 0;
+            font-weight: 600;
+            color: var(--digit-num-color);
+        }
+        .letter-sequence.digit-sequence .digit-num {
+            display: inline-block;
+            min-width: 20px;
+            padding: 0 4px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.7rem;
+            line-height: 1.5;
+            color: var(--digit-num-color);
+            font-family: monospace;
+            background: transparent;
+            border-radius: 2px;
+            transition: background 0.15s;
+        }
+        /* Hover effect for digits to show they're interactive */
+        .letter-sequence.digit-sequence .digit-num:hover {
+            background: var(--bg-panel);
+        }
+
+        .seq-u,
+        .seq-m,
+        .seq-o,
+        .seq-e,
+        .seq-odd,
+        .seq-r,
+        .seq-f {
             display: inline-block;
             padding: 0 4px;
             border-radius: 3px;
@@ -933,17 +1049,55 @@
             text-align: center;
             line-height: 1.5;
         }
-        .seq-u { background: var(--zone-under); color: #fff; }
-        .seq-m { background: var(--zone-middle); color: #000; }
-        .seq-o { background: var(--zone-over); color: #fff; }
-        .seq-e { background: var(--seq-e); color: #fff; }
-        .seq-odd { background: var(--seq-o); color: #fff; }
-        .seq-r { background: #4ade80; color: #000; }
-        .seq-f { background: #f87171; color: #000; }
+        .seq-u {
+            background: var(--zone-under);
+            color: #fff;
+        }
+        .seq-m {
+            background: var(--zone-middle);
+            color: #000;
+        }
+        .seq-o {
+            background: var(--zone-over);
+            color: #fff;
+        }
+        .seq-e {
+            background: var(--seq-e);
+            color: #fff;
+        }
+        .seq-odd {
+            background: var(--seq-o);
+            color: #fff;
+        }
+        .seq-r {
+            background: #4ade80;
+            color: #000;
+        }
+        .seq-f {
+            background: #f87171;
+            color: #000;
+        }
 
-        .arrow-up { color: #4ade80; font-weight: bold; font-size: 1rem; margin: 0 4px; display: inline-block; }
-        .arrow-down { color: #f87171; font-weight: bold; font-size: 1rem; margin: 0 4px; display: inline-block; }
-        .arrow-flat { color: #6b7280; font-size: 1rem; margin: 0 4px; display: inline-block; }
+        .arrow-up {
+            color: #4ade80;
+            font-weight: bold;
+            font-size: 1rem;
+            margin: 0 4px;
+            display: inline-block;
+        }
+        .arrow-down {
+            color: #f87171;
+            font-weight: bold;
+            font-size: 1rem;
+            margin: 0 4px;
+            display: inline-block;
+        }
+        .arrow-flat {
+            color: #6b7280;
+            font-size: 1rem;
+            margin: 0 4px;
+            display: inline-block;
+        }
 
         /* All Markets */
         .all-markets-container {
@@ -989,7 +1143,7 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0, 0, 0, 0.8);
             justify-content: center;
             align-items: center;
         }
@@ -1021,7 +1175,10 @@
             gap: 0.5rem;
             flex-wrap: wrap;
         }
-        select, input[type="range"], input[type="number"], input[type="color"] {
+        select,
+        input[type="range"],
+        input[type="number"],
+        input[type="color"] {
             background: var(--bg-panel);
             border: 1px solid var(--border-color);
             border-radius: 0.5rem;
@@ -1029,7 +1186,11 @@
             font-size: 0.7rem;
             color: var(--text-primary);
         }
-        input[type="color"] { width: 40px; height: 25px; cursor: pointer; }
+        input[type="color"] {
+            width: 40px;
+            height: 25px;
+            cursor: pointer;
+        }
 
         .trend-bars {
             display: flex;
@@ -1062,8 +1223,12 @@
             border-radius: 4px;
             transition: width 0.3s;
         }
-        .trend-bar-fill.even { background: #10b981; }
-        .trend-bar-fill.odd { background: #f97316; }
+        .trend-bar-fill.even {
+            background: #10b981;
+        }
+        .trend-bar-fill.odd {
+            background: #f97316;
+        }
         .trend-percent {
             width: 42px;
             text-align: right;
@@ -1077,29 +1242,74 @@
         }
 
         @media (max-width: 800px) {
-            .main-scroll-area { flex-direction: column; }
+            .main-scroll-area {
+                flex-direction: column;
+            }
             .all-markets-container {
                 flex: none;
                 width: 100%;
                 max-height: 200px;
             }
-            .digits-row { gap: 4px; }
-            .digit-cell span.digit { font-size: 1rem; }
-            .last-digit-badge { font-size: 1.5rem; min-width: 40px; }
-            .strategy-selector { flex-wrap: wrap; }
-            .market-list-item { font-size: 0.75rem; padding: 0.3rem 0.4rem; }
-            .zone-memory { font-size: 0.6rem; }
-            .zone-bar { height: 32px; }
-            .zone-bar .zone-pointer { height: 40px; width: 8px; }
-            .eo-zone-dominance { font-size: 0.55rem; gap: 0.3rem; }
-            .eo-zone-dominance .eo-bar { width: 40px; }
-            .letter-sequence { font-size: 0.65rem; }
-            .seq-u, .seq-m, .seq-o, .seq-e, .seq-odd, .seq-r, .seq-f {
+            .digits-row {
+                gap: 4px;
+            }
+            .digit-cell span.digit {
+                font-size: 1rem;
+            }
+            .last-digit-badge {
+                font-size: 1.5rem;
+                min-width: 40px;
+            }
+            .strategy-selector {
+                flex-wrap: wrap;
+            }
+            .market-list-item {
+                font-size: 0.75rem;
+                padding: 0.3rem 0.4rem;
+            }
+            .zone-memory {
+                font-size: 0.6rem;
+            }
+            .zone-bar {
+                height: 32px;
+            }
+            .zone-bar .zone-pointer {
+                height: 40px;
+                width: 8px;
+            }
+            .eo-zone-dominance {
+                font-size: 0.55rem;
+                gap: 0.3rem;
+            }
+            .eo-zone-dominance .eo-bar {
+                width: 40px;
+            }
+            .letter-sequence {
+                font-size: 0.65rem;
+            }
+            .letter-sequence.digit-sequence {
+                font-size: 0.55rem;
+            }
+            .letter-sequence.digit-sequence .digit-num {
+                font-size: 0.55rem;
+                min-width: 16px;
+                padding: 0 2px;
+            }
+            .seq-u,
+            .seq-m,
+            .seq-o,
+            .seq-e,
+            .seq-odd,
+            .seq-r,
+            .seq-f {
                 font-size: 0.65rem;
                 min-width: 16px;
                 padding: 0 2px;
             }
-            .info-row .stat-box { font-size: 0.65rem; padding: 0.1rem 0.3rem; }
+            .info-row .stat-box {
+                font-size: 0.65rem;
+                padding: 0.1rem 0.3rem;
+            }
         }
     </style>
 </head>
@@ -1553,7 +1763,6 @@
 
         // ---- TRANSITION / PERCENTAGE HELPERS ----
         function getTransitionStats(sym, windowSize) {
-            // We keep this for other uses but we won't display the table anymore
             let data = marketData[sym];
             if (!data || data.rollingArray.length < windowSize + 1) return null;
             let arr = data.rollingArray.slice(-(windowSize + 1));
@@ -1904,20 +2113,20 @@
                     const break6 = stats6.total ? ((stats6.breakout / stats6.total) * 100).toFixed(0) : '?';
                     const bounce6 = stats6.total ? ((stats6.bounce / stats6.total) * 100).toFixed(0) : '?';
                     zoneMem.innerHTML = `
-                        <div class="zone-row">
-                            <span class="zone-label">Zone Memory (${s.zoneWindow} ticks)</span>
-                        </div>
-                        <div class="zone-row">
-                            <span class="zone-percent" style="color:var(--zone-under);">Under ${pctUnder}%</span>
-                            <span class="zone-percent" style="color:var(--zone-middle);">Middle ${pctMiddle}%</span>
-                            <span class="zone-percent" style="color:var(--zone-over);">Over ${pctOver}%</span>
-                            <span>Streak: ${streak} in ${zoneLabel}</span>
-                        </div>
-                        <div class="zone-row boundary-stat">
-                            <span>3→4/5: <span class="breakout">${break3}%</span> breakout | 3→0-2: <span class="bounce">${bounce3}%</span> bounce</span>
-                            <span>6→5/4: <span class="bounce">${bounce6}%</span> bounce | 6→7-9: <span class="breakout">${break6}%</span> breakout</span>
-                        </div>
-                    `;
+                            <div class="zone-row">
+                                <span class="zone-label">Zone Memory (${s.zoneWindow} ticks)</span>
+                            </div>
+                            <div class="zone-row">
+                                <span class="zone-percent" style="color:var(--zone-under);">Under ${pctUnder}%</span>
+                                <span class="zone-percent" style="color:var(--zone-middle);">Middle ${pctMiddle}%</span>
+                                <span class="zone-percent" style="color:var(--zone-over);">Over ${pctOver}%</span>
+                                <span>Streak: ${streak} in ${zoneLabel}</span>
+                            </div>
+                            <div class="zone-row boundary-stat">
+                                <span>3→4/5: <span class="breakout">${break3}%</span> breakout | 3→0-2: <span class="bounce">${bounce3}%</span> bounce</span>
+                                <span>6→5/4: <span class="bounce">${bounce6}%</span> bounce | 6→7-9: <span class="breakout">${break6}%</span> breakout</span>
+                            </div>
+                        `;
                 } else {
                     zoneMem.innerHTML = `<div class="zone-row">⏳ Waiting for data...</div>`;
                 }
@@ -1947,39 +2156,40 @@
                     let domHTML = '';
                     if (dominance) {
                         domHTML = `
-                            <div class="digit-dominance">
-                                <span class="dom-item"><span style="color:var(--zone-under);">Under</span> → <span class="dom-digit">${dominance.under.digit}</span> <span class="dom-pct">(${dominance.under.pct.toFixed(0)}%)</span></span>
-                                <span class="dom-item"><span style="color:var(--zone-middle);">Middle</span> → <span class="dom-digit">${dominance.middle.digit}</span> <span class="dom-pct">(${dominance.middle.pct.toFixed(0)}%)</span></span>
-                                <span class="dom-item"><span style="color:var(--zone-over);">Over</span> → <span class="dom-digit">${dominance.over.digit}</span> <span class="dom-pct">(${dominance.over.pct.toFixed(0)}%)</span></span>
-                            </div>
-                        `;
+                                <div class="digit-dominance">
+                                    <span class="dom-item"><span style="color:var(--zone-under);">Under</span> → <span class="dom-digit">${dominance.under.digit}</span> <span class="dom-pct">(${dominance.under.pct.toFixed(0)}%)</span></span>
+                                    <span class="dom-item"><span style="color:var(--zone-middle);">Middle</span> → <span class="dom-digit">${dominance.middle.digit}</span> <span class="dom-pct">(${dominance.middle.pct.toFixed(0)}%)</span></span>
+                                    <span class="dom-item"><span style="color:var(--zone-over);">Over</span> → <span class="dom-digit">${dominance.over.digit}</span> <span class="dom-pct">(${dominance.over.pct.toFixed(0)}%)</span></span>
+                                </div>
+                            `;
                     }
 
                     const reminder = density ? getMemoryReminder(data.lastDigit, density, s.densityThreshold) : null;
 
                     zoneBarContainer.innerHTML = `
-                        <div class="zone-bar">
-                            <div class="zone-segment under">Under</div>
-                            <div class="zone-segment middle">Middle</div>
-                            <div class="zone-segment over">Over</div>
-                            <div class="zone-pointer" style="left: ${pointerLeft}%;"></div>
-                        </div>
-                        <div class="zone-bar-labels">
-                            <span class="under-label">${zones.low.toFixed(2)}</span>
-                            <span class="middle-label">${zones.middle.toFixed(2)}</span>
-                            <span class="over-label">${zones.high.toFixed(2)}</span>
-                        </div>
-                        <div class="zone-density">
-                            <span class="density-item"><span class="density-dot under"></span> Under ${densityUnder}%</span>
-                            <span class="density-item"><span class="density-dot middle"></span> Middle ${densityMid}%</span>
-                            <span class="density-item"><span class="density-dot over"></span> Over ${densityOver}%</span>
-                        </div>
-                        ${reminder ? `<div class="zone-memory-reminder">${reminder}</div>` : ''}
-                        ${domHTML}
-                    `;
+                            <div class="zone-bar">
+                                <div class="zone-segment under">Under</div>
+                                <div class="zone-segment middle">Middle</div>
+                                <div class="zone-segment over">Over</div>
+                                <div class="zone-pointer" style="left: ${pointerLeft}%;"></div>
+                            </div>
+                            <div class="zone-bar-labels">
+                                <span class="under-label">${zones.low.toFixed(2)}</span>
+                                <span class="middle-label">${zones.middle.toFixed(2)}</span>
+                                <span class="over-label">${zones.high.toFixed(2)}</span>
+                            </div>
+                            <div class="zone-density">
+                                <span class="density-item"><span class="density-dot under"></span> Under ${densityUnder}%</span>
+                                <span class="density-item"><span class="density-dot middle"></span> Middle ${densityMid}%</span>
+                                <span class="density-item"><span class="density-dot over"></span> Over ${densityOver}%</span>
+                            </div>
+                            ${reminder ? `<div class="zone-memory-reminder">${reminder}</div>` : ''}
+                            ${domHTML}
+                        `;
                 } else if (zoneBarContainer) {
                     zoneBarContainer.style.display = 'block';
-                    zoneBarContainer.innerHTML = `<div style="text-align:center; padding:0.5rem; color: var(--text-secondary);">⏳ Waiting for price data...</div>`;
+                    zoneBarContainer.innerHTML =
+                        `<div style="text-align:center; padding:0.5rem; color: var(--text-secondary);">⏳ Waiting for price data...</div>`;
                 }
 
                 // Existing Over/Under elements
@@ -1990,19 +2200,19 @@
                     let underPct = (under / 50 * 100),
                         overPct = (over / 50 * 100);
                     tugWarDiv.innerHTML = `
-                        <div class="tug-war-container">
-                            <div style="font-size:0.65rem; font-weight:bold; text-align:center; margin-bottom:2px;">⚔️ Over vs Under</div>
-                            <div class="tug-war-row">
-                                <span class="tug-war-left-label">← UNDER</span>
-                                <div class="tug-war-bar-area">
-                                    <div class="tug-war-center"></div>
-                                    <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
-                                    <div class="tug-war-left-bar" style="width:${underPct}%;">${under} (${underPct.toFixed(0)}%)</div>
-                                    <div class="tug-war-right-bar" style="width:${overPct}%;">${over} (${overPct.toFixed(0)}%)</div>
+                            <div class="tug-war-container">
+                                <div style="font-size:0.65rem; font-weight:bold; text-align:center; margin-bottom:2px;">⚔️ Over vs Under</div>
+                                <div class="tug-war-row">
+                                    <span class="tug-war-left-label">← UNDER</span>
+                                    <div class="tug-war-bar-area">
+                                        <div class="tug-war-center"></div>
+                                        <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+                                        <div class="tug-war-left-bar" style="width:${underPct}%;">${under} (${underPct.toFixed(0)}%)</div>
+                                        <div class="tug-war-right-bar" style="width:${overPct}%;">${over} (${overPct.toFixed(0)}%)</div>
+                                    </div>
+                                    <span class="tug-war-right-label">OVER →</span>
                                 </div>
-                                <span class="tug-war-right-label">OVER →</span>
-                            </div>
-                        </div>`;
+                            </div>`;
                 }
 
                 // Pair-bias (five boxes)
@@ -2141,27 +2351,36 @@
                     }
                 }
 
-                // ---- 50-TICK LETTERS (U/M/O) ----
+                // ---- LETTERS + DIGITS (50-tick numbers) - FIXED ----
                 let seq1 = document.getElementById(`letterSeq1_${sym}`);
                 let seq2 = document.getElementById(`letterSeq2_${sym}`);
-                if (seq1 && seq2 && data.rollingArray.length >= 50) {
+                let dig1 = document.getElementById(`digitSeq1_${sym}`);
+                let dig2 = document.getElementById(`digitSeq2_${sym}`);
+                if (seq1 && seq2 && dig1 && dig2 && data.rollingArray.length >= 50) {
                     const len = Math.min(data.rollingArray.length, 100);
                     const start = data.rollingArray.length - len;
                     const slice = data.rollingArray.slice(start);
                     const older = slice.slice(0, 50);
                     const newer = slice.slice(50);
                     const mapUMO = d => d <= 3 ? 'U' : d <= 5 ? 'M' : 'O';
-                    const buildRow = (arr) => arr.map(d => `<span class="seq-${mapUMO(d).toLowerCase()}">${mapUMO(d)}</span>`).join(
-                        '');
+                    const buildRow = (arr) => arr.map(d =>
+                        `<span class="seq-${mapUMO(d).toLowerCase()}">${mapUMO(d)}</span>`).join('');
+                    const buildDigits = (arr) => arr.map(d =>
+                        `<span class="digit-num">${d}</span>`).join('');
                     seq1.innerHTML = older.length ? buildRow(older) : '';
+                    dig1.innerHTML = older.length ? buildDigits(older) : '';
                     seq2.innerHTML = newer.length ? buildRow(newer) : '';
+                    dig2.innerHTML = newer.length ? buildDigits(newer) : '';
+                    // ensure wrapper is visible
                     const wrapper = document.querySelector(`#market_${sym} .letter-sequence-wrapper`);
                     if (wrapper) wrapper.style.display = 'block';
                 } else {
                     const wrapper = document.querySelector(`#market_${sym} .letter-sequence-wrapper`);
                     if (wrapper) wrapper.style.display = 'block';
                     if (seq1) seq1.innerHTML = '⏳';
+                    if (dig1) dig1.innerHTML = '';
                     if (seq2) seq2.innerHTML = '⏳';
+                    if (dig2) dig2.innerHTML = '';
                 }
 
                 // Hide transition table
@@ -2195,19 +2414,19 @@
                     let evenPct = (even / 50 * 100),
                         oddPct = (odd / 50 * 100);
                     tugWarDiv.innerHTML = `
-                        <div class="tug-war-container">
-                            <div style="font-size:0.65rem; font-weight:bold; text-align:center; margin-bottom:2px;">⚔️ Even vs Odd</div>
-                            <div class="tug-war-row">
-                                <span class="tug-war-left-label">← EVEN</span>
-                                <div class="tug-war-bar-area">
-                                    <div class="tug-war-center"></div>
-                                    <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
-                                    <div class="tug-war-left-bar" style="width:${evenPct}%;">${even} (${evenPct.toFixed(0)}%)</div>
-                                    <div class="tug-war-right-bar" style="width:${oddPct}%;">${odd} (${oddPct.toFixed(0)}%)</div>
+                            <div class="tug-war-container">
+                                <div style="font-size:0.65rem; font-weight:bold; text-align:center; margin-bottom:2px;">⚔️ Even vs Odd</div>
+                                <div class="tug-war-row">
+                                    <span class="tug-war-left-label">← EVEN</span>
+                                    <div class="tug-war-bar-area">
+                                        <div class="tug-war-center"></div>
+                                        <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+                                        <div class="tug-war-left-bar" style="width:${evenPct}%;">${even} (${evenPct.toFixed(0)}%)</div>
+                                        <div class="tug-war-right-bar" style="width:${oddPct}%;">${odd} (${oddPct.toFixed(0)}%)</div>
+                                    </div>
+                                    <span class="tug-war-right-label">ODD →</span>
                                 </div>
-                                <span class="tug-war-right-label">ODD →</span>
-                            </div>
-                        </div>`;
+                            </div>`;
                 }
 
                 let freq = getDigitPercentages(sym, s.analysisWindow);
@@ -2221,8 +2440,8 @@
                         let clsEven = mostIsEven ? 'most-pair' : 'least-pair';
                         let clsOdd = mostIsEven ? 'least-pair' : 'most-pair';
                         let boxesHTML = `
-                            <div class="eo-two-box ${clsEven}"><div class="digits">0 2 4 6 8</div><div class="pct">${evenPctBox.toFixed(1)}%</div></div>
-                            <div class="eo-two-box ${clsOdd}"><div class="digits">1 3 5 7 9</div><div class="pct">${oddPctBox.toFixed(1)}%</div></div>`;
+                                <div class="eo-two-box ${clsEven}"><div class="digits">0 2 4 6 8</div><div class="pct">${evenPctBox.toFixed(1)}%</div></div>
+                                <div class="eo-two-box ${clsOdd}"><div class="digits">1 3 5 7 9</div><div class="pct">${oddPctBox.toFixed(1)}%</div></div>`;
                         let lastDigit = data.lastDigit;
                         let cursorIdx = (lastDigit % 2 === 0) ? 0 : 1;
                         let cursorLeft = cursorIdx === 0 ? '15%' : '65%';
@@ -2237,7 +2456,8 @@
                 if (sigDiv) {
                     if (signal) {
                         let col = signal.side === 'EVEN' ? '#4ade80' : '#f87171';
-                        sigDiv.innerHTML = `<div class="signal-flash" style="color:${col};">🎯 ${signal.strategy} → ${signal.side}</div>`;
+                        sigDiv.innerHTML =
+                            `<div class="signal-flash" style="color:${col};">🎯 ${signal.strategy} → ${signal.side}</div>`;
                     } else sigDiv.innerHTML = '';
                 }
 
@@ -2296,27 +2516,35 @@
                     }
                 }
 
-                // ---- 50-TICK LETTERS (EO: Even/Odd) ----
+                // ---- LETTERS + DIGITS (50-tick numbers) - FIXED ----
                 let seq1 = document.getElementById(`letterSeq1_${sym}`);
                 let seq2 = document.getElementById(`letterSeq2_${sym}`);
-                if (seq1 && seq2 && data.rollingArray.length >= 50) {
+                let dig1 = document.getElementById(`digitSeq1_${sym}`);
+                let dig2 = document.getElementById(`digitSeq2_${sym}`);
+                if (seq1 && seq2 && dig1 && dig2 && data.rollingArray.length >= 50) {
                     const len = Math.min(data.rollingArray.length, 100);
                     const start = data.rollingArray.length - len;
                     const slice = data.rollingArray.slice(start);
                     const older = slice.slice(0, 50);
                     const newer = slice.slice(50);
                     const mapDigit = d => d % 2 === 0 ? 'E' : 'O';
-                    const buildRow = (arr) => arr.map(d => `<span class="seq-${mapDigit(d).toLowerCase()}">${mapDigit(d)}</span>`).join(
-                        '');
+                    const buildRow = (arr) => arr.map(d =>
+                        `<span class="seq-${mapDigit(d).toLowerCase()}">${mapDigit(d)}</span>`).join('');
+                    const buildDigits = (arr) => arr.map(d =>
+                        `<span class="digit-num">${d}</span>`).join('');
                     seq1.innerHTML = older.length ? buildRow(older) : '';
+                    dig1.innerHTML = older.length ? buildDigits(older) : '';
                     seq2.innerHTML = newer.length ? buildRow(newer) : '';
+                    dig2.innerHTML = newer.length ? buildDigits(newer) : '';
                     const wrapper = document.querySelector(`#market_${sym} .letter-sequence-wrapper`);
                     if (wrapper) wrapper.style.display = 'block';
                 } else {
                     const wrapper = document.querySelector(`#market_${sym} .letter-sequence-wrapper`);
                     if (wrapper) wrapper.style.display = 'block';
                     if (seq1) seq1.innerHTML = '⏳';
+                    if (dig1) dig1.innerHTML = '';
                     if (seq2) seq2.innerHTML = '⏳';
+                    if (dig2) dig2.innerHTML = '';
                 }
 
                 // Hide other elements
@@ -2351,19 +2579,19 @@
                     let risePct = (riseCount / 50 * 100),
                         fallPct = (fallCount / 50 * 100);
                     tugWarDiv.innerHTML = `
-                        <div class="tug-war-container">
-                            <div style="font-size:0.65rem; font-weight:bold; text-align:center; margin-bottom:2px;">⚔️ Rise vs Fall</div>
-                            <div class="tug-war-row">
-                                <span class="tug-war-left-label">← FALL</span>
-                                <div class="tug-war-bar-area">
-                                    <div class="tug-war-center"></div>
-                                    <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
-                                    <div class="tug-war-left-bar" style="width:${fallPct}%;">${fallCount} (${fallPct.toFixed(0)}%)</div>
-                                    <div class="tug-war-right-bar" style="width:${risePct}%;">${riseCount} (${risePct.toFixed(0)}%)</div>
+                            <div class="tug-war-container">
+                                <div style="font-size:0.65rem; font-weight:bold; text-align:center; margin-bottom:2px;">⚔️ Rise vs Fall</div>
+                                <div class="tug-war-row">
+                                    <span class="tug-war-left-label">← FALL</span>
+                                    <div class="tug-war-bar-area">
+                                        <div class="tug-war-center"></div>
+                                        <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+                                        <div class="tug-war-left-bar" style="width:${fallPct}%;">${fallCount} (${fallPct.toFixed(0)}%)</div>
+                                        <div class="tug-war-right-bar" style="width:${risePct}%;">${riseCount} (${risePct.toFixed(0)}%)</div>
+                                    </div>
+                                    <span class="tug-war-right-label">RISE →</span>
                                 </div>
-                                <span class="tug-war-right-label">RISE →</span>
-                            </div>
-                        </div>`;
+                            </div>`;
                 }
 
                 let signals = getVanillaSignals(sym);
@@ -2437,26 +2665,41 @@
                     }
                 }
 
-                // ---- 50-TICK LETTERS (RF: Rise/Fall) ----
+                // ---- LETTERS + DIGITS (50-tick numbers) - FIXED ----
                 let seq1 = document.getElementById(`letterSeq1_${sym}`);
                 let seq2 = document.getElementById(`letterSeq2_${sym}`);
-                if (seq1 && seq2 && data.directions && data.directions.length >= 50) {
+                let dig1 = document.getElementById(`digitSeq1_${sym}`);
+                let dig2 = document.getElementById(`digitSeq2_${sym}`);
+                if (seq1 && seq2 && dig1 && dig2 && data.directions && data.directions.length >= 50) {
                     const len = Math.min(data.directions.length, 100);
                     const start = data.directions.length - len;
                     const slice = data.directions.slice(start);
                     const older = slice.slice(0, 50);
                     const newer = slice.slice(50);
                     const mapRF = d => d === 1 ? 'R' : d === -1 ? 'F' : '–';
-                    const buildRow = (arr) => arr.map(d => `<span class="seq-${d===1?'r':'f'}">${mapRF(d)}</span>`).join('');
+                    const buildRow = (arr) => arr.map(d =>
+                        `<span class="seq-${d===1?'r':'f'}">${mapRF(d)}</span>`).join('');
+                    // digits: use rollingArray with same indices
+                    const dLen = Math.min(data.rollingArray.length, 100);
+                    const dStart = data.rollingArray.length - dLen;
+                    const dSlice = data.rollingArray.slice(dStart);
+                    const dOlder = dSlice.slice(0, 50);
+                    const dNewer = dSlice.slice(50);
+                    const buildDigits = (arr) => arr.map(d =>
+                        `<span class="digit-num">${d}</span>`).join('');
                     seq1.innerHTML = older.length ? buildRow(older) : '';
+                    dig1.innerHTML = dOlder.length ? buildDigits(dOlder) : '';
                     seq2.innerHTML = newer.length ? buildRow(newer) : '';
+                    dig2.innerHTML = dNewer.length ? buildDigits(dNewer) : '';
                     const wrapper = document.querySelector(`#market_${sym} .letter-sequence-wrapper`);
                     if (wrapper) wrapper.style.display = 'block';
                 } else {
                     const wrapper = document.querySelector(`#market_${sym} .letter-sequence-wrapper`);
                     if (wrapper) wrapper.style.display = 'block';
                     if (seq1) seq1.innerHTML = '⏳';
+                    if (dig1) dig1.innerHTML = '';
                     if (seq2) seq2.innerHTML = '⏳';
+                    if (dig2) dig2.innerHTML = '';
                 }
 
                 // Hide other elements
@@ -2506,9 +2749,9 @@
                         let g2 = freq.pct[3] + freq.pct[4] + freq.pct[5] + freq.pct[6];
                         let g3 = freq.pct[7] + freq.pct[8] + freq.pct[9];
                         groupDiv.innerHTML = `
-                            <div class="group-box"><div class="digits">0 1 2</div><div class="pct">${g1.toFixed(1)}%</div></div>
-                            <div class="group-box"><div class="digits">3 4 5 6</div><div class="pct">${g2.toFixed(1)}%</div></div>
-                            <div class="group-box"><div class="digits">7 8 9</div><div class="pct">${g3.toFixed(1)}%</div></div>`;
+                                <div class="group-box"><div class="digits">0 1 2</div><div class="pct">${g1.toFixed(1)}%</div></div>
+                                <div class="group-box"><div class="digits">3 4 5 6</div><div class="pct">${g2.toFixed(1)}%</div></div>
+                                <div class="group-box"><div class="digits">7 8 9</div><div class="pct">${g3.toFixed(1)}%</div></div>`;
                     } else {
                         groupDiv.innerHTML =
                             '<div class="group-box">⏳</div><div class="group-box">⏳</div><div class="group-box">⏳</div>';
@@ -2524,39 +2767,39 @@
                     let risePct = (riseCount / 50 * 100),
                         fallPct = (fallCount / 50 * 100);
                     tugWarDiv.innerHTML = `
-                        <div class="tug-war-container">
-                            <div style="font-size:0.65rem; font-weight:bold; text-align:center; margin-bottom:2px;">⚔️ Tug of War</div>
-                            <div class="tug-war-row">
-                                <span class="tug-war-left-label">← UNDER</span>
-                                <div class="tug-war-bar-area">
-                                    <div class="tug-war-center"></div>
-                                    <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
-                                    <div class="tug-war-left-bar" style="width:${underPct}%;">${underCount} (${underPct.toFixed(0)}%)</div>
-                                    <div class="tug-war-right-bar" style="width:${overPct}%;">${overCount} (${overPct.toFixed(0)}%)</div>
+                            <div class="tug-war-container">
+                                <div style="font-size:0.65rem; font-weight:bold; text-align:center; margin-bottom:2px;">⚔️ Tug of War</div>
+                                <div class="tug-war-row">
+                                    <span class="tug-war-left-label">← UNDER</span>
+                                    <div class="tug-war-bar-area">
+                                        <div class="tug-war-center"></div>
+                                        <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+                                        <div class="tug-war-left-bar" style="width:${underPct}%;">${underCount} (${underPct.toFixed(0)}%)</div>
+                                        <div class="tug-war-right-bar" style="width:${overPct}%;">${overCount} (${overPct.toFixed(0)}%)</div>
+                                    </div>
+                                    <span class="tug-war-right-label">OVER →</span>
                                 </div>
-                                <span class="tug-war-right-label">OVER →</span>
-                            </div>
-                            <div class="tug-war-row">
-                                <span class="tug-war-left-label">← ODD</span>
-                                <div class="tug-war-bar-area">
-                                    <div class="tug-war-center"></div>
-                                    <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
-                                    <div class="tug-war-left-bar" style="width:${oddPct}%;">${oddCount} (${oddPct.toFixed(0)}%)</div>
-                                    <div class="tug-war-right-bar" style="width:${evenPct}%;">${evenCount} (${evenPct.toFixed(0)}%)</div>
+                                <div class="tug-war-row">
+                                    <span class="tug-war-left-label">← ODD</span>
+                                    <div class="tug-war-bar-area">
+                                        <div class="tug-war-center"></div>
+                                        <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+                                        <div class="tug-war-left-bar" style="width:${oddPct}%;">${oddCount} (${oddPct.toFixed(0)}%)</div>
+                                        <div class="tug-war-right-bar" style="width:${evenPct}%;">${evenCount} (${evenPct.toFixed(0)}%)</div>
+                                    </div>
+                                    <span class="tug-war-right-label">EVEN →</span>
                                 </div>
-                                <span class="tug-war-right-label">EVEN →</span>
-                            </div>
-                            <div class="tug-war-row">
-                                <span class="tug-war-left-label">← FALL</span>
-                                <div class="tug-war-bar-area">
-                                    <div class="tug-war-center"></div>
-                                    <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
-                                    <div class="tug-war-left-bar" style="width:${fallPct}%;">${fallCount} (${fallPct.toFixed(0)}%)</div>
-                                    <div class="tug-war-right-bar" style="width:${risePct}%;">${riseCount} (${risePct.toFixed(0)}%)</div>
+                                <div class="tug-war-row">
+                                    <span class="tug-war-left-label">← FALL</span>
+                                    <div class="tug-war-bar-area">
+                                        <div class="tug-war-center"></div>
+                                        <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+                                        <div class="tug-war-left-bar" style="width:${fallPct}%;">${fallCount} (${fallPct.toFixed(0)}%)</div>
+                                        <div class="tug-war-right-bar" style="width:${risePct}%;">${riseCount} (${risePct.toFixed(0)}%)</div>
+                                    </div>
+                                    <span class="tug-war-right-label">RISE →</span>
                                 </div>
-                                <span class="tug-war-right-label">RISE →</span>
-                            </div>
-                        </div>`;
+                            </div>`;
                 }
 
                 let sigDiv = document.getElementById(`signalDisplay_${sym}`);
@@ -2569,8 +2812,8 @@
                                 `<div class="signal-flash" style="color:#4ade80; font-weight:bold;">🎯 ${ouLabel}/${eoLabel} confirmed (${ouLabel} ${status.ouValue.toFixed(0)}% / ${eoLabel} ${status.eoValue.toFixed(0)}%)</div>`;
                         } else {
                             sigDiv.innerHTML = `
-                                <div class="signal-flash" style="color:${status.ouConfirmed?'#4ade80':'#facc15'};">${ouLabel}: ${status.ouValue.toFixed(0)}% ${status.ouConfirmed?'✅':'⏳'}</div>
-                                <div class="signal-flash" style="color:${status.eoConfirmed?'#4ade80':'#facc15'};">${eoLabel}: ${status.eoValue.toFixed(0)}% ${status.eoConfirmed?'✅':'⏳'}</div>`;
+                                    <div class="signal-flash" style="color:${status.ouConfirmed?'#4ade80':'#facc15'};">${ouLabel}: ${status.ouValue.toFixed(0)}% ${status.ouConfirmed?'✅':'⏳'}</div>
+                                    <div class="signal-flash" style="color:${status.eoConfirmed?'#4ade80':'#facc15'};">${eoLabel}: ${status.eoValue.toFixed(0)}% ${status.eoConfirmed?'✅':'⏳'}</div>`;
                         }
                     } else {
                         sigDiv.innerHTML = `<div class="signal-flash">⏳ No direction identified</div>`;
@@ -2720,27 +2963,35 @@
                     }
                 }
 
-                // ---- 50-TICK LETTERS (U/M/O) for Predict ----
+                // ---- LETTERS + DIGITS (50-tick numbers) - FIXED ----
                 let seq1 = document.getElementById(`letterSeq1_${sym}`);
                 let seq2 = document.getElementById(`letterSeq2_${sym}`);
-                if (seq1 && seq2 && data.rollingArray.length >= 50) {
+                let dig1 = document.getElementById(`digitSeq1_${sym}`);
+                let dig2 = document.getElementById(`digitSeq2_${sym}`);
+                if (seq1 && seq2 && dig1 && dig2 && data.rollingArray.length >= 50) {
                     const len = Math.min(data.rollingArray.length, 100);
                     const start = data.rollingArray.length - len;
                     const slice = data.rollingArray.slice(start);
                     const older = slice.slice(0, 50);
                     const newer = slice.slice(50);
                     const mapDigit = d => d <= 3 ? 'U' : d <= 5 ? 'M' : 'O';
-                    const buildRow = (arr) => arr.map(d => `<span class="seq-${mapDigit(d).toLowerCase()}">${mapDigit(d)}</span>`).join(
-                        '');
+                    const buildRow = (arr) => arr.map(d =>
+                        `<span class="seq-${mapDigit(d).toLowerCase()}">${mapDigit(d)}</span>`).join('');
+                    const buildDigits = (arr) => arr.map(d =>
+                        `<span class="digit-num">${d}</span>`).join('');
                     seq1.innerHTML = older.length ? buildRow(older) : '';
+                    dig1.innerHTML = older.length ? buildDigits(older) : '';
                     seq2.innerHTML = newer.length ? buildRow(newer) : '';
+                    dig2.innerHTML = newer.length ? buildDigits(newer) : '';
                     const wrapper = document.querySelector(`#market_${sym} .letter-sequence-wrapper`);
                     if (wrapper) wrapper.style.display = 'block';
                 } else {
                     const wrapper = document.querySelector(`#market_${sym} .letter-sequence-wrapper`);
                     if (wrapper) wrapper.style.display = 'block';
                     if (seq1) seq1.innerHTML = '⏳';
+                    if (dig1) dig1.innerHTML = '';
                     if (seq2) seq2.innerHTML = '⏳';
+                    if (dig2) dig2.innerHTML = '';
                 }
 
                 // Trend bars (Predict only)
@@ -2751,8 +3002,8 @@
                         underPct = 100 - overPct;
                     trendDiv.style.display = 'flex';
                     trendDiv.innerHTML = `
-                        <div class="trend-bar-item"><div class="trend-bar-label">Even</div><div class="trend-bar-container"><div class="trend-bar-fill even" style="width:${overPct}%"></div></div><div class="trend-percent">${overPct.toFixed(1)}%</div></div>
-                        <div class="trend-bar-item"><div class="trend-bar-label">Odd</div><div class="trend-bar-container"><div class="trend-bar-fill odd" style="width:${underPct}%"></div></div><div class="trend-percent">${underPct.toFixed(1)}%</div></div>`;
+                            <div class="trend-bar-item"><div class="trend-bar-label">Even</div><div class="trend-bar-container"><div class="trend-bar-fill even" style="width:${overPct}%"></div></div><div class="trend-percent">${overPct.toFixed(1)}%</div></div>
+                            <div class="trend-bar-item"><div class="trend-bar-label">Odd</div><div class="trend-bar-container"><div class="trend-bar-fill odd" style="width:${underPct}%"></div></div><div class="trend-percent">${underPct.toFixed(1)}%</div></div>`;
                 }
 
                 // Hide other elements
@@ -2830,33 +3081,34 @@
             card.className = 'market-card';
             card.id = `market_${sym}`;
             card.innerHTML = `
-                <div class="market-header">
-                    <div class="market-title"><span>📈 ${name}</span><span class="focus-icon" onclick="setFocus('${sym}')">👁️</span></div>
-                    <div><span class="live-price-big" id="livePriceBig_${sym}">—</span></div>
-                    <div class="market-status" id="status_${sym}">🔴 no data</div>
-                    <span class="last-digit-badge" id="lastDigit_${sym}">?</span>
-                </div>
-                <div class="card-content">
-                    <div id="digitsContainer_${sym}" class="digits-grid"></div>
-                    <div class="info-row">
-                        <div class="stat-box" id="stability_${sym}">⚖️ --</div>
-                        <div class="stat-box" id="condition_${sym}">📈 --</div>
+                    <div class="market-header">
+                        <div class="market-title"><span>📈 ${name}</span><span class="focus-icon" onclick="setFocus('${sym}')">👁️</span></div>
+                        <div><span class="live-price-big" id="livePriceBig_${sym}">—</span></div>
+                        <div class="market-status" id="status_${sym}">🔴 no data</div>
+                        <span class="last-digit-badge" id="lastDigit_${sym}">?</span>
                     </div>
-                    <div id="zoneMemory_${sym}" class="zone-memory">⏳</div>
-                    <div id="zoneBarContainer_${sym}" class="zone-bar-container"></div>
-                    <div id="eoTwo_${sym}" class="eo-two-container" style="display:none;"></div>
-                    <div id="pairBias_${sym}" class="pair-bias-container" style="display:none;"></div>
-                    <div id="groupBias_${sym}" class="group-bias-container"></div>
-                    <div id="tugWar_${sym}"></div>
-                    <div id="transitions_${sym}"></div>
-                    <div class="letter-sequence-wrapper">
-                        <div class="letter-sequence" id="letterSeq1_${sym}"></div>
-                        <div class="letter-sequence" id="letterSeq2_${sym}"></div>
-                        <div class="letter-sequence" id="letterSeq3_${sym}"></div>
-                    </div>
-                    <div class="signal-area" id="signalDisplay_${sym}">⏳</div>
-                    <div id="trendBars_${sym}" class="trend-bars"></div>
-                </div>`;
+                    <div class="card-content">
+                        <div id="digitsContainer_${sym}" class="digits-grid"></div>
+                        <div class="info-row">
+                            <div class="stat-box" id="stability_${sym}">⚖️ --</div>
+                            <div class="stat-box" id="condition_${sym}">📈 --</div>
+                        </div>
+                        <div id="zoneMemory_${sym}" class="zone-memory">⏳</div>
+                        <div id="zoneBarContainer_${sym}" class="zone-bar-container"></div>
+                        <div id="eoTwo_${sym}" class="eo-two-container" style="display:none;"></div>
+                        <div id="pairBias_${sym}" class="pair-bias-container" style="display:none;"></div>
+                        <div id="groupBias_${sym}" class="group-bias-container"></div>
+                        <div id="tugWar_${sym}"></div>
+                        <div id="transitions_${sym}"></div>
+                        <div class="letter-sequence-wrapper">
+                            <div class="letter-sequence" id="letterSeq1_${sym}"></div>
+                            <div class="letter-sequence digit-sequence" id="digitSeq1_${sym}"></div>
+                            <div class="letter-sequence" id="letterSeq2_${sym}"></div>
+                            <div class="letter-sequence digit-sequence" id="digitSeq2_${sym}"></div>
+                        </div>
+                        <div class="signal-area" id="signalDisplay_${sym}">⏳</div>
+                        <div id="trendBars_${sym}" class="trend-bars"></div>
+                    </div>`;
             document.getElementById('marketsContainer').appendChild(card);
         }
 
