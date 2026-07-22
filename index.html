@@ -591,6 +591,7 @@
             transition: left 0.15s ease-out;
             pointer-events: none;
             z-index: 5;
+            transform: translateX(-50%);
         }
         .zone-bar .zone-pointer::after {
             content: '';
@@ -774,80 +775,9 @@
             transition: left 0.3s;
         }
 
-        /* Tug-of-war */
+        /* Tug-of-war - HIDDEN as requested */
         .tug-war-container {
-            margin: 0.2rem 0;
-            padding: 0.15rem 0.2rem;
-            background: var(--bg-body);
-            border-radius: 0.4rem;
-        }
-        .tug-war-row {
-            display: flex;
-            align-items: center;
-            height: 28px;
-            background: #1a1f2e;
-            border-radius: 4px;
-            margin: 2px 0;
-            position: relative;
-            overflow: hidden;
-        }
-        .tug-war-left-label,
-        .tug-war-right-label {
-            width: 60px;
-            text-align: center;
-            font-size: 0.6rem;
-            font-weight: bold;
-            color: #fff;
-            z-index: 3;
-            white-space: nowrap;
-        }
-        .tug-war-left-label {
-            margin-right: 4px;
-        }
-        .tug-war-right-label {
-            margin-left: 4px;
-        }
-        .tug-war-bar-area {
-            flex: 1;
-            position: relative;
-            height: 100%;
-        }
-        .tug-war-center {
-            position: absolute;
-            left: 50%;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: #fff;
-            z-index: 2;
-        }
-        .tug-war-scale {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 2%;
-            font-size: 0.45rem;
-            color: #888;
-            pointer-events: none;
-        }
-        .tug-war-left-bar {
-            left: 0;
-            background: linear-gradient(90deg, #ef4444, #c0392b);
-            justify-content: flex-end;
-            padding-right: 8px;
-            color: #fff;
-        }
-        .tug-war-right-bar {
-            right: 0;
-            background: linear-gradient(90deg, #27ae60, #10b981);
-            justify-content: flex-start;
-            padding-left: 8px;
-            color: #fff;
+            display: none !important;
         }
 
         /* Pair-bias (Over/Under five boxes) */
@@ -2144,8 +2074,9 @@
                 if (zoneBarContainer && zones && currentPrice !== null && currentPrice !== undefined) {
                     zoneBarContainer.style.display = 'block';
                     const zoneIdx = zones.getZone(currentPrice);
-                    const pct = ((currentPrice - zones.low) / (zones.high - zones.low)) * 100;
-                    const pointerLeft = Math.min(100, Math.max(0, pct));
+                    let pct = ((currentPrice - zones.low) / (zones.high - zones.low)) * 100;
+                    // Clamp pointer between 3% and 97% so it stays fully visible at both edges
+                    const pointerLeft = Math.min(97, Math.max(3, pct));
 
                     const density = computeHistoricalDensity(data.rollingArray, s.densityWindow);
                     const densityUnder = density ? density.under.toFixed(0) : '?';
@@ -2195,25 +2126,7 @@
                 // Existing Over/Under elements
                 let over = last50.filter(d => d >= 5).length,
                     under = 50 - over;
-                let tugWarDiv = document.getElementById(`tugWar_${sym}`);
-                if (tugWarDiv) {
-                    let underPct = (under / 50 * 100),
-                        overPct = (over / 50 * 100);
-                    tugWarDiv.innerHTML = `
-                            <div class="tug-war-container">
-                                <div style="font-size:0.65rem; font-weight:bold; text-align:center; margin-bottom:2px;">⚔️ Over vs Under</div>
-                                <div class="tug-war-row">
-                                    <span class="tug-war-left-label">← UNDER</span>
-                                    <div class="tug-war-bar-area">
-                                        <div class="tug-war-center"></div>
-                                        <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
-                                        <div class="tug-war-left-bar" style="width:${underPct}%;">${under} (${underPct.toFixed(0)}%)</div>
-                                        <div class="tug-war-right-bar" style="width:${overPct}%;">${over} (${overPct.toFixed(0)}%)</div>
-                                    </div>
-                                    <span class="tug-war-right-label">OVER →</span>
-                                </div>
-                            </div>`;
-                }
+                // Tug-of-war is now hidden via CSS
 
                 // Pair-bias (five boxes)
                 let freq = getDigitPercentages(sym, s.analysisWindow);
@@ -2409,25 +2322,7 @@
                 // Existing even/odd elements
                 let even = last50.filter(d => d % 2 === 0).length,
                     odd = 50 - even;
-                let tugWarDiv = document.getElementById(`tugWar_${sym}`);
-                if (tugWarDiv) {
-                    let evenPct = (even / 50 * 100),
-                        oddPct = (odd / 50 * 100);
-                    tugWarDiv.innerHTML = `
-                            <div class="tug-war-container">
-                                <div style="font-size:0.65rem; font-weight:bold; text-align:center; margin-bottom:2px;">⚔️ Even vs Odd</div>
-                                <div class="tug-war-row">
-                                    <span class="tug-war-left-label">← EVEN</span>
-                                    <div class="tug-war-bar-area">
-                                        <div class="tug-war-center"></div>
-                                        <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
-                                        <div class="tug-war-left-bar" style="width:${evenPct}%;">${even} (${evenPct.toFixed(0)}%)</div>
-                                        <div class="tug-war-right-bar" style="width:${oddPct}%;">${odd} (${oddPct.toFixed(0)}%)</div>
-                                    </div>
-                                    <span class="tug-war-right-label">ODD →</span>
-                                </div>
-                            </div>`;
-                }
+                // Tug-of-war hidden
 
                 let freq = getDigitPercentages(sym, s.analysisWindow);
                 let eoDiv = document.getElementById(`eoTwo_${sym}`);
@@ -2574,25 +2469,7 @@
                 let fallCount = last50dirs.filter(d => d === -1).length;
                 let total = last50dirs.length || 1;
 
-                let tugWarDiv = document.getElementById(`tugWar_${sym}`);
-                if (tugWarDiv) {
-                    let risePct = (riseCount / 50 * 100),
-                        fallPct = (fallCount / 50 * 100);
-                    tugWarDiv.innerHTML = `
-                            <div class="tug-war-container">
-                                <div style="font-size:0.65rem; font-weight:bold; text-align:center; margin-bottom:2px;">⚔️ Rise vs Fall</div>
-                                <div class="tug-war-row">
-                                    <span class="tug-war-left-label">← FALL</span>
-                                    <div class="tug-war-bar-area">
-                                        <div class="tug-war-center"></div>
-                                        <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
-                                        <div class="tug-war-left-bar" style="width:${fallPct}%;">${fallCount} (${fallPct.toFixed(0)}%)</div>
-                                        <div class="tug-war-right-bar" style="width:${risePct}%;">${riseCount} (${risePct.toFixed(0)}%)</div>
-                                    </div>
-                                    <span class="tug-war-right-label">RISE →</span>
-                                </div>
-                            </div>`;
-                }
+                // Tug-of-war hidden
 
                 let signals = getVanillaSignals(sym);
                 let sigDiv = document.getElementById(`signalDisplay_${sym}`);
@@ -2758,49 +2635,7 @@
                     }
                 }
 
-                let tugWarDiv = document.getElementById(`tugWar_${sym}`);
-                if (tugWarDiv) {
-                    let underPct = (underCount / 50 * 100),
-                        overPct = (overCount / 50 * 100);
-                    let oddPct = (oddCount / 50 * 100),
-                        evenPct = (evenCount / 50 * 100);
-                    let risePct = (riseCount / 50 * 100),
-                        fallPct = (fallCount / 50 * 100);
-                    tugWarDiv.innerHTML = `
-                            <div class="tug-war-container">
-                                <div style="font-size:0.65rem; font-weight:bold; text-align:center; margin-bottom:2px;">⚔️ Tug of War</div>
-                                <div class="tug-war-row">
-                                    <span class="tug-war-left-label">← UNDER</span>
-                                    <div class="tug-war-bar-area">
-                                        <div class="tug-war-center"></div>
-                                        <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
-                                        <div class="tug-war-left-bar" style="width:${underPct}%;">${underCount} (${underPct.toFixed(0)}%)</div>
-                                        <div class="tug-war-right-bar" style="width:${overPct}%;">${overCount} (${overPct.toFixed(0)}%)</div>
-                                    </div>
-                                    <span class="tug-war-right-label">OVER →</span>
-                                </div>
-                                <div class="tug-war-row">
-                                    <span class="tug-war-left-label">← ODD</span>
-                                    <div class="tug-war-bar-area">
-                                        <div class="tug-war-center"></div>
-                                        <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
-                                        <div class="tug-war-left-bar" style="width:${oddPct}%;">${oddCount} (${oddPct.toFixed(0)}%)</div>
-                                        <div class="tug-war-right-bar" style="width:${evenPct}%;">${evenCount} (${evenPct.toFixed(0)}%)</div>
-                                    </div>
-                                    <span class="tug-war-right-label">EVEN →</span>
-                                </div>
-                                <div class="tug-war-row">
-                                    <span class="tug-war-left-label">← FALL</span>
-                                    <div class="tug-war-bar-area">
-                                        <div class="tug-war-center"></div>
-                                        <div class="tug-war-scale"><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
-                                        <div class="tug-war-left-bar" style="width:${fallPct}%;">${fallCount} (${fallPct.toFixed(0)}%)</div>
-                                        <div class="tug-war-right-bar" style="width:${risePct}%;">${riseCount} (${risePct.toFixed(0)}%)</div>
-                                    </div>
-                                    <span class="tug-war-right-label">RISE →</span>
-                                </div>
-                            </div>`;
-                }
+                // Tug-of-war hidden
 
                 let sigDiv = document.getElementById(`signalDisplay_${sym}`);
                 if (sigDiv) {
@@ -3196,9 +3031,12 @@
         window.onclick = e => { if (e.target === document.getElementById('settingsModal')) document.getElementById(
                 'settingsModal').style.display = 'none'; };
 
+        // Auto-connect on page load
+        setTimeout(connectWebSocket, 500);
+
         setMarket('predict');
 
-        console.log('✅ TAJIRI TRADERS – Full connection restored, UI readability improved.');
+        console.log('✅ TAJIRI TRADERS – Auto-connect enabled, UI updates live.');
     </script>
 </body>
 </html>
