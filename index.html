@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover" />
-    <title>TAJIRI TRADERS – Signal Summary</title>
+    <title>TAJIRI TRADERS – Early SMA Angle</title>
     <style>
-        /* ===== BASE STYLES (unchanged) ===== */
+        /* ===== BASE STYLES ===== */
         * {
             margin: 0;
             padding: 0;
@@ -41,6 +41,8 @@
             --signal-sell: #ef4444;
             --signal-neutral: #6b7280;
             --signal-watch: #facc15;
+            --signal-buy-watch: #4ade80;
+            --signal-sell-watch: #f87171;
         }
         body.light {
             --bg-body: #f8fafc;
@@ -69,6 +71,8 @@
             --signal-sell: #dc2626;
             --signal-neutral: #64748b;
             --signal-watch: #ca8a04;
+            --signal-buy-watch: #22c55e;
+            --signal-sell-watch: #ef4444;
         }
         body {
             font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
@@ -240,7 +244,7 @@
             background: var(--trade-active);
         }
 
-        /* ===== SIGNAL SUMMARY BAR – only shown when signals exist ===== */
+        /* ===== SIGNAL SUMMARY BAR ===== */
         .signal-summary-bar {
             background: var(--bg-header);
             border-bottom: 1px solid var(--border-color);
@@ -324,6 +328,16 @@
             background: var(--signal-watch);
             color: #000;
             border-color: var(--signal-watch);
+        }
+        .signal-summary-bar .summary-mode-cell.buy-watch {
+            background: var(--signal-buy-watch);
+            color: #000;
+            border-color: var(--signal-buy-watch);
+        }
+        .signal-summary-bar .summary-mode-cell.sell-watch {
+            background: var(--signal-sell-watch);
+            color: #fff;
+            border-color: var(--signal-sell-watch);
         }
 
         .focus-bar {
@@ -1118,6 +1132,18 @@
         .market-list-item .signal-badge.neutral {
             background: var(--signal-neutral);
         }
+        .market-list-item .signal-badge.watch {
+            background: var(--signal-watch);
+            color: #000;
+        }
+        .market-list-item .signal-badge.buy-watch {
+            background: var(--signal-buy-watch);
+            color: #000;
+        }
+        .market-list-item .signal-badge.sell-watch {
+            background: var(--signal-sell-watch);
+            color: #fff;
+        }
         .modal {
             display: none;
             position: fixed;
@@ -1256,6 +1282,16 @@
             border-color: var(--signal-neutral);
             color: var(--text-secondary);
         }
+        .analysis-signal-banner.buy-watch {
+            background: rgba(74, 222, 128, 0.15);
+            border-color: var(--signal-buy-watch);
+            color: var(--signal-buy-watch);
+        }
+        .analysis-signal-banner.sell-watch {
+            background: rgba(248, 113, 113, 0.15);
+            border-color: var(--signal-sell-watch);
+            color: var(--signal-sell-watch);
+        }
         .analysis-signal-banner .signal-icon {
             font-size: 1.6rem;
         }
@@ -1269,7 +1305,7 @@
         }
         .analysis-metrics {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
             gap: 0.4rem;
             width: 100%;
         }
@@ -1316,6 +1352,7 @@
             gap: 0.4rem;
             width: 100%;
             flex-wrap: wrap;
+            margin: 0.2rem 0;
         }
         .analysis-confluence .conf-item {
             flex: 1;
@@ -1348,6 +1385,35 @@
             border-color: var(--signal-neutral);
             background: rgba(107, 114, 128, 0.06);
         }
+        .analysis-confluence .conf-item.active-watch {
+            border-color: var(--signal-watch);
+            background: rgba(250, 204, 21, 0.10);
+        }
+
+        /* Duration card */
+        .analysis-duration {
+            background: var(--bg-panel);
+            border-radius: 0.5rem;
+            padding: 0.4rem 0.6rem;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            margin: 0.2rem 0;
+        }
+        .analysis-duration .duration-badge {
+            display: inline-block;
+            padding: 0.2rem 0.8rem;
+            border-radius: 1.5rem;
+            font-weight: 800;
+            font-size: 1.2rem;
+            background: var(--gold);
+            color: #000;
+            margin-right: 0.4rem;
+        }
+        .analysis-duration .duration-reason {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
 
         .analysis-mini-chart {
             background: var(--bg-panel);
@@ -1365,8 +1431,7 @@
             height: 100%;
         }
 
-        /* MACD / Duration display */
-        .analysis-macd-row {
+        .analysis-roccard {
             display: flex;
             flex-wrap: wrap;
             gap: 0.3rem;
@@ -1380,18 +1445,54 @@
             font-weight: 600;
             width: 100%;
         }
-        .analysis-macd-row .macd-item {
+        .analysis-roccard .roc-item {
             padding: 0.1rem 0.4rem;
             background: var(--bg-body);
             border-radius: 0.3rem;
         }
-        .analysis-macd-row .duration-badge {
+
+        .analysis-extreme {
+            display: inline-block;
             padding: 0.2rem 0.6rem;
-            border-radius: 1.2rem;
-            background: var(--gold);
-            color: #000;
-            font-weight: 800;
-            font-size: 0.9rem;
+            border-radius: 1rem;
+            font-weight: 700;
+            font-size: 0.75rem;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+        }
+        .analysis-extreme.overbought {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: var(--signal-sell);
+            color: var(--signal-sell);
+        }
+        .analysis-extreme.oversold {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: var(--signal-buy);
+            color: var(--signal-buy);
+        }
+        .analysis-extreme.neutral {
+            color: var(--text-secondary);
+        }
+
+        .analysis-early-indicator {
+            display: inline-block;
+            padding: 0.1rem 0.5rem;
+            border-radius: 1rem;
+            font-weight: 700;
+            font-size: 0.65rem;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            margin: 0.1rem;
+        }
+        .analysis-early-indicator.triggered {
+            background: rgba(250, 204, 21, 0.2);
+            border-color: var(--signal-watch);
+            color: var(--signal-watch);
+        }
+        .analysis-early-indicator.active {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: var(--signal-buy);
+            color: var(--signal-buy);
         }
 
         @media (max-width: 800px) {
@@ -1482,7 +1583,7 @@
                 font-size: 0.55rem;
             }
             .analysis-metrics {
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: 1fr 1fr 1fr;
             }
             .analysis-signal-banner {
                 font-size: 0.9rem;
@@ -1514,7 +1615,7 @@
         }
         @media (max-width: 500px) {
             .analysis-metrics {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr 1fr;
             }
             .analysis-confluence .conf-item {
                 min-width: 60px;
@@ -1522,7 +1623,7 @@
             }
         }
 
-        /* ===== CONFLUENCE PROGRESS (reused) ===== */
+        /* ===== CONFLUENCE PROGRESS ===== */
         .signal-flash .signal-tag {
             display: inline-block;
             padding: 0.1rem 0.5rem;
@@ -1541,6 +1642,14 @@
         .signal-flash .signal-tag.watch {
             background: #facc15;
             color: #000;
+        }
+        .signal-flash .signal-tag.buy-watch {
+            background: #4ade80;
+            color: #000;
+        }
+        .signal-flash .signal-tag.sell-watch {
+            background: #f87171;
+            color: #fff;
         }
         .signal-flash .signal-tag.bullish {
             background: #10b981;
@@ -1683,12 +1792,10 @@
             </div>
         </div>
 
-        <!-- SIGNAL SUMMARY BAR – only visible when signals exist -->
+        <!-- SIGNAL SUMMARY BAR -->
         <div class="signal-summary-bar" id="signalSummaryBar">
             <span class="summary-label">📡 SIGNALS</span>
-            <div id="signalSummaryContent" style="display:flex;gap:0.4rem;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:0.1rem 0;">
-                <!-- dynamic content -->
-            </div>
+            <div id="signalSummaryContent" style="display:flex;gap:0.4rem;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:0.1rem 0;"></div>
         </div>
 
         <!-- MAIN -->
@@ -1728,25 +1835,33 @@
                 <div class="setting-row"><label>🔔 Density Reminder Threshold %</label><input type="number" id="densityThreshold" value="45" min="30" max="70" step="5" /></div>
                 <div class="setting-row"><label>📊 SMA Period</label><input type="number" id="smaPeriod" value="7" min="3" max="20" step="1" /></div>
                 <div class="setting-row"><label>📊 RSI Period</label><input type="number" id="rsiPeriod" value="14" min="5" max="30" step="1" /></div>
-                <div class="setting-row"><label>📊 MACD Fast</label><input type="number" id="macdFast" value="12" min="5" max="20" step="1" /></div>
-                <div class="setting-row"><label>📊 MACD Slow</label><input type="number" id="macdSlow" value="26" min="10" max="40" step="1" /></div>
-                <div class="setting-row"><label>📊 MACD Signal</label><input type="number" id="macdSignal" value="9" min="3" max="20" step="1" /></div>
+                <div class="setting-row"><label>📊 ROC Period</label><input type="number" id="rocPeriod" value="10" min="5" max="30" step="1" /></div>
+                <div class="setting-row"><label>📐 SMA Slope Period</label><input type="number" id="slopePeriod" value="5" min="3" max="15" step="1" /></div>
+                <div class="setting-row"><label>📊 Angle Threshold (BUY/SELL °)</label><input type="number" id="angleThreshold" value="30" min="15" max="60" step="1" /></div>
+                <div class="setting-row"><label>📊 Angle Watch Threshold (°)</label><input type="number" id="angleWatchThreshold" value="15" min="5" max="35" step="1" /></div>
+                <div class="setting-row"><label>📊 Price‑SMA Proximity %</label><input type="number" id="priceSmaProximity" value="0.5" min="0.1" max="2.0" step="0.1" /></div>
             </div>
-            <div style="font-size:0.65rem; margin-top:0.5rem;">✅ Click any signal group to jump to that market card.</div>
+            <div style="font-size:0.65rem; margin-top:0.5rem;">✅ Early detection: WATCH signals fire when momentum starts (angle >15° or approaching SMA). BUY/SELL confirm with full confluence (angle >30°).</div>
         </div>
     </div>
 
     <script>
         // ============================================================
-        //  COMPLETE SCRIPT – signal summary only shows when signals exist
+        //  EARLY SMA ANGLE – detects trend initiation before extremes
         // ============================================================
         (function() {
             try {
+                // ========================
+                //  MARKET LISTS
+                // ========================
                 const MARKET_NAMES = {
                     "1HZ10V": "V10",
+                    "1HZ15V": "V15",
                     "1HZ25V": "V25",
+                    "1HZ30V": "V30",
                     "1HZ50V": "V50",
                     "1HZ75V": "V75",
+                    "1HZ90V": "V90",
                     "1HZ100V": "V100",
                     "R_10": "R10",
                     "R_25": "R25",
@@ -1761,9 +1876,12 @@
                 };
                 const FULL_NAMES = {
                     "1HZ10V": "Volatility 10 (1s)",
+                    "1HZ15V": "Volatility 15 (1s)",
                     "1HZ25V": "Volatility 25 (1s)",
+                    "1HZ30V": "Volatility 30 (1s)",
                     "1HZ50V": "Volatility 50 (1s)",
                     "1HZ75V": "Volatility 75 (1s)",
+                    "1HZ90V": "Volatility 90 (1s)",
                     "1HZ100V": "Volatility 100 (1s)",
                     "R_10": "Volatility 10 Index",
                     "R_25": "Volatility 25 Index",
@@ -1776,12 +1894,14 @@
                     "JD75": "Jump 75 Index",
                     "JD100": "Jump 100 Index"
                 };
-                const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
                 const DECIMAL_MAP = {
                     "1HZ10V": 2,
+                    "1HZ15V": 2,
                     "1HZ25V": 2,
+                    "1HZ30V": 2,
                     "1HZ50V": 2,
                     "1HZ75V": 2,
+                    "1HZ90V": 2,
                     "1HZ100V": 2,
                     "R_10": 3,
                     "R_25": 3,
@@ -1794,6 +1914,7 @@
                     "JD75": 2,
                     "JD100": 2
                 };
+                const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
                 const MODE_LABELS = ['predict', 'overunder', 'evenodd', 'vanilla', 'hybrid', 'analysis'];
                 const MODE_SHORT = {
                     predict: 'Pred',
@@ -1839,7 +1960,6 @@
                         if (candle.open !== null && candle.minute !== null) {
                             candle.history.push({ ...candle });
                             if (candle.history.length > 100) candle.history.shift();
-                            updateAnalysisForSymbol(sym);
                         }
                         candle.open = price;
                         candle.high = price;
@@ -1866,7 +1986,6 @@
                         candle.isClosed = true;
                         candle.history.push({ ...candle });
                         if (candle.history.length > 100) candle.history.shift();
-                        updateAnalysisForSymbol(sym);
                         const price = candle.close;
                         const newMinute = Math.floor(now / 60000) * 60000;
                         candle.open = price;
@@ -1905,9 +2024,11 @@
                         densityThreshold: parseFloat(document.getElementById('densityThreshold')?.value) || 45,
                         smaPeriod: parseInt(document.getElementById('smaPeriod')?.value) || 7,
                         rsiPeriod: parseInt(document.getElementById('rsiPeriod')?.value) || 14,
-                        macdFast: parseInt(document.getElementById('macdFast')?.value) || 12,
-                        macdSlow: parseInt(document.getElementById('macdSlow')?.value) || 26,
-                        macdSignal: parseInt(document.getElementById('macdSignal')?.value) || 9
+                        rocPeriod: parseInt(document.getElementById('rocPeriod')?.value) || 10,
+                        slopePeriod: parseInt(document.getElementById('slopePeriod')?.value) || 5,
+                        angleThreshold: parseFloat(document.getElementById('angleThreshold')?.value) || 30,
+                        angleWatchThreshold: parseFloat(document.getElementById('angleWatchThreshold')?.value) || 15,
+                        priceSmaProximity: parseFloat(document.getElementById('priceSmaProximity')?.value) || 0.5
                     };
                 }
 
@@ -1920,7 +2041,7 @@
                     return p.toFixed(DECIMAL_MAP[s] ?? 2);
                 }
 
-                // ---- ZONE MEMORY (unchanged) ----
+                // ---- ZONE MEMORY ----
                 function computeZoneMemory(digits, windowSize) {
                     if (!digits || digits.length < 2) return null;
                     const slice = digits.slice(-windowSize);
@@ -2681,7 +2802,7 @@
                 }
 
                 // ============================================================
-                //  SIGNAL SUMMARY BAR – ONLY SHOWS WHEN SIGNALS EXIST
+                //  SIGNAL SUMMARY BAR
                 // ============================================================
                 function updateSignalSummary() {
                     const container = document.getElementById('signalSummaryContent');
@@ -2717,6 +2838,8 @@
                                 } else if (sig.type === 'analysis') {
                                     if (sig.signal === 'BUY') status = 'buy';
                                     else if (sig.signal === 'SELL') status = 'sell';
+                                    else if (sig.signal === 'BUY_WATCH') status = 'buy-watch';
+                                    else if (sig.signal === 'SELL_WATCH') status = 'sell-watch';
                                     else if (sig.signal === 'WATCH') status = 'watch';
                                 } else {
                                     if (sig.side === 'BUY' || sig.side === 'UP' || sig.side === 'UNDER' || sig.side ===
@@ -2749,10 +2872,14 @@
                         for (let mode of MODE_LABELS) {
                             let status = group.modes[mode] || 'none';
                             if (status === 'none') continue;
-                            let cls = status === 'buy' ? 'buy' : (status === 'sell' ? 'sell' : 'watch');
-                            let display = status === 'buy' ? 'B' : (status === 'sell' ? 'S' : 'W');
+                            let cls = status === 'buy' ? 'buy' : (status === 'sell' ? 'sell' : (status === 'watch' ?
+                                'watch' : (status === 'buy-watch' ? 'buy-watch' : (status === 'sell-watch' ?
+                                'sell-watch' : ''))));
+                            let display = status === 'buy' ? 'B' : (status === 'sell' ? 'S' : (status === 'watch' ?
+                                'W' : (status === 'buy-watch' ? 'b' : (status === 'sell-watch' ? 's' : ''))));
                             let short = MODE_SHORT[mode] || mode;
-                            cells += `<span class="summary-mode-cell ${cls}" title="${short}: ${status.toUpperCase()}">${display}</span>`;
+                            cells +=
+                            `<span class="summary-mode-cell ${cls}" title="${short}: ${status.toUpperCase()}">${display}</span>`;
                         }
 
                         if (cells) {
@@ -2766,193 +2893,271 @@
                     container.innerHTML = html;
                 }
 
-                // ---- ANALYSIS COMPUTATION ----
-                function computeMACD(closes, fast = 12, slow = 26, signal = 9) {
-                    if (closes.length < slow + signal) return null;
-                    const ema = (data, period) => {
-                        if (data.length < period) return null;
-                        let k = 2 / (period + 1);
-                        let emaVal = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
-                        for (let i = period; i < data.length; i++) {
-                            emaVal = data[i] * k + emaVal * (1 - k);
-                        }
-                        return emaVal;
-                    };
-                    const emaFast = ema(closes, fast);
-                    const emaSlow = ema(closes, slow);
-                    if (emaFast === null || emaSlow === null) return null;
-                    const macdLine = emaFast - emaSlow;
-                    const macdValues = [];
-                    for (let i = slow; i < closes.length; i++) {
-                        const f = ema(closes.slice(0, i + 1), fast);
-                        const s = ema(closes.slice(0, i + 1), slow);
-                        if (f !== null && s !== null) macdValues.push(f - s);
-                    }
-                    if (macdValues.length < signal) return null;
-                    const signalLine = ema(macdValues, signal);
-                    const histogram = macdValues[macdValues.length - 1] - signalLine;
-                    let macdSlope = 0;
-                    if (macdValues.length >= 5) {
-                        const recent = macdValues.slice(-5);
-                        const slope = linearRegressionSlope(recent);
-                        macdSlope = slope;
-                    }
-                    return {
-                        macdLine: macdValues[macdValues.length - 1],
-                        signalLine: signalLine,
-                        histogram: histogram,
-                        macdSlope: macdSlope,
-                        macdValues: macdValues,
-                    };
+                // ============================================================
+                //  RATE OF CHANGE (ROC)
+                // ============================================================
+                function computeROC(closes, period) {
+                    if (closes.length <= period) return null;
+                    const current = closes[closes.length - 1];
+                    const past = closes[closes.length - 1 - period];
+                    if (past === 0) return null;
+                    return ((current - past) / past) * 100;
                 }
 
+                // ============================================================
+                //  SMA ANGLE – using closed candles only
+                // ============================================================
+                function computeSMAAngle(closedCloses, smaPeriod, slopePeriod) {
+                    if (closedCloses.length < smaPeriod + slopePeriod - 1) return null;
+                    const smaValues = [];
+                    for (let i = 0; i < slopePeriod; i++) {
+                        const end = closedCloses.length - slopePeriod + i + 1;
+                        const start = end - smaPeriod;
+                        const slice = closedCloses.slice(start, end);
+                        if (slice.length < smaPeriod) return null;
+                        const sma = slice.reduce((a, b) => a + b, 0) / smaPeriod;
+                        smaValues.push(sma);
+                    }
+                    const n = smaValues.length;
+                    if (n < 2) return null;
+                    let sumX = 0,
+                        sumY = 0,
+                        sumXY = 0,
+                        sumX2 = 0;
+                    for (let i = 0; i < n; i++) {
+                        sumX += i;
+                        sumY += smaValues[i];
+                        sumXY += i * smaValues[i];
+                        sumX2 += i * i;
+                    }
+                    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+                    const angleRad = Math.atan(slope);
+                    const angleDeg = angleRad * 180 / Math.PI;
+                    return { slope, angle: angleDeg, smaValues };
+                }
+
+                // ============================================================
+                //  REAL‑TIME ANALYSIS – EARLY DETECTION
+                //  Signals fire when momentum STARTS, not when overextended.
+                // ============================================================
                 function computeAnalysis(sym) {
                     const data = marketData[sym];
                     if (!data || !data.priceHistory || data.priceHistory.length < 30) return null;
 
+                    const currentPrice = data.lastPrice;
+                    if (currentPrice === null || currentPrice === undefined) return null;
+
                     const candle = getCandle(sym);
-                    let closes = [];
-                    if (candle.history && candle.history.length > 0) {
-                        closes = candle.history.map(c => c.close);
-                    }
-                    if (closes.length < 30) {
-                        closes = data.priceHistory.slice(-50);
-                    }
+                    const closedCloses = candle.history.map(c => c.close);
+                    if (closedCloses.length < 10) return null;
 
                     const s = getSettings();
                     const smaPeriod = s.smaPeriod || 7;
                     const rsiPeriod = s.rsiPeriod || 14;
-                    const fast = s.macdFast || 12;
-                    const slow = s.macdSlow || 26;
-                    const signalPeriod = s.macdSignal || 9;
+                    const rocPeriod = s.rocPeriod || 10;
+                    const slopePeriod = s.slopePeriod || 5;
+                    const angleThreshold = s.angleThreshold || 30;
+                    const angleWatchThreshold = s.angleWatchThreshold || 15;
+                    const proximityPct = s.priceSmaProximity || 0.5;
 
-                    const sma = calcSMA(closes, Math.min(smaPeriod, closes.length));
-                    const currentPrice = closes[closes.length - 1];
-                    const priceAboveSMA = sma !== null && currentPrice > sma;
-                    const priceBelowSMA = sma !== null && currentPrice < sma;
+                    const sma = calcSMA(closedCloses, Math.min(smaPeriod, closedCloses.length));
+                    if (sma === null) return null;
 
-                    const rsi = calcRSI(closes, Math.min(rsiPeriod, closes.length));
-                    const rsiAbove50 = rsi > 50;
-                    const rsiBelow50 = rsi < 50;
-                    let rsiTrend = 'flat';
-                    let prevRsi = rsi;
-                    if (closes.length > rsiPeriod + 1) {
-                        const prevCloses = closes.slice(0, -1);
-                        const prevRsiVal = calcRSI(prevCloses, Math.min(rsiPeriod, prevCloses.length));
-                        if (prevRsiVal !== null) {
-                            const diff = rsi - prevRsiVal;
-                            if (diff > 0.5) rsiTrend = 'rising';
-                            else if (diff < -0.5) rsiTrend = 'falling';
-                            else rsiTrend = 'flat';
-                            prevRsi = prevRsiVal;
-                        }
+                    const rsi = calcRSI(closedCloses, Math.min(rsiPeriod, closedCloses.length));
+                    const rsiAbove50 = rsi ? rsi > 50 : false;
+                    const rsiBelow50 = rsi ? rsi < 50 : false;
+
+                    const roc = computeROC(closedCloses, rocPeriod);
+                    const rocAboveZero = roc !== null && roc > 0;
+                    const rocBelowZero = roc !== null && roc < 0;
+
+                    const priceAboveSMA = currentPrice > sma;
+                    const priceBelowSMA = currentPrice < sma;
+
+                    // SMA angle from closed candles
+                    const angleData = computeSMAAngle(closedCloses, smaPeriod, slopePeriod);
+                    const angle = angleData ? angleData.angle : 0;
+                    const angleCondition = angleData !== null;
+
+                    // ---- EARLY DETECTION ----
+                    // 1. Angle starting to turn bullish (crossing above watch threshold)
+                    const angleBullishStart = angleCondition && angle > angleWatchThreshold;
+                    const angleBearishStart = angleCondition && angle < -angleWatchThreshold;
+
+                    // 2. Price approaching SMA (within proximity %)
+                    const distToSmaPct = ((currentPrice - sma) / sma) * 100;
+                    const priceApproachingSmaFromBelow = distToSmaPct < 0 && Math.abs(distToSmaPct) < proximityPct;
+                    const priceApproachingSmaFromAbove = distToSmaPct > 0 && distToSmaPct < proximityPct;
+
+                    // 3. RSI crossing 50 (momentum shift)
+                    const rsiCrossAbove50 = rsi !== null && rsi > 50 && rsi < 60;
+                    const rsiCrossBelow50 = rsi !== null && rsi < 50 && rsi > 40;
+
+                    // 4. ROC turning positive/negative
+                    const rocTurningPositive = roc !== null && roc > 0 && roc < 0.5;
+                    const rocTurningNegative = roc !== null && roc < 0 && roc > -0.5;
+
+                    // 5. Angle acceleration (angle increasing for bullish, decreasing for bearish)
+                    let angleIncreasing = false,
+                        angleDecreasing = false;
+                    if (angleData && angleData.smaValues && angleData.smaValues.length >= 3) {
+                        const last3 = angleData.smaValues.slice(-3);
+                        const slopeOfAngle = last3[2] - last3[0];
+                        angleIncreasing = slopeOfAngle > 0;
+                        angleDecreasing = slopeOfAngle < 0;
                     }
 
-                    const macd = computeMACD(closes, fast, slow, signalPeriod);
-                    let macdBullish = false,
-                        macdBearish = false;
-                    let macdHistAboveZero = false,
-                        macdHistBelowZero = false;
-                    let macdRising = false,
-                        macdFalling = false;
-                    let macdLine = null,
-                        signalLine = null,
-                        histogram = null,
-                        macdSlope = 0;
-                    if (macd) {
-                        macdLine = macd.macdLine;
-                        signalLine = macd.signalLine;
-                        histogram = macd.histogram;
-                        macdSlope = macd.macdSlope;
-                        macdBullish = macdLine > signalLine;
-                        macdBearish = macdLine < signalLine;
-                        macdHistAboveZero = histogram > 0;
-                        macdHistBelowZero = histogram < 0;
-                        macdRising = macdSlope > 0.0001;
-                        macdFalling = macdSlope < -0.0001;
-                    }
-
+                    // ---- DETERMINE SIGNAL ----
                     let signal = 'NEUTRAL';
                     let reasons = [];
-                    let duration = 3;
+                    let earlyFlags = [];
 
-                    if (priceAboveSMA && rsiAbove50 && rsiTrend === 'rising' && macd && macdHistAboveZero && macdBullish) {
+                    // FULL BUY: price above SMA, RSI > 50, ROC > 0, angle > threshold
+                    const fullBuy = priceAboveSMA && rsiAbove50 && rocAboveZero && angleCondition && angle > angleThreshold;
+                    const fullSell = priceBelowSMA && rsiBelow50 && rocBelowZero && angleCondition && angle < -angleThreshold;
+
+                    // WATCH BUY: early signs of bullish momentum
+                    const watchBuy =
+                        (angleBullishStart && (rsiAbove50 || rocAboveZero)) ||
+                        (priceApproachingSmaFromBelow && (rsiAbove50 || rocAboveZero)) ||
+                        (rsiCrossAbove50 && (rocAboveZero || angleBullishStart)) ||
+                        (rocTurningPositive && (rsiAbove50 || angleBullishStart)) ||
+                        (angleBullishStart && angleIncreasing);
+
+                    // WATCH SELL: early signs of bearish momentum
+                    const watchSell =
+                        (angleBearishStart && (rsiBelow50 || rocBelowZero)) ||
+                        (priceApproachingSmaFromAbove && (rsiBelow50 || rocBelowZero)) ||
+                        (rsiCrossBelow50 && (rocBelowZero || angleBearishStart)) ||
+                        (rocTurningNegative && (rsiBelow50 || angleBearishStart)) ||
+                        (angleBearishStart && angleDecreasing);
+
+                    if (fullBuy) {
                         signal = 'BUY';
-                        reasons.push('Price above SMA7');
-                        reasons.push('RSI above 50 & rising');
-                        reasons.push('MACD bullish (hist > 0)');
-                    } else if (priceBelowSMA && rsiBelow50 && rsiTrend === 'falling' && macd && macdHistBelowZero && macdBearish) {
+                        reasons.push('✅ BUY: Full confluence – price > SMA, RSI > 50, ROC > 0, angle > ' + angleThreshold +
+                            '°');
+                    } else if (fullSell) {
                         signal = 'SELL';
-                        reasons.push('Price below SMA7');
-                        reasons.push('RSI below 50 & falling');
-                        reasons.push('MACD bearish (hist < 0)');
+                        reasons.push('✅ SELL: Full confluence – price < SMA, RSI < 50, ROC < 0, angle < -' + angleThreshold +
+                            '°');
+                    } else if (watchBuy) {
+                        signal = 'BUY_WATCH';
+                        let flags = [];
+                        if (angleBullishStart) flags.push('angle rising (' + angle.toFixed(1) + '°)');
+                        if (priceApproachingSmaFromBelow) flags.push('price approaching SMA');
+                        if (rsiCrossAbove50) flags.push('RSI crossing 50 (' + rsi.toFixed(1) + ')');
+                        if (rocTurningPositive) flags.push('ROC turning positive');
+                        if (angleIncreasing) flags.push('angle accelerating');
+                        reasons.push('🔍 BUY WATCH: Momentum starting – ' + flags.join(', '));
+                    } else if (watchSell) {
+                        signal = 'SELL_WATCH';
+                        let flags = [];
+                        if (angleBearishStart) flags.push('angle falling (' + angle.toFixed(1) + '°)');
+                        if (priceApproachingSmaFromAbove) flags.push('price approaching SMA');
+                        if (rsiCrossBelow50) flags.push('RSI crossing 50 (' + rsi.toFixed(1) + ')');
+                        if (rocTurningNegative) flags.push('ROC turning negative');
+                        if (angleDecreasing) flags.push('angle accelerating down');
+                        reasons.push('🔍 SELL WATCH: Momentum starting – ' + flags.join(', '));
                     } else {
-                        if (priceAboveSMA) reasons.push('Price above SMA7 ✓');
-                        else if (priceBelowSMA) reasons.push('Price below SMA7 ✓ (sell)');
-                        else reasons.push('SMA7 —');
-                        if (rsiAbove50) reasons.push('RSI above 50 ✓');
-                        else if (rsiBelow50) reasons.push('RSI below 50 ✓ (sell)');
-                        else reasons.push('RSI —');
-                        reasons.push(`RSI trend: ${rsiTrend}`);
-                        if (macd) {
-                            if (macdHistAboveZero) reasons.push('MACD hist > 0 ✓');
-                            else if (macdHistBelowZero) reasons.push('MACD hist < 0 ✓ (sell)');
-                            else reasons.push('MACD hist = 0');
-                        } else {
-                            reasons.push('MACD insufficient data');
+                        signal = 'NEUTRAL';
+                        let missing = [];
+                        if (!priceAboveSMA && !priceBelowSMA) missing.push('price near SMA');
+                        else if (!priceAboveSMA) missing.push('price below SMA');
+                        else if (!priceBelowSMA) missing.push('price above SMA');
+                        if (!rsiAbove50 && !rsiBelow50) missing.push('RSI near 50');
+                        if (!rocAboveZero && !rocBelowZero) missing.push('ROC near 0');
+                        if (!angleCondition) missing.push('angle insufficient');
+                        else if (Math.abs(angle) < angleWatchThreshold) missing.push('angle too flat (' + angle.toFixed(1) +
+                            '°)');
+                        reasons.push('⛔ No signal: ' + (missing.length ? missing.join(', ') : 'conditions not met'));
+                        // Still add a note if something is close
+                        if (angleBullishStart || angleBearishStart) {
+                            earlyFlags.push('angle close to watch threshold (' + angle.toFixed(1) + '°)');
+                        }
+                        if (priceApproachingSmaFromBelow || priceApproachingSmaFromAbove) {
+                            earlyFlags.push('price approaching SMA');
+                        }
+                        if (rsiCrossAbove50 || rsiCrossBelow50) {
+                            earlyFlags.push('RSI near 50');
+                        }
+                        if (earlyFlags.length > 0) {
+                            reasons.push('⏳ Watch: ' + earlyFlags.join(', ') + ' (wait for confirmation)');
                         }
                     }
 
-                    let durationMinutes = 3;
-                    if (signal === 'BUY' || signal === 'SELL') {
-                        let strength = 0;
-                        if (macd && macdHistAboveZero) strength += Math.abs(histogram) / currentPrice * 100;
-                        if (rsi > 60 && signal === 'BUY') strength += 1;
-                        if (rsi < 40 && signal === 'SELL') strength += 1;
-                        if (macdRising && signal === 'BUY') strength += 1;
-                        if (macdFalling && signal === 'SELL') strength += 1;
-                        if (strength >= 2.0) durationMinutes = 1;
-                        else if (strength >= 1.0) durationMinutes = 2;
-                        else if (strength >= 0.5) durationMinutes = 3;
-                        else durationMinutes = 4;
-                        durationMinutes = Math.min(5, Math.max(1, durationMinutes));
-                    } else {
-                        durationMinutes = 5;
+                    let extreme = 'neutral';
+                    if (rsi !== null) {
+                        if (rsi > 70) extreme = 'overbought';
+                        else if (rsi < 30) extreme = 'oversold';
                     }
 
-                    const condPrice = priceAboveSMA ? 'above' : (priceBelowSMA ? 'below' : 'equal');
-                    const condRSI = rsiAbove50 ? 'above' : (rsiBelow50 ? 'below' : 'equal');
+                    let duration = 5;
+                    let durationReason = 'No signal – waiting for confluence';
+                    if (signal === 'BUY' || signal === 'SELL') {
+                        let strength = 3;
+                        const distPct = ((currentPrice - sma) / sma) * 100;
+                        if (Math.abs(distPct) > 0.5) strength += 0.5;
+                        if (Math.abs(distPct) > 1.0) strength += 0.5;
+                        if (rsi && (rsi > 60 || rsi < 40)) strength += 0.5;
+                        if (roc !== null && Math.abs(roc) > 0.5) strength += 0.5;
+                        if (roc !== null && Math.abs(roc) > 1.0) strength += 0.5;
+                        if (Math.abs(angle) > 50) strength += 0.5;
+
+                        let rawDuration = 5;
+                        if (strength >= 4.5) rawDuration = 1;
+                        else if (strength >= 3.5) rawDuration = 2;
+                        else if (strength >= 2.5) rawDuration = 3;
+                        else if (strength >= 1.5) rawDuration = 4;
+                        else rawDuration = 5;
+                        duration = Math.min(5, Math.max(1, Math.round(rawDuration)));
+
+                        if (duration === 1) durationReason = '🏆 Strong confluence + steep angle – quick scalp';
+                        else if (duration === 2) durationReason = '✅ Good confluence – short trade';
+                        else if (duration === 3) durationReason = '✅ Moderate confluence – medium hold';
+                        else if (duration === 4) durationReason = '✅ Weak confluence – longer horizon';
+                        else durationReason = '✅ Weak momentum – extended view';
+                    } else if (signal === 'BUY_WATCH' || signal === 'SELL_WATCH') {
+                        duration = 3;
+                        durationReason = '🔍 Early momentum detected – watch for confirmation';
+                    } else {
+                        duration = 5;
+                        durationReason = '⏳ Waiting for confluence';
+                    }
 
                     return {
                         type: 'analysis',
                         signal: signal,
                         reasons: reasons,
+                        duration: duration,
+                        durationReason: durationReason,
                         price: currentPrice,
                         sma: sma,
                         rsi: rsi,
-                        prevRsi: prevRsi,
-                        rsiTrend: rsiTrend,
-                        condPrice: condPrice,
-                        condRSI: condRSI,
-                        condRSITrend: rsiTrend,
-                        priceAboveSMA: priceAboveSMA,
-                        rsiAbove50: rsiAbove50,
-                        rsiRising: rsiTrend === 'rising',
-                        rsiFalling: rsiTrend === 'falling',
+                        roc: roc,
+                        rocPeriod: rocPeriod,
                         smaPeriod: smaPeriod,
                         rsiPeriod: rsiPeriod,
-                        closes: closes,
-                        macd: macd,
-                        macdBullish: macdBullish,
-                        macdBearish: macdBearish,
-                        macdHistAboveZero: macdHistAboveZero,
-                        macdHistBelowZero: macdHistBelowZero,
-                        macdRising: macdRising,
-                        macdFalling: macdFalling,
-                        macdLine: macdLine,
-                        signalLine: signalLine,
-                        histogram: histogram,
-                        duration: durationMinutes
+                        extreme: extreme,
+                        angle: angle,
+                        angleOk: angleCondition,
+                        priceAboveSMA: priceAboveSMA,
+                        priceBelowSMA: priceBelowSMA,
+                        rsiAbove50: rsiAbove50,
+                        rsiBelow50: rsiBelow50,
+                        rocAboveZero: rocAboveZero,
+                        rocBelowZero: rocBelowZero,
+                        // early flags
+                        angleBullishStart: angleBullishStart,
+                        angleBearishStart: angleBearishStart,
+                        priceApproachingSmaFromBelow: priceApproachingSmaFromBelow,
+                        priceApproachingSmaFromAbove: priceApproachingSmaFromAbove,
+                        rsiCrossAbove50: rsiCrossAbove50,
+                        rsiCrossBelow50: rsiCrossBelow50,
+                        rocTurningPositive: rocTurningPositive,
+                        rocTurningNegative: rocTurningNegative,
+                        angleIncreasing: angleIncreasing,
+                        angleDecreasing: angleDecreasing,
+                        distToSmaPct: distToSmaPct,
                     };
                 }
 
@@ -3073,9 +3278,13 @@
                     updateCandle(sym, price);
                     closeCandleIfNeeded(sym);
 
+                    // Update analysis on every tick
+                    updateAnalysisForSymbol(sym);
+
                     if (document.getElementById('alarmToggle').checked && currentMarket === 'analysis') {
                         const anSig = d.analysisResult;
-                        if (anSig && (anSig.signal === 'BUY' || anSig.signal === 'SELL')) {
+                        if (anSig && (anSig.signal === 'BUY' || anSig.signal === 'SELL' || anSig.signal === 'BUY_WATCH' ||
+                                anSig.signal === 'SELL_WATCH')) {
                             const now = Date.now();
                             const last = _lastAlarmTime['analysis_' + sym] || 0;
                             const s = getSettings();
@@ -3185,7 +3394,7 @@
                     }
                 }
 
-                // ---- RENDER MARKET ----
+                // ---- RENDER MARKET (with early signals) ----
                 function renderMarket(sym) {
                     let data = marketData[sym];
                     if (!data || !data.rollingArray.length) return;
@@ -3263,13 +3472,31 @@
                                 const signal = anSig.signal;
                                 const isBuy = signal === 'BUY';
                                 const isSell = signal === 'SELL';
+                                const isBuyWatch = signal === 'BUY_WATCH';
+                                const isSellWatch = signal === 'SELL_WATCH';
                                 const isNeutral = signal === 'NEUTRAL';
-                                const bannerClass = isBuy ? 'buy' : (isSell ? 'sell' : 'neutral');
-                                const icon = isBuy ? '🟢' : (isSell ? '🔴' : '⚪');
-                                const label = isBuy ? 'BUY' : (isSell ? 'SELL' : 'NEUTRAL');
-                                const subText = isBuy ? 'Price ↑ SMA · RSI ↑ · MACD bullish' :
-                                    isSell ? 'Price ↓ SMA · RSI ↓ · MACD bearish' :
-                                    'Conditions not met';
+
+                                let bannerClass = 'neutral';
+                                let icon = '⚪';
+                                let label = 'NEUTRAL';
+                                let subText = 'Conditions not met';
+
+                                if (isBuy) { bannerClass = 'buy';
+                                    icon = '🟢';
+                                    label = 'BUY';
+                                    subText = 'Full confluence – strong momentum'; } else if (isSell) { bannerClass =
+                                        'sell';
+                                    icon = '🔴';
+                                    label = 'SELL';
+                                    subText = 'Full confluence – strong momentum'; } else if (isBuyWatch) { bannerClass =
+                                        'buy-watch';
+                                    icon = '🟡';
+                                    label = 'BUY WATCH';
+                                    subText = 'Early momentum detected – watch for entry'; } else if (isSellWatch) {
+                                    bannerClass = 'sell-watch';
+                                    icon = '🟠';
+                                    label = 'SELL WATCH';
+                                    subText = 'Early momentum detected – watch for entry'; }
 
                                 html += `
                                         <div class="analysis-signal-banner ${bannerClass}">
@@ -3279,154 +3506,168 @@
                                         </div>
                                     `;
 
+                                // Extreme indicator
+                                const extreme = anSig.extreme || 'neutral';
+                                const extremeLabel = extreme === 'overbought' ? '🔴 Overbought' :
+                                    extreme === 'oversold' ? '🟢 Oversold' : '⚪ Neutral';
+                                const extremeClass = extreme === 'overbought' ? 'overbought' :
+                                    extreme === 'oversold' ? 'oversold' : 'neutral';
+                                html += `
+                                        <div style="text-align:center;margin:0.2rem 0;">
+                                            <span class="analysis-extreme ${extremeClass}">${extremeLabel}</span>
+                                            ${(isBuyWatch || isSellWatch) ? '<span style="margin-left:0.5rem;font-size:0.7rem;color:var(--signal-watch);">⚡ Early detection active</span>' : ''}
+                                        </div>
+                                    `;
+
                                 const priceStr = anSig.price !== undefined ? anSig.price.toFixed(4) : '—';
                                 const smaStr = anSig.sma !== null ? anSig.sma.toFixed(4) : '—';
                                 const rsiStr = anSig.rsi !== null ? anSig.rsi.toFixed(1) : '—';
-                                const rsiTrendLabel = anSig.rsiTrend === 'rising' ? '📈 Rising' :
-                                    anSig.rsiTrend === 'falling' ? '📉 Falling' : '➡️ Flat';
-                                const rsiTrendClass = anSig.rsiTrend === 'rising' ? 'up' :
-                                    anSig.rsiTrend === 'falling' ? 'down' : 'flat';
-
-                                let macdStr = '—',
-                                    histStr = '—',
-                                    macdStatus = 'flat';
-                                if (anSig.macd) {
-                                    macdStr = anSig.macdLine.toFixed(4);
-                                    histStr = anSig.histogram.toFixed(4);
-                                    macdStatus = anSig.macdHistAboveZero ? 'bullish' : (anSig.macdHistBelowZero ? 'bearish' :
-                                        'flat');
-                                }
+                                const rocStr = anSig.roc !== null ? anSig.roc.toFixed(2) + '%' : '—';
+                                const angleStr = anSig.angle !== undefined ? anSig.angle.toFixed(1) + '°' : '—';
+                                const distStr = anSig.distToSmaPct !== undefined ? anSig.distToSmaPct.toFixed(2) + '%' :
+                                '—';
 
                                 html += `
                                         <div class="analysis-metrics">
                                             <div class="analysis-metric-card">
                                                 <div class="metric-label">Price</div>
                                                 <div class="metric-value">${priceStr}</div>
-                                                <div class="metric-status ${anSig.condPrice === 'above' ? 'above' : (anSig.condPrice === 'below' ? 'below' : 'flat')}">
-                                                    ${anSig.condPrice === 'above' ? '▲ Above SMA' : (anSig.condPrice === 'below' ? '▼ Below SMA' : '—')}
+                                                <div class="metric-status ${anSig.priceAboveSMA ? 'above' : (anSig.priceBelowSMA ? 'below' : 'flat')}">
+                                                    ${anSig.priceAboveSMA ? '▲ Above SMA' : (anSig.priceBelowSMA ? '▼ Below SMA' : 'At SMA')}
                                                 </div>
                                             </div>
                                             <div class="analysis-metric-card">
                                                 <div class="metric-label">SMA${anSig.smaPeriod}</div>
                                                 <div class="metric-value">${smaStr}</div>
-                                                <div class="metric-status ${anSig.condPrice === 'above' ? 'above' : (anSig.condPrice === 'below' ? 'below' : 'flat')}">
+                                                <div class="metric-status ${anSig.priceAboveSMA ? 'above' : (anSig.priceBelowSMA ? 'below' : 'flat')}">
                                                     ${anSig.priceAboveSMA ? '✅ Bullish' : (anSig.priceBelowSMA ? '❌ Bearish' : '—')}
                                                 </div>
                                             </div>
                                             <div class="analysis-metric-card">
                                                 <div class="metric-label">RSI (${anSig.rsiPeriod})</div>
                                                 <div class="metric-value">${rsiStr}</div>
-                                                <div class="metric-status ${rsiTrendClass}">
-                                                    ${rsiTrendLabel} ${anSig.rsiAbove50 ? '• >50' : (anSig.rsiBelow50 ? '• <50' : '')}
+                                                <div class="metric-status ${anSig.rsiAbove50 ? 'up' : 'down'}">
+                                                    ${anSig.rsiAbove50 ? '📈 >50' : '📉 <50'}
                                                 </div>
                                             </div>
                                             <div class="analysis-metric-card">
-                                                <div class="metric-label">MACD Hist</div>
-                                                <div class="metric-value">${histStr}</div>
-                                                <div class="metric-status ${macdStatus === 'bullish' ? 'up' : (macdStatus === 'bearish' ? 'down' : 'flat')}">
-                                                    ${macdStatus === 'bullish' ? '🟢 Bullish' : (macdStatus === 'bearish' ? '🔴 Bearish' : '—')}
+                                                <div class="metric-label">ROC (${anSig.rocPeriod})</div>
+                                                <div class="metric-value">${rocStr}</div>
+                                                <div class="metric-status ${anSig.rocAboveZero ? 'up' : 'down'}">
+                                                    ${anSig.rocAboveZero ? '✅ >0' : '❌ <0'}
+                                                </div>
+                                            </div>
+                                            <div class="analysis-metric-card">
+                                                <div class="metric-label">SMA Angle</div>
+                                                <div class="metric-value">${angleStr}</div>
+                                                <div class="metric-status ${anSig.angle > 20 ? 'up' : (anSig.angle < -20 ? 'down' : 'flat')}">
+                                                    ${anSig.angle > 20 ? '📈 Steep' : (anSig.angle < -20 ? '📉 Steep' : 'Flat')}
                                                 </div>
                                             </div>
                                         </div>
                                     `;
 
-                                const isSellSignal = isSell;
-                                const check1 = isSellSignal ? !anSig.priceAboveSMA : anSig.priceAboveSMA;
-                                const check2 = isSellSignal ? !anSig.rsiAbove50 : anSig.rsiAbove50;
-                                const check3 = isSellSignal ? anSig.rsiFalling : anSig.rsiRising;
-                                const check4 = isSellSignal ? anSig.macdHistBelowZero : anSig.macdHistAboveZero;
+                                // Early detection flags
+                                let earlyFlags = [];
+                                if (anSig.angleBullishStart) earlyFlags.push('📐 angle rising (' + anSig.angle.toFixed(1) +
+                                    '°)');
+                                if (anSig.angleBearishStart) earlyFlags.push('📐 angle falling (' + anSig.angle.toFixed(1) +
+                                    '°)');
+                                if (anSig.priceApproachingSmaFromBelow) earlyFlags.push('📊 price approaching SMA from below');
+                                if (anSig.priceApproachingSmaFromAbove) earlyFlags.push('📊 price approaching SMA from above');
+                                if (anSig.rsiCrossAbove50) earlyFlags.push('📈 RSI crossing 50 (' + anSig.rsi.toFixed(1) +
+                                    ')');
+                                if (anSig.rsiCrossBelow50) earlyFlags.push('📉 RSI crossing 50 (' + anSig.rsi.toFixed(1) +
+                                    ')');
+                                if (anSig.rocTurningPositive) earlyFlags.push('📈 ROC turning positive');
+                                if (anSig.rocTurningNegative) earlyFlags.push('📉 ROC turning negative');
+                                if (anSig.angleIncreasing) earlyFlags.push('⚡ angle accelerating up');
+                                if (anSig.angleDecreasing) earlyFlags.push('⚡ angle accelerating down');
 
-                                const check1Label = isSellSignal ?
-                                    (check1 ? '✅ Price below SMA' : '❌ Price above SMA') :
-                                    (check1 ? '✅ Price above SMA' : '❌ Price below SMA');
-                                const check2Label = isSellSignal ?
-                                    (check2 ? '✅ RSI < 50' : '❌ RSI > 50') :
-                                    (check2 ? '✅ RSI > 50' : '❌ RSI < 50');
-                                const check3Label = isSellSignal ?
-                                    (check3 ? '✅ RSI falling' : (anSig.rsiRising ? '❌ RSI rising' : '➡️ RSI flat')) :
-                                    (check3 ? '✅ RSI rising' : (anSig.rsiFalling ? '❌ RSI falling' : '➡️ RSI flat'));
-                                const check4Label = isSellSignal ?
-                                    (check4 ? '✅ MACD hist < 0' : (anSig.macdHistAboveZero ? '❌ MACD hist > 0' :
-                                        '➡️ MACD flat')) :
-                                    (check4 ? '✅ MACD hist > 0' : (anSig.macdHistBelowZero ? '❌ MACD hist < 0' :
-                                        '➡️ MACD flat'));
+                                if (earlyFlags.length > 0) {
+                                    html +=
+                                        `<div style="display:flex;flex-wrap:wrap;gap:0.2rem;justify-content:center;padding:0.2rem 0;">`;
+                                    for (let flag of earlyFlags) {
+                                        const cls = (flag.includes('rising') || flag.includes('up') || flag.includes(
+                                            'positive') || flag.includes('accelerating up')) ? 'triggered' :
+                                            (flag.includes('falling') || flag.includes('down') || flag.includes(
+                                            'negative') || flag.includes('accelerating down')) ? 'triggered' :
+                                            'active';
+                                        html +=
+                                            `<span class="analysis-early-indicator ${cls}">${flag}</span>`;
+                                    }
+                                    html += `</div>`;
+                                }
 
+                                // Confluence checklist
+                                let check1, check2, check3, check4;
+                                let label1, label2, label3, label4;
+
+                                if (signal === 'BUY' || signal === 'BUY_WATCH') {
+                                    check1 = anSig.priceAboveSMA || anSig.priceApproachingSmaFromBelow;
+                                    check2 = anSig.rsiAbove50 || anSig.rsiCrossAbove50;
+                                    check3 = anSig.rocAboveZero || anSig.rocTurningPositive;
+                                    check4 = anSig.angle > angleWatchThreshold || anSig.angleBullishStart;
+                                    label1 = 'Price > SMA';
+                                    label2 = 'RSI > 50';
+                                    label3 = 'ROC > 0';
+                                    label4 = `Angle > ${angleWatchThreshold}°`;
+                                } else if (signal === 'SELL' || signal === 'SELL_WATCH') {
+                                    check1 = anSig.priceBelowSMA || anSig.priceApproachingSmaFromAbove;
+                                    check2 = anSig.rsiBelow50 || anSig.rsiCrossBelow50;
+                                    check3 = anSig.rocBelowZero || anSig.rocTurningNegative;
+                                    check4 = anSig.angle < -angleWatchThreshold || anSig.angleBearishStart;
+                                    label1 = 'Price < SMA';
+                                    label2 = 'RSI < 50';
+                                    label3 = 'ROC < 0';
+                                    label4 = `Angle < -${angleWatchThreshold}°`;
+                                } else {
+                                    check1 = anSig.priceAboveSMA;
+                                    check2 = anSig.rsiAbove50;
+                                    check3 = anSig.rocAboveZero;
+                                    check4 = anSig.angle > angleWatchThreshold;
+                                    label1 = 'Price > SMA';
+                                    label2 = 'RSI > 50';
+                                    label3 = 'ROC > 0';
+                                    label4 = `Angle > ${angleWatchThreshold}°`;
+                                }
+
+                                // Determine if we show watch or full status
+                                const isWatchSignal = (signal === 'BUY_WATCH' || signal === 'SELL_WATCH');
                                 html += `
                                         <div class="analysis-confluence">
-                                            <div class="conf-item ${check1 ? 'active-true' : 'active-false'}">
+                                            <div class="conf-item ${check1 ? (isWatchSignal ? 'active-watch' : 'active-true') : 'active-false'}">
                                                 <span class="conf-check">${check1 ? '✅' : '❌'}</span>
-                                                <span class="conf-label">Price vs SMA${anSig.smaPeriod}</span>
-                                                <span style="font-size:0.65rem;display:block;">${check1Label}</span>
+                                                <span class="conf-label">${label1}</span>
+                                                <span style="font-size:0.65rem;display:block;">${check1 ? 'Yes' : 'No'}</span>
                                             </div>
-                                            <div class="conf-item ${check2 ? 'active-true' : 'active-false'}">
+                                            <div class="conf-item ${check2 ? (isWatchSignal ? 'active-watch' : 'active-true') : 'active-false'}">
                                                 <span class="conf-check">${check2 ? '✅' : '❌'}</span>
-                                                <span class="conf-label">RSI vs 50</span>
-                                                <span style="font-size:0.65rem;display:block;">${check2Label}</span>
+                                                <span class="conf-label">${label2}</span>
+                                                <span style="font-size:0.65rem;display:block;">${check2 ? 'Yes' : 'No'}</span>
                                             </div>
-                                            <div class="conf-item ${check3 ? 'active-true' : (isSellSignal ? (anSig.rsiRising ? 'active-false' : 'active-neutral') : (anSig.rsiFalling ? 'active-false' : 'active-neutral'))}">
-                                                <span class="conf-check">${check3 ? '✅' : (isSellSignal ? (anSig.rsiRising ? '❌' : '➡️') : (anSig.rsiFalling ? '❌' : '➡️'))}</span>
-                                                <span class="conf-label">RSI Trend</span>
-                                                <span style="font-size:0.65rem;display:block;">${check3Label}</span>
+                                            <div class="conf-item ${check3 ? (isWatchSignal ? 'active-watch' : 'active-true') : 'active-false'}">
+                                                <span class="conf-check">${check3 ? '✅' : '❌'}</span>
+                                                <span class="conf-label">${label3}</span>
+                                                <span style="font-size:0.65rem;display:block;">${check3 ? 'Yes' : 'No'}</span>
                                             </div>
-                                            <div class="conf-item ${check4 ? 'active-true' : (isSellSignal ? (anSig.macdHistAboveZero ? 'active-false' : 'active-neutral') : (anSig.macdHistBelowZero ? 'active-false' : 'active-neutral'))}">
-                                                <span class="conf-check">${check4 ? '✅' : (isSellSignal ? (anSig.macdHistAboveZero ? '❌' : '➡️') : (anSig.macdHistBelowZero ? '❌' : '➡️'))}</span>
-                                                <span class="conf-label">MACD Hist</span>
-                                                <span style="font-size:0.65rem;display:block;">${check4Label}</span>
+                                            <div class="conf-item ${check4 ? (isWatchSignal ? 'active-watch' : 'active-true') : 'active-false'}">
+                                                <span class="conf-check">${check4 ? '✅' : '❌'}</span>
+                                                <span class="conf-label">${label4}</span>
+                                                <span style="font-size:0.65rem;display:block;">${check4 ? 'Yes' : 'No'}</span>
                                             </div>
                                         </div>
                                     `;
 
-                                let durationText = '';
-                                if (anSig.duration !== undefined) {
-                                    const dur = anSig.duration;
-                                    durationText =
-                                        `<span class="duration-badge">⏱️ ${dur}m</span> ${signal === 'BUY' ? ' (scalp)' : signal === 'SELL' ? ' (scalp)' : ' (wait)'}`;
-                                }
-                                html += `
-                                        <div class="analysis-macd-row">
-                                            <span class="macd-item">MACD: ${macdStr}</span>
-                                            <span class="macd-item">Signal: ${anSig.macd ? anSig.signalLine.toFixed(4) : '—'}</span>
-                                            <span class="macd-item">Hist: ${histStr}</span>
-                                            ${durationText ? `<span class="macd-item">${durationText}</span>` : ''}
-                                        </div>
-                                    `;
-
-                                if (anSig.closes && anSig.closes.length >= 5) {
-                                    const closes = anSig.closes.slice(-30);
-                                    const smaVals = [];
-                                    for (let i = 0; i < closes.length; i++) {
-                                        const sub = closes.slice(0, i + 1);
-                                        const val = calcSMA(sub, Math.min(anSig.smaPeriod, sub.length));
-                                        smaVals.push(val !== null ? val : closes[i]);
-                                    }
-                                    const minPrice = Math.min(...closes) * 0.998;
-                                    const maxPrice = Math.max(...closes) * 1.002;
-                                    const rangeP = maxPrice - minPrice;
-                                    const norm = (v) => ((v - minPrice) / rangeP) * 100;
-
-                                    let pathPrice = '',
-                                        pathSMA = '';
-                                    for (let i = 0; i < closes.length; i++) {
-                                        const x = (i / (closes.length - 1)) * 100;
-                                        const y = 100 - norm(closes[i]);
-                                        pathPrice += (i === 0 ? 'M' : 'L') + x + ',' + y;
-                                        const ySMA = 100 - norm(smaVals[i]);
-                                        pathSMA += (i === 0 ? 'M' : 'L') + x + ',' + ySMA;
-                                    }
-
+                                // Duration
+                                if (anSig.duration && anSig.durationReason) {
                                     html += `
-                                            <div class="analysis-mini-chart">
-                                                <svg viewBox="0 0 100 70" preserveAspectRatio="none">
-                                                    <rect width="100" height="70" fill="var(--bg-panel)" rx="4" />
-                                                    <polyline points="${pathPrice}" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                                    <polyline points="${pathSMA}" fill="none" stroke="#3b82f6" stroke-width="2" stroke-dasharray="3,3" stroke-linecap="round" stroke-linejoin="round" />
-                                                    <text x="4" y="12" font-size="6" fill="var(--text-secondary)" font-weight="600">Price</text>
-                                                    <text x="4" y="22" font-size="6" fill="#3b82f6" font-weight="600">SMA${anSig.smaPeriod}</text>
-                                                    <text x="96" y="12" font-size="6" fill="var(--text-secondary)" text-anchor="end">${closes[closes.length-1].toFixed(2)}</text>
-                                                    <text x="96" y="22" font-size="6" fill="#3b82f6" text-anchor="end">${smaVals[smaVals.length-1].toFixed(2)}</text>
-                                                </svg>
-                                            </div>
-                                        `;
+                                        <div class="analysis-duration">
+                                            <span class="duration-badge">⏱️ ${anSig.duration}m</span>
+                                            <span class="duration-reason">${anSig.durationReason}</span>
+                                            ${isWatchSignal ? '<span style="margin-left:0.5rem;font-size:0.65rem;color:var(--signal-watch);">⚡ Early signal – confirmation pending</span>' : ''}
+                                        </div>
+                                    `;
                                 }
 
                                 if (anSig.reasons && anSig.reasons.length > 0) {
@@ -3520,7 +3761,7 @@
                         return;
                     }
 
-                    // ---- OTHER MODES ----
+                    // ---- OTHER MODES (unchanged) ----
                     const zoneBarContainer = document.getElementById(`zoneBarContainer_${sym}`);
                     if (zoneBarContainer) { zoneBarContainer.style.display = 'none';
                         zoneBarContainer.innerHTML = ''; }
@@ -3858,11 +4099,9 @@
                     focusedSymbol = sym;
                     document.getElementById('focusBar').style.display = sym ? 'flex' : 'none';
                     applyFocusVisibility();
-                    // Scroll to the market card
                     const container = document.getElementById('marketCardsContainer');
                     const card = document.getElementById(`market_${sym}`);
                     if (card && container) {
-                        // Calculate position to scroll card to top of container
                         const cardTop = card.offsetTop - container.offsetTop;
                         container.scrollTo({ top: cardTop - 10, behavior: 'smooth' });
                     }
@@ -3877,9 +4116,7 @@
 
                 function showAllMarkets() { setFocus(null); }
 
-                // ============================================================
-                //  UPDATE ALL MARKETS LIST – SIGNALS SORTED TO TOP
-                // ============================================================
+                // ---- UPDATE ALL MARKETS LIST ----
                 function updateAllMarketsList() {
                     let s = getSettings();
                     let items = [];
@@ -3893,15 +4130,25 @@
 
                         if (currentMarket === 'analysis') {
                             if (signal && signal.signal === 'BUY') {
-                                suffix = ` → 🟢 BUY (${signal.duration}m)`;
+                                suffix = ` → 🟢 BUY`;
                                 hasActiveSignal = true;
                                 signalType = 'buy';
                                 signalLabel = 'BUY';
                             } else if (signal && signal.signal === 'SELL') {
-                                suffix = ` → 🔴 SELL (${signal.duration}m)`;
+                                suffix = ` → 🔴 SELL`;
                                 hasActiveSignal = true;
                                 signalType = 'sell';
                                 signalLabel = 'SELL';
+                            } else if (signal && signal.signal === 'BUY_WATCH') {
+                                suffix = ` → 🟡 BUY WATCH`;
+                                hasActiveSignal = true;
+                                signalType = 'buy-watch';
+                                signalLabel = 'B-W';
+                            } else if (signal && signal.signal === 'SELL_WATCH') {
+                                suffix = ` → 🟠 SELL WATCH`;
+                                hasActiveSignal = true;
+                                signalType = 'sell-watch';
+                                signalLabel = 'S-W';
                             } else if (signal && signal.signal === 'NEUTRAL') {
                                 suffix = ` → ⚪ NEUTRAL`;
                                 signalType = 'neutral';
@@ -3942,7 +4189,8 @@
 
                         let badgeHTML = '';
                         if (hasActiveSignal) {
-                            const badgeClass = signalType === 'buy' ? '' : (signalType === 'sell' ? 'sell' : 'neutral');
+                            const badgeClass = signalType === 'buy' ? '' : (signalType === 'sell' ? 'sell' : (signalType ===
+                                'buy-watch' ? 'buy-watch' : (signalType === 'sell-watch' ? 'sell-watch' : 'neutral')));
                             badgeHTML = `<span class="signal-badge ${badgeClass}">${signalLabel}</span>`;
                         }
 
@@ -3963,8 +4211,8 @@
                         if (a.hasSignal && !b.hasSignal) return -1;
                         if (!a.hasSignal && b.hasSignal) return 1;
                         if (a.hasSignal && b.hasSignal) {
-                            const order = { buy: 0, sell: 1, neutral: 2 };
-                            return (order[a.signalType] || 3) - (order[b.signalType] || 3);
+                            const order = { buy: 0, 'buy-watch': 1, sell: 2, 'sell-watch': 3, neutral: 4 };
+                            return (order[a.signalType] || 5) - (order[b.signalType] || 5);
                         }
                         return 0;
                     });
@@ -4160,7 +4408,9 @@
                 window.onclick = e => { if (e.target === document.getElementById('settingsModal')) document.getElementById(
                         'settingsModal').style.display = 'none'; };
 
-                ['smaPeriod', 'rsiPeriod', 'macdFast', 'macdSlow', 'macdSignal'].forEach(id => {
+                ['smaPeriod', 'rsiPeriod', 'rocPeriod', 'slopePeriod', 'angleThreshold', 'angleWatchThreshold',
+                    'priceSmaProximity'
+                ].forEach(id => {
                     document.getElementById(id)?.addEventListener('change', () => {
                         for (let s in marketData)
                             if (marketData[s]?.rollingArray?.length) renderMarket(s);
@@ -4172,7 +4422,7 @@
                 setTimeout(connectWebSocket, 500);
                 setMarket('analysis');
 
-                console.log('✅ TAJIRI TRADERS – Signal summary groups focus and scroll to card.');
+                console.log('✅ TAJIRI TRADERS – Early SMA angle: signals fire when momentum starts, not when overextended.');
             } catch (err) {
                 console.error('Error initializing app:', err);
                 document.body.innerHTML =
