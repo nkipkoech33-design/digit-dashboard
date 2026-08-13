@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover" />
-    <title>TAJIRI TRADERS – Early SMA Angle</title>
+    <title>TAJIRI TRADERS – SMA10 + RSI + Angle</title>
     <style>
-        /* ===== BASE STYLES ===== */
+        /* ===== BASE STYLES (unchanged – original UI) ===== */
         * {
             margin: 0;
             padding: 0;
@@ -41,8 +41,6 @@
             --signal-sell: #ef4444;
             --signal-neutral: #6b7280;
             --signal-watch: #facc15;
-            --signal-buy-watch: #4ade80;
-            --signal-sell-watch: #f87171;
         }
         body.light {
             --bg-body: #f8fafc;
@@ -71,8 +69,6 @@
             --signal-sell: #dc2626;
             --signal-neutral: #64748b;
             --signal-watch: #ca8a04;
-            --signal-buy-watch: #22c55e;
-            --signal-sell-watch: #ef4444;
         }
         body {
             font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
@@ -328,16 +324,6 @@
             background: var(--signal-watch);
             color: #000;
             border-color: var(--signal-watch);
-        }
-        .signal-summary-bar .summary-mode-cell.buy-watch {
-            background: var(--signal-buy-watch);
-            color: #000;
-            border-color: var(--signal-buy-watch);
-        }
-        .signal-summary-bar .summary-mode-cell.sell-watch {
-            background: var(--signal-sell-watch);
-            color: #fff;
-            border-color: var(--signal-sell-watch);
         }
 
         .focus-bar {
@@ -1136,14 +1122,6 @@
             background: var(--signal-watch);
             color: #000;
         }
-        .market-list-item .signal-badge.buy-watch {
-            background: var(--signal-buy-watch);
-            color: #000;
-        }
-        .market-list-item .signal-badge.sell-watch {
-            background: var(--signal-sell-watch);
-            color: #fff;
-        }
         .modal {
             display: none;
             position: fixed;
@@ -1282,15 +1260,10 @@
             border-color: var(--signal-neutral);
             color: var(--text-secondary);
         }
-        .analysis-signal-banner.buy-watch {
-            background: rgba(74, 222, 128, 0.15);
-            border-color: var(--signal-buy-watch);
-            color: var(--signal-buy-watch);
-        }
-        .analysis-signal-banner.sell-watch {
-            background: rgba(248, 113, 113, 0.15);
-            border-color: var(--signal-sell-watch);
-            color: var(--signal-sell-watch);
+        .analysis-signal-banner.watch {
+            background: rgba(250, 204, 21, 0.15);
+            border-color: var(--signal-watch);
+            color: var(--signal-watch);
         }
         .analysis-signal-banner .signal-icon {
             font-size: 1.6rem;
@@ -1413,42 +1386,6 @@
             font-size: 0.75rem;
             color: var(--text-secondary);
             font-weight: 500;
-        }
-
-        .analysis-mini-chart {
-            background: var(--bg-panel);
-            border-radius: 0.4rem;
-            padding: 0.3rem;
-            border: 1px solid var(--border-color);
-            width: 100%;
-            height: 70px;
-            position: relative;
-            overflow: hidden;
-        }
-        .analysis-mini-chart svg {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-
-        .analysis-roccard {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.3rem;
-            background: var(--bg-panel);
-            border-radius: 0.4rem;
-            padding: 0.3rem 0.4rem;
-            border: 1px solid var(--border-color);
-            justify-content: center;
-            align-items: center;
-            font-size: 0.7rem;
-            font-weight: 600;
-            width: 100%;
-        }
-        .analysis-roccard .roc-item {
-            padding: 0.1rem 0.4rem;
-            background: var(--bg-body);
-            border-radius: 0.3rem;
         }
 
         .analysis-extreme {
@@ -1623,7 +1560,7 @@
             }
         }
 
-        /* ===== CONFLUENCE PROGRESS ===== */
+        /* ===== CONFLUENCE PROGRESS (reused) ===== */
         .signal-flash .signal-tag {
             display: inline-block;
             padding: 0.1rem 0.5rem;
@@ -1642,14 +1579,6 @@
         .signal-flash .signal-tag.watch {
             background: #facc15;
             color: #000;
-        }
-        .signal-flash .signal-tag.buy-watch {
-            background: #4ade80;
-            color: #000;
-        }
-        .signal-flash .signal-tag.sell-watch {
-            background: #f87171;
-            color: #fff;
         }
         .signal-flash .signal-tag.bullish {
             background: #10b981;
@@ -1814,7 +1743,7 @@
         </div>
     </div>
 
-    <!-- SETTINGS MODAL -->
+    <!-- SETTINGS MODAL (simplified) -->
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" id="closeModal">&times;</span>
@@ -1822,32 +1751,29 @@
             <div class="settings-panel">
                 <div class="setting-row"><label>📍 Pointer Style</label><select id="pointerStyle"><option value="triangle">Triangle</option><option value="arrow">Arrow</option><option value="dot">Dot</option></select></div>
                 <div class="setting-row"><label>🔍 Pointer Scale</label><input type="range" id="pointerScale" min="1" max="20" step="0.5" value="3" /><span id="scaleValue">3.0</span></div>
-                <div class="setting-row"><label>📊 Analysis Window</label><input type="number" id="analysisWindow" value="1000" min="100" max="2000" step="100" /></div>
+                <div class="setting-row"><label>📊 SMA Period</label><input type="number" id="smaPeriod" value="10" min="3" max="20" step="1" /></div>
+                <div class="setting-row"><label>📊 RSI Period</label><input type="number" id="rsiPeriod" value="14" min="5" max="30" step="1" /></div>
+                <div class="setting-row"><label>📐 Angle Slope Period</label><input type="number" id="slopePeriod" value="5" min="3" max="15" step="1" /></div>
+                <div class="setting-row"><label>📐 Angle Threshold (BUY/SELL °)</label><input type="number" id="angleThreshold" value="50" min="20" max="80" step="1" /></div>
+                <div class="setting-row"><label>📐 Angle Watch Threshold (°)</label><input type="number" id="angleWatchThreshold" value="30" min="10" max="60" step="1" /></div>
+                <div class="setting-row"><label>🎨 Signal Highlight</label><input type="color" id="highlightColor" value="#7e22ce" /><span id="highlightColorPreview">Purple</span></div>
+                <div class="setting-row"><label>🔔 Alarm Cooldown (s)</label><input type="number" id="alarmCooldown" value="10" min="2" max="60" step="1" /></div>
+                <div class="setting-row"><label>📊 Zone Memory Window</label><input type="number" id="zoneWindow" value="50" min="20" max="200" step="5" /></div>
+                <div class="setting-row"><label>📊 Analysis Window (for digit stats)</label><input type="number" id="analysisWindow" value="1000" min="100" max="2000" step="100" /></div>
                 <div class="setting-row"><label>🔁 Predict Threshold %</label><input type="number" id="predThreshold" value="19" min="10" max="90" step="1" /></div>
                 <div class="setting-row"><label>🎯 Opp % Threshold</label><input type="number" id="oppositeThreshold" value="10" min="1" max="20" step="1" /></div>
                 <div class="setting-row"><label>⚡ 3‑Streak Threshold %</label><input type="number" id="streakThreshold" value="70" min="50" max="95" step="5" /></div>
                 <div class="setting-row"><label>🔀 Hybrid Threshold %</label><input type="number" id="hybridThreshold" value="65" min="50" max="90" step="1" /></div>
-                <div class="setting-row"><label>🎨 Signal Highlight</label><input type="color" id="highlightColor" value="#7e22ce" /><span id="highlightColorPreview">Purple</span></div>
-                <div class="setting-row"><label>🔔 Alarm Cooldown (s)</label><input type="number" id="alarmCooldown" value="10" min="2" max="60" step="1" /></div>
-                <div class="setting-row"><label>📊 Zone Memory Window</label><input type="number" id="zoneWindow" value="50" min="20" max="200" step="5" /></div>
-                <div class="setting-row"><label>📊 Analysis Range Window</label><input type="number" id="analysisRangeWindow" value="50" min="20" max="200" step="5" /></div>
-                <div class="setting-row"><label>📊 Historical Density Window</label><input type="number" id="densityWindow" value="300" min="100" max="500" step="50" /></div>
-                <div class="setting-row"><label>🔔 Density Reminder Threshold %</label><input type="number" id="densityThreshold" value="45" min="30" max="70" step="5" /></div>
-                <div class="setting-row"><label>📊 SMA Period</label><input type="number" id="smaPeriod" value="7" min="3" max="20" step="1" /></div>
-                <div class="setting-row"><label>📊 RSI Period</label><input type="number" id="rsiPeriod" value="14" min="5" max="30" step="1" /></div>
-                <div class="setting-row"><label>📊 ROC Period</label><input type="number" id="rocPeriod" value="10" min="5" max="30" step="1" /></div>
-                <div class="setting-row"><label>📐 SMA Slope Period</label><input type="number" id="slopePeriod" value="5" min="3" max="15" step="1" /></div>
-                <div class="setting-row"><label>📊 Angle Threshold (BUY/SELL °)</label><input type="number" id="angleThreshold" value="30" min="15" max="60" step="1" /></div>
-                <div class="setting-row"><label>📊 Angle Watch Threshold (°)</label><input type="number" id="angleWatchThreshold" value="15" min="5" max="35" step="1" /></div>
-                <div class="setting-row"><label>📊 Price‑SMA Proximity %</label><input type="number" id="priceSmaProximity" value="0.5" min="0.1" max="2.0" step="0.1" /></div>
             </div>
-            <div style="font-size:0.65rem; margin-top:0.5rem;">✅ Early detection: WATCH signals fire when momentum starts (angle >15° or approaching SMA). BUY/SELL confirm with full confluence (angle >30°).</div>
+            <div style="font-size:0.65rem; margin-top:0.5rem;">✅ Analysis: BUY when price > SMA10, RSI>50, angle > 50°. SELL when price < SMA10, RSI<50, angle < -50°.</div>
         </div>
     </div>
 
     <script>
         // ============================================================
-        //  EARLY SMA ANGLE – detects trend initiation before extremes
+        //  FIX: Digit grid now updates in ALL modes on every tick.
+        //  Uses the full analysisWindow for percentages, but pointer
+        //  moves on each tick.
         // ============================================================
         (function() {
             try {
@@ -2019,16 +1945,11 @@
                         highlightColor: document.getElementById('highlightColor')?.value || '#7e22ce',
                         alarmCooldown: parseInt(document.getElementById('alarmCooldown')?.value) || 10,
                         zoneWindow: parseInt(document.getElementById('zoneWindow')?.value) || 50,
-                        analysisRangeWindow: parseInt(document.getElementById('analysisRangeWindow')?.value) || 50,
-                        densityWindow: parseInt(document.getElementById('densityWindow')?.value) || 300,
-                        densityThreshold: parseFloat(document.getElementById('densityThreshold')?.value) || 45,
-                        smaPeriod: parseInt(document.getElementById('smaPeriod')?.value) || 7,
+                        smaPeriod: parseInt(document.getElementById('smaPeriod')?.value) || 10,
                         rsiPeriod: parseInt(document.getElementById('rsiPeriod')?.value) || 14,
-                        rocPeriod: parseInt(document.getElementById('rocPeriod')?.value) || 10,
                         slopePeriod: parseInt(document.getElementById('slopePeriod')?.value) || 5,
-                        angleThreshold: parseFloat(document.getElementById('angleThreshold')?.value) || 30,
-                        angleWatchThreshold: parseFloat(document.getElementById('angleWatchThreshold')?.value) || 15,
-                        priceSmaProximity: parseFloat(document.getElementById('priceSmaProximity')?.value) || 0.5
+                        angleThreshold: parseFloat(document.getElementById('angleThreshold')?.value) || 50,
+                        angleWatchThreshold: parseFloat(document.getElementById('angleWatchThreshold')?.value) || 30,
                     };
                 }
 
@@ -2079,94 +2000,52 @@
                     return { pct, currentZone, streak, stats3, stats6, total };
                 }
 
-                function computeHistoricalDensity(digits, windowSize) {
-                    if (!digits || digits.length < 10) return null;
-                    const slice = digits.slice(-windowSize);
-                    let under = 0,
-                        middle = 0,
-                        over = 0;
-                    for (let d of slice) {
-                        if (d <= 3) under++;
-                        else if (d <= 5) middle++;
-                        else over++;
+                // ---- DIGIT PERCENTAGES (uses full analysisWindow) ----
+                function getDigitPercentages(sym, windowSize) {
+                    let data = marketData[sym];
+                    if (!data || data.rollingArray.length < Math.min(windowSize, 5)) return null;
+                    const actualWindow = Math.min(windowSize, data.rollingArray.length);
+                    const arr = data.rollingArray.slice(-actualWindow);
+                    let cnt = Array(10).fill(0);
+                    for (let d of arr) cnt[d]++;
+                    let total = arr.length;
+                    let pct = cnt.map(c => (c / total) * 100);
+                    let countMap = {};
+                    for (let d = 0; d < 10; d++) {
+                        let c = cnt[d];
+                        if (!countMap[c]) countMap[c] = [];
+                        countMap[c].push(d);
                     }
-                    const total = slice.length || 1;
-                    return { under: (under / total) * 100, middle: (middle / total) * 100, over: (over / total) * 100 };
-                }
-
-                function getMemoryReminder(currentDigit, density, threshold) {
-                    if (!density) return null;
-                    const zoneMap = d => d <= 3 ? 'under' : d <= 5 ? 'middle' : 'over';
-                    const currentZone = zoneMap(currentDigit);
-                    const val = density[currentZone];
-                    if (val > threshold) {
-                        const label = currentZone.charAt(0).toUpperCase() + currentZone.slice(1);
-                        return `🔁 Memory Zone: ${label} (${val.toFixed(0)}% historical)`;
+                    let distinctCounts = Object.keys(countMap).map(Number).sort((a, b) => b - a);
+                    let assigned = new Set();
+                    let most = new Set(),
+                        second = new Set(),
+                        least = new Set(),
+                        secondLeast = new Set();
+                    if (distinctCounts.length > 0) {
+                        for (let d of countMap[distinctCounts[0]]) { most.add(d);
+                            assigned.add(d); }
                     }
-                    return null;
-                }
-
-                function getPriceZones(prices, windowSize) {
-                    if (!prices || prices.length < windowSize) return null;
-                    const slice = prices.slice(-windowSize);
-                    const high = Math.max(...slice);
-                    const low = Math.min(...slice);
-                    const range = high - low;
-                    if (range === 0) return null;
-                    const third = range / 3;
-                    return {
-                        high,
-                        low,
-                        under: low + third,
-                        middle: low + 2 * third,
-                        over: high,
-                        getZone: (price) => {
-                            if (price <= low + third) return 0;
-                            if (price <= low + 2 * third) return 1;
-                            return 2;
-                        },
-                        getZoneLabel: (idx) => ['Under', 'Middle', 'Over'][idx]
-                    };
-                }
-
-                function computeDigitDominance(prices, digits, zones, windowSize = 200) {
-                    if (!prices || !digits || prices.length < 5 || !zones) return null;
-                    const len = Math.min(prices.length, windowSize);
-                    const start = prices.length - len;
-                    const zoneCounts = [Array(10).fill(0), Array(10).fill(0), Array(10).fill(0)];
-                    let counts = [0, 0, 0];
-                    for (let i = start; i < prices.length; i++) {
-                        const price = prices[i];
-                        const digit = digits[i];
-                        if (digit === undefined || digit === null) continue;
-                        const zoneIdx = zones.getZone(price);
-                        if (zoneIdx >= 0 && zoneIdx < 3) {
-                            zoneCounts[zoneIdx][digit]++;
-                            counts[zoneIdx]++;
+                    if (distinctCounts.length > 1) {
+                        for (let i = 1; i < distinctCounts.length; i++) {
+                            let digits = countMap[distinctCounts[i]].filter(d => !assigned.has(d));
+                            if (digits.length > 0) { for (let d of digits) { second.add(d);
+                                    assigned.add(d); } break; }
                         }
                     }
-                    const result = {};
-                    const zoneLabels = ['under', 'middle', 'over'];
-                    for (let z = 0; z < 3; z++) {
-                        const total = counts[z];
-                        if (total === 0) {
-                            result[zoneLabels[z]] = { digit: '?', pct: 0 };
-                            continue;
-                        }
-                        let maxCount = 0,
-                            bestDigit = 0;
-                        for (let d = 0; d < 10; d++) {
-                            if (zoneCounts[z][d] > maxCount) {
-                                maxCount = zoneCounts[z][d];
-                                bestDigit = d;
-                            }
-                        }
-                        result[zoneLabels[z]] = { digit: bestDigit, pct: (maxCount / total) * 100 };
-                    }
-                    return result;
+                    let unassignedCounts = distinctCounts.filter(c => countMap[c].some(d => !assigned.has(d))).sort((a, b) => a -
+                    b);
+                    if (unassignedCounts.length > 0) { for (let d of countMap[unassignedCounts[0]]) { if (!assigned.has(d)) { least
+                                .add(d);
+                                assigned.add(d); } } }
+                    unassignedCounts = distinctCounts.filter(c => countMap[c].some(d => !assigned.has(d))).sort((a, b) => a - b);
+                    if (unassignedCounts.length > 0) { for (let d of countMap[unassignedCounts[0]]) { if (!assigned.has(d)) { secondLeast
+                                .add(d);
+                                assigned.add(d); } } }
+                    return { pct, most, second, least, secondLeast };
                 }
 
-                // ---- STABILITY & CONDITION ----
+                // ---- STABILITY, CONDITION, S/R ----
                 function getDigitStability(sym) {
                     let data = marketData[sym];
                     if (!data || !data.rollingArray || data.rollingArray.length < 10) return null;
@@ -2201,7 +2080,6 @@
                     return { label: 'Ranging', cssClass: 'ranging' };
                 }
 
-                // ---- SUPPORT / RESISTANCE ----
                 function detectSupportResistance(sym) {
                     const data = marketData[sym];
                     if (!data || !data.priceHistory || data.priceHistory.length < 20) return null;
@@ -2250,7 +2128,6 @@
                     return { resistance, support };
                 }
 
-                // ---- ALARM ----
                 function playAlarm() {
                     try {
                         const ctx = new(window.AudioContext || window.webkitAudioContext)();
@@ -2286,7 +2163,7 @@
                     }
                 }
 
-                // ---- TRANSITION / PERCENTAGE ----
+                // ---- TRANSITION STATS (for Predict mode) ----
                 function getTransitionStats(sym, windowSize) {
                     let data = marketData[sym];
                     if (!data || data.rollingArray.length < windowSize + 1) return null;
@@ -2306,49 +2183,6 @@
                     }
                     list.sort((a, b) => b.count - a.count);
                     return list;
-                }
-
-                function getDigitPercentages(sym, windowSize) {
-                    let data = marketData[sym];
-                    if (!data || data.rollingArray.length < windowSize) return null;
-                    let arr = data.rollingArray.slice(-windowSize);
-                    let cnt = Array(10).fill(0);
-                    for (let d of arr) cnt[d]++;
-                    let total = arr.length;
-                    let pct = cnt.map(c => (c / total) * 100);
-                    let countMap = {};
-                    for (let d = 0; d < 10; d++) {
-                        let c = cnt[d];
-                        if (!countMap[c]) countMap[c] = [];
-                        countMap[c].push(d);
-                    }
-                    let distinctCounts = Object.keys(countMap).map(Number).sort((a, b) => b - a);
-                    let assigned = new Set();
-                    let most = new Set(),
-                        second = new Set(),
-                        least = new Set(),
-                        secondLeast = new Set();
-                    if (distinctCounts.length > 0) {
-                        for (let d of countMap[distinctCounts[0]]) { most.add(d);
-                            assigned.add(d); }
-                    }
-                    if (distinctCounts.length > 1) {
-                        for (let i = 1; i < distinctCounts.length; i++) {
-                            let digits = countMap[distinctCounts[i]].filter(d => !assigned.has(d));
-                            if (digits.length > 0) { for (let d of digits) { second.add(d);
-                                    assigned.add(d); } break; }
-                        }
-                    }
-                    let unassignedCounts = distinctCounts.filter(c => countMap[c].some(d => !assigned.has(d))).sort((a, b) => a -
-                    b);
-                    if (unassignedCounts.length > 0) { for (let d of countMap[unassignedCounts[0]]) { if (!assigned.has(d)) { least
-                                .add(d);
-                                assigned.add(d); } } }
-                    unassignedCounts = distinctCounts.filter(c => countMap[c].some(d => !assigned.has(d))).sort((a, b) => a - b);
-                    if (unassignedCounts.length > 0) { for (let d of countMap[unassignedCounts[0]]) { if (!assigned.has(d)) { secondLeast
-                                .add(d);
-                                assigned.add(d); } } }
-                    return { pct, most, second, least, secondLeast };
                 }
 
                 function getTopPrediction(sym, currentDigit) {
@@ -2416,7 +2250,76 @@
                     return null;
                 }
 
-                // ---- GMMA + CONFLUENCE ----
+                function getHybridStatus(sym) {
+                    let data = marketData[sym];
+                    if (!data || data.rollingArray.length < 50) return null;
+                    let freqData = getDigitPercentages(sym, getSettings().analysisWindow);
+                    if (!freqData) return null;
+                    let mostDigits = Array.from(freqData.most);
+                    let secondDigits = Array.from(freqData.second);
+                    if (mostDigits.length === 0 || secondDigits.length === 0) return null;
+
+                    const sets = [
+                        { digits: [0, 2, 4], ouSide: 'UNDER', eoSide: 'EVEN', pair: 'UE' },
+                        { digits: [4, 6, 8], ouSide: 'OVER', eoSide: 'EVEN', pair: 'OE' },
+                        { digits: [5, 7, 9], ouSide: 'OVER', eoSide: 'ODD', pair: 'OO' },
+                        { digits: [1, 3, 5], ouSide: 'UNDER', eoSide: 'ODD', pair: 'UO' }
+                    ];
+                    let target = null;
+                    for (let s of sets) {
+                        if (mostDigits.every(d => s.digits.includes(d)) && secondDigits.every(d => s.digits.includes(d))) {
+                            target = s;
+                            break;
+                        }
+                    }
+                    if (!target) return null;
+
+                    let last50 = data.rollingArray.slice(-50);
+                    let overCount = last50.filter(d => d >= 5).length,
+                        underCount = 50 - overCount;
+                    let evenCount = last50.filter(d => d % 2 === 0).length,
+                        oddCount = 50 - evenCount;
+                    let overPct = (overCount / 50 * 100),
+                        evenPct = (evenCount / 50 * 100);
+                    let underPct = 100 - overPct,
+                        oddPct = 100 - evenPct;
+                    let threshold = getSettings().hybridThreshold;
+
+                    let ouValue = target.ouSide === 'OVER' ? overPct : underPct;
+                    let eoValue = target.eoSide === 'EVEN' ? evenPct : oddPct;
+                    return {
+                        pair: target.pair,
+                        ouSide: target.ouSide,
+                        eoSide: target.eoSide,
+                        ouValue,
+                        eoValue,
+                        ouConfirmed: ouValue >= threshold,
+                        eoConfirmed: eoValue >= threshold,
+                        bothConfirmed: ouValue >= threshold && eoValue >= threshold,
+                        threshold,
+                        overCount,
+                        underCount,
+                        evenCount,
+                        oddCount,
+                        overPct,
+                        underPct,
+                        evenPct,
+                        oddPct
+                    };
+                }
+
+                function getPredictSignal(sym) {
+                    let data = marketData[sym];
+                    if (!data || data.lastDigit === null) return null;
+                    let pred = getTopPrediction(sym, data.lastDigit);
+                    if (!pred) return null;
+                    let s = getSettings();
+                    if (pred.percentage >= s.predThreshold) return { type: 'predict', digit: pred.nextDigit,
+                        percentage: pred.percentage };
+                    return null;
+                }
+
+                // ---- GMMA & Confluence (for Vanilla mode) ----
                 function computeGMMA(closes) {
                     if (!closes || closes.length < 60) return null;
                     const shortPeriods = [3, 5, 8, 10, 12, 15];
@@ -2512,7 +2415,7 @@
                     }
 
                     const distToResistance = nearestResistance ? ((nearestResistance - currentPrice) / currentPrice * 100) :
-                    null;
+                        null;
                     const distToSupport = nearestSupport ? ((currentPrice - nearestSupport) / currentPrice * 100) : null;
                     const distToTrendLine = ((trendLineValue - currentPrice) / currentPrice * 100);
 
@@ -2702,211 +2605,122 @@
                     return 100 - 100 / (1 + avgGain / avgLoss);
                 }
 
-                function getHybridStatus(sym) {
-                    let data = marketData[sym];
-                    if (!data || data.rollingArray.length < 50) return null;
-                    let freqData = getDigitPercentages(sym, getSettings().analysisWindow);
-                    if (!freqData) return null;
-                    let mostDigits = Array.from(freqData.most);
-                    let secondDigits = Array.from(freqData.second);
-                    if (mostDigits.length === 0 || secondDigits.length === 0) return null;
+                // ============================================================
+                //  ANALYSIS: SMA10 + RSI + ANGLE
+                // ============================================================
+                function computeAnalysis(sym) {
+                    const data = marketData[sym];
+                    if (!data || !data.priceHistory || data.priceHistory.length < 30) return null;
 
-                    const sets = [
-                        { digits: [0, 2, 4], ouSide: 'UNDER', eoSide: 'EVEN', pair: 'UE' },
-                        { digits: [4, 6, 8], ouSide: 'OVER', eoSide: 'EVEN', pair: 'OE' },
-                        { digits: [5, 7, 9], ouSide: 'OVER', eoSide: 'ODD', pair: 'OO' },
-                        { digits: [1, 3, 5], ouSide: 'UNDER', eoSide: 'ODD', pair: 'UO' }
-                    ];
-                    let target = null;
-                    for (let s of sets) {
-                        if (mostDigits.every(d => s.digits.includes(d)) && secondDigits.every(d => s.digits.includes(d))) {
-                            target = s;
-                            break;
-                        }
+                    const currentPrice = data.lastPrice;
+                    if (currentPrice === null || currentPrice === undefined) return null;
+
+                    const candle = getCandle(sym);
+                    const closedCloses = candle.history.map(c => c.close);
+                    if (closedCloses.length < 10) return null;
+
+                    const s = getSettings();
+                    const smaPeriod = s.smaPeriod || 10;
+                    const rsiPeriod = s.rsiPeriod || 14;
+                    const slopePeriod = s.slopePeriod || 5;
+                    const angleThreshold = s.angleThreshold || 50;
+                    const angleWatchThreshold = s.angleWatchThreshold || 30;
+
+                    const sma = calcSMA(closedCloses, Math.min(smaPeriod, closedCloses.length));
+                    if (sma === null) return null;
+                    const rsi = calcRSI(closedCloses, Math.min(rsiPeriod, closedCloses.length));
+                    const angleData = computeSMAAngle(closedCloses, smaPeriod, slopePeriod);
+                    const angle = angleData ? angleData.angle : 0;
+                    const angleOk = angleData !== null;
+
+                    const priceAboveSMA = currentPrice > sma;
+                    const priceBelowSMA = currentPrice < sma;
+                    const rsiAbove50 = rsi !== null && rsi > 50;
+                    const rsiBelow50 = rsi !== null && rsi < 50;
+
+                    let signal = 'NEUTRAL';
+                    let reasons = [];
+
+                    if (priceAboveSMA && rsiAbove50 && angleOk && angle > angleThreshold) {
+                        signal = 'BUY';
+                        reasons.push(`✅ BUY: Price > SMA10, RSI > 50 (${rsi.toFixed(1)}), angle > ${angleThreshold}° (${angle.toFixed(1)}°)`);
+                    } else if (priceBelowSMA && rsiBelow50 && angleOk && angle < -angleThreshold) {
+                        signal = 'SELL';
+                        reasons.push(`✅ SELL: Price < SMA10, RSI < 50 (${rsi.toFixed(1)}), angle < -${angleThreshold}° (${angle.toFixed(1)}°)`);
+                    } else if (priceAboveSMA && rsiAbove50 && angleOk && angle > angleWatchThreshold) {
+                        signal = 'WATCH';
+                        reasons.push(`🟡 WATCH: Price > SMA10, RSI > 50, angle > ${angleWatchThreshold}° (${angle.toFixed(1)}°)`);
+                    } else if (priceBelowSMA && rsiBelow50 && angleOk && angle < -angleWatchThreshold) {
+                        signal = 'WATCH';
+                        reasons.push(`🟡 WATCH: Price < SMA10, RSI < 50, angle < -${angleWatchThreshold}° (${angle.toFixed(1)}°)`);
+                    } else {
+                        let missing = [];
+                        if (!priceAboveSMA && !priceBelowSMA) missing.push('price near SMA');
+                        else if (!priceAboveSMA) missing.push('price below SMA');
+                        else if (!priceBelowSMA) missing.push('price above SMA');
+                        if (!rsiAbove50 && !rsiBelow50) missing.push('RSI near 50');
+                        if (!angleOk) missing.push('angle insufficient data');
+                        else if (Math.abs(angle) < angleWatchThreshold) missing.push(`angle too flat (${angle.toFixed(1)}°)`);
+                        reasons.push(`⛔ No signal: ${missing.join(', ')}`);
                     }
-                    if (!target) return null;
 
-                    let last50 = data.rollingArray.slice(-50);
-                    let overCount = last50.filter(d => d >= 5).length,
-                        underCount = 50 - overCount;
-                    let evenCount = last50.filter(d => d % 2 === 0).length,
-                        oddCount = 50 - evenCount;
-                    let overPct = (overCount / 50 * 100),
-                        evenPct = (evenCount / 50 * 100);
-                    let underPct = 100 - overPct,
-                        oddPct = 100 - evenPct;
-                    let threshold = getSettings().hybridThreshold;
+                    // Duration
+                    let duration = 5,
+                        durationReason = 'No signal';
+                    if (signal === 'BUY' || signal === 'SELL') {
+                        let strength = 3;
+                        if (Math.abs(angle) > 60) strength += 1;
+                        else if (Math.abs(angle) > 50) strength += 0.5;
+                        if (rsi && (rsi > 60 || rsi < 40)) strength += 0.5;
+                        const distPct = ((currentPrice - sma) / sma) * 100;
+                        if (Math.abs(distPct) > 0.5) strength += 0.5;
+                        if (Math.abs(distPct) > 1.0) strength += 0.5;
+                        let rawDuration = 5;
+                        if (strength >= 4.5) rawDuration = 1;
+                        else if (strength >= 3.5) rawDuration = 2;
+                        else if (strength >= 2.5) rawDuration = 3;
+                        else if (strength >= 1.5) rawDuration = 4;
+                        else rawDuration = 5;
+                        duration = Math.min(5, Math.max(1, Math.round(rawDuration)));
+                        if (duration === 1) durationReason = '🏆 Strong confluence – quick scalp';
+                        else if (duration === 2) durationReason = '✅ Good confluence – short trade';
+                        else if (duration === 3) durationReason = '✅ Moderate confluence – medium hold';
+                        else if (duration === 4) durationReason = '✅ Weak confluence – longer horizon';
+                        else durationReason = '✅ Weak momentum – extended view';
+                    } else if (signal === 'WATCH') {
+                        duration = 3;
+                        durationReason = '🔍 Approaching threshold – watch for confirmation';
+                    } else {
+                        durationReason = '⏳ Waiting for confluence';
+                    }
 
-                    let ouValue = target.ouSide === 'OVER' ? overPct : underPct;
-                    let eoValue = target.eoSide === 'EVEN' ? evenPct : oddPct;
+                    let extreme = 'neutral';
+                    if (rsi !== null) {
+                        if (rsi > 70) extreme = 'overbought';
+                        else if (rsi < 30) extreme = 'oversold';
+                    }
+
                     return {
-                        pair: target.pair,
-                        ouSide: target.ouSide,
-                        eoSide: target.eoSide,
-                        ouValue,
-                        eoValue,
-                        ouConfirmed: ouValue >= threshold,
-                        eoConfirmed: eoValue >= threshold,
-                        bothConfirmed: ouValue >= threshold && eoValue >= threshold,
-                        threshold,
-                        overCount,
-                        underCount,
-                        evenCount,
-                        oddCount,
-                        overPct,
-                        underPct,
-                        evenPct,
-                        oddPct
+                        type: 'analysis',
+                        signal: signal,
+                        reasons: reasons,
+                        duration: duration,
+                        durationReason: durationReason,
+                        price: currentPrice,
+                        sma: sma,
+                        rsi: rsi,
+                        rsiPeriod: rsiPeriod,
+                        extreme: extreme,
+                        angle: angle,
+                        angleOk: angleOk,
+                        priceAboveSMA: priceAboveSMA,
+                        priceBelowSMA: priceBelowSMA,
+                        rsiAbove50: rsiAbove50,
+                        rsiBelow50: rsiBelow50,
+                        distToSmaPct: ((currentPrice - sma) / sma) * 100,
                     };
                 }
 
-                function getPredictSignal(sym) {
-                    let data = marketData[sym];
-                    if (!data || data.lastDigit === null) return null;
-                    let pred = getTopPrediction(sym, data.lastDigit);
-                    if (!pred) return null;
-                    let s = getSettings();
-                    if (pred.percentage >= s.predThreshold) return { type: 'predict', digit: pred.nextDigit,
-                        percentage: pred.percentage };
-                    return null;
-                }
-
-                // ============================================================
-                //  SIGNAL FETCH FOR ANY MODE
-                // ============================================================
-                function getSignalForMode(sym, mode) {
-                    if (mode === 'predict') return getPredictSignal(sym);
-                    else if (mode === 'overunder') return getOverUnderSignal(sym);
-                    else if (mode === 'evenodd') return getEvenOddSignal(sym);
-                    else if (mode === 'vanilla') {
-                        let signals = getVanillaSignals(sym);
-                        let best = null;
-                        for (let s of signals) {
-                            if (s.type === 'confluence' && (s.side === 'BUY' || s.side === 'SELL')) {
-                                if (!best || best.side !== 'BUY') best = s;
-                            }
-                            if (s.type === 'vanilla' && (s.side === 'UP' || s.side === 'DOWN')) {
-                                if (!best || best.side !== 'BUY') best = s;
-                            }
-                            if (s.type === 'confluence_progress') continue;
-                        }
-                        if (best) return best;
-                        return signals.length > 0 ? signals[0] : null;
-                    } else if (mode === 'hybrid') return getHybridStatus(sym);
-                    else if (mode === 'analysis') {
-                        const data = marketData[sym];
-                        if (data && data.analysisResult) return data.analysisResult;
-                        return null;
-                    }
-                    return null;
-                }
-
-                // ============================================================
-                //  SIGNAL SUMMARY BAR
-                // ============================================================
-                function updateSignalSummary() {
-                    const container = document.getElementById('signalSummaryContent');
-                    const bar = document.getElementById('signalSummaryBar');
-                    if (!container) return;
-
-                    let signalGroups = [];
-
-                    for (let sym of ALL_SYMBOLS) {
-                        let hasData = marketData[sym] && marketData[sym].rollingArray && marketData[sym].rollingArray.length >
-                            10;
-                        if (!hasData) continue;
-
-                        let modeStatus = {};
-                        let hasSignal = false;
-
-                        for (let mode of MODE_LABELS) {
-                            let sig = getSignalForMode(sym, mode);
-                            let status = 'none';
-                            if (sig) {
-                                if (sig.type === 'predict' || sig.type === 'overunder' || sig.type === 'evenodd') {
-                                    if (sig.side === 'UNDER' || sig.side === 'EVEN' || sig.side === 'BUY') status = 'buy';
-                                    else if (sig.side === 'OVER' || sig.side === 'ODD' || sig.side === 'SELL') status =
-                                    'sell';
-                                    else if (sig.side === 'WATCH') status = 'watch';
-                                } else if (sig.type === 'vanilla' || sig.type === 'confluence') {
-                                    if (sig.side === 'UP' || sig.side === 'BUY') status = 'buy';
-                                    else if (sig.side === 'DOWN' || sig.side === 'SELL') status = 'sell';
-                                    else if (sig.side === 'WATCH') status = 'watch';
-                                } else if (sig.type === 'hybrid' || sig.bothConfirmed) {
-                                    if (sig.bothConfirmed) status = 'buy';
-                                    else if (sig.ouConfirmed || sig.eoConfirmed) status = 'watch';
-                                } else if (sig.type === 'analysis') {
-                                    if (sig.signal === 'BUY') status = 'buy';
-                                    else if (sig.signal === 'SELL') status = 'sell';
-                                    else if (sig.signal === 'BUY_WATCH') status = 'buy-watch';
-                                    else if (sig.signal === 'SELL_WATCH') status = 'sell-watch';
-                                    else if (sig.signal === 'WATCH') status = 'watch';
-                                } else {
-                                    if (sig.side === 'BUY' || sig.side === 'UP' || sig.side === 'UNDER' || sig.side ===
-                                        'EVEN') status = 'buy';
-                                    else if (sig.side === 'SELL' || sig.side === 'DOWN' || sig.side === 'OVER' || sig
-                                        .side === 'ODD') status = 'sell';
-                                    else if (sig.side === 'WATCH') status = 'watch';
-                                }
-                            }
-                            modeStatus[mode] = status;
-                            if (status !== 'none') hasSignal = true;
-                        }
-
-                        if (hasSignal) {
-                            signalGroups.push({ sym, modes: modeStatus });
-                        }
-                    }
-
-                    if (signalGroups.length === 0) {
-                        bar.classList.remove('visible');
-                        container.innerHTML = '';
-                        return;
-                    }
-
-                    bar.classList.add('visible');
-
-                    let html = '';
-                    for (let group of signalGroups) {
-                        let cells = '';
-                        for (let mode of MODE_LABELS) {
-                            let status = group.modes[mode] || 'none';
-                            if (status === 'none') continue;
-                            let cls = status === 'buy' ? 'buy' : (status === 'sell' ? 'sell' : (status === 'watch' ?
-                                'watch' : (status === 'buy-watch' ? 'buy-watch' : (status === 'sell-watch' ?
-                                'sell-watch' : ''))));
-                            let display = status === 'buy' ? 'B' : (status === 'sell' ? 'S' : (status === 'watch' ?
-                                'W' : (status === 'buy-watch' ? 'b' : (status === 'sell-watch' ? 's' : ''))));
-                            let short = MODE_SHORT[mode] || mode;
-                            cells +=
-                            `<span class="summary-mode-cell ${cls}" title="${short}: ${status.toUpperCase()}">${display}</span>`;
-                        }
-
-                        if (cells) {
-                            html += `<div class="summary-market-group" onclick="setFocus('${group.sym}')" title="${FULL_NAMES[group.sym]}">
-                                        <span class="market-name">${MARKET_NAMES[group.sym]}</span>
-                                        ${cells}
-                                    </div>`;
-                        }
-                    }
-
-                    container.innerHTML = html;
-                }
-
-                // ============================================================
-                //  RATE OF CHANGE (ROC)
-                // ============================================================
-                function computeROC(closes, period) {
-                    if (closes.length <= period) return null;
-                    const current = closes[closes.length - 1];
-                    const past = closes[closes.length - 1 - period];
-                    if (past === 0) return null;
-                    return ((current - past) / past) * 100;
-                }
-
-                // ============================================================
-                //  SMA ANGLE – using closed candles only
-                // ============================================================
                 function computeSMAAngle(closedCloses, smaPeriod, slopePeriod) {
                     if (closedCloses.length < smaPeriod + slopePeriod - 1) return null;
                     const smaValues = [];
@@ -2936,238 +2750,13 @@
                     return { slope, angle: angleDeg, smaValues };
                 }
 
-                // ============================================================
-                //  REAL‑TIME ANALYSIS – EARLY DETECTION
-                //  Signals fire when momentum STARTS, not when overextended.
-                // ============================================================
-                function computeAnalysis(sym) {
-                    const data = marketData[sym];
-                    if (!data || !data.priceHistory || data.priceHistory.length < 30) return null;
-
-                    const currentPrice = data.lastPrice;
-                    if (currentPrice === null || currentPrice === undefined) return null;
-
-                    const candle = getCandle(sym);
-                    const closedCloses = candle.history.map(c => c.close);
-                    if (closedCloses.length < 10) return null;
-
-                    const s = getSettings();
-                    const smaPeriod = s.smaPeriod || 7;
-                    const rsiPeriod = s.rsiPeriod || 14;
-                    const rocPeriod = s.rocPeriod || 10;
-                    const slopePeriod = s.slopePeriod || 5;
-                    const angleThreshold = s.angleThreshold || 30;
-                    const angleWatchThreshold = s.angleWatchThreshold || 15;
-                    const proximityPct = s.priceSmaProximity || 0.5;
-
-                    const sma = calcSMA(closedCloses, Math.min(smaPeriod, closedCloses.length));
-                    if (sma === null) return null;
-
-                    const rsi = calcRSI(closedCloses, Math.min(rsiPeriod, closedCloses.length));
-                    const rsiAbove50 = rsi ? rsi > 50 : false;
-                    const rsiBelow50 = rsi ? rsi < 50 : false;
-
-                    const roc = computeROC(closedCloses, rocPeriod);
-                    const rocAboveZero = roc !== null && roc > 0;
-                    const rocBelowZero = roc !== null && roc < 0;
-
-                    const priceAboveSMA = currentPrice > sma;
-                    const priceBelowSMA = currentPrice < sma;
-
-                    // SMA angle from closed candles
-                    const angleData = computeSMAAngle(closedCloses, smaPeriod, slopePeriod);
-                    const angle = angleData ? angleData.angle : 0;
-                    const angleCondition = angleData !== null;
-
-                    // ---- EARLY DETECTION ----
-                    // 1. Angle starting to turn bullish (crossing above watch threshold)
-                    const angleBullishStart = angleCondition && angle > angleWatchThreshold;
-                    const angleBearishStart = angleCondition && angle < -angleWatchThreshold;
-
-                    // 2. Price approaching SMA (within proximity %)
-                    const distToSmaPct = ((currentPrice - sma) / sma) * 100;
-                    const priceApproachingSmaFromBelow = distToSmaPct < 0 && Math.abs(distToSmaPct) < proximityPct;
-                    const priceApproachingSmaFromAbove = distToSmaPct > 0 && distToSmaPct < proximityPct;
-
-                    // 3. RSI crossing 50 (momentum shift)
-                    const rsiCrossAbove50 = rsi !== null && rsi > 50 && rsi < 60;
-                    const rsiCrossBelow50 = rsi !== null && rsi < 50 && rsi > 40;
-
-                    // 4. ROC turning positive/negative
-                    const rocTurningPositive = roc !== null && roc > 0 && roc < 0.5;
-                    const rocTurningNegative = roc !== null && roc < 0 && roc > -0.5;
-
-                    // 5. Angle acceleration (angle increasing for bullish, decreasing for bearish)
-                    let angleIncreasing = false,
-                        angleDecreasing = false;
-                    if (angleData && angleData.smaValues && angleData.smaValues.length >= 3) {
-                        const last3 = angleData.smaValues.slice(-3);
-                        const slopeOfAngle = last3[2] - last3[0];
-                        angleIncreasing = slopeOfAngle > 0;
-                        angleDecreasing = slopeOfAngle < 0;
-                    }
-
-                    // ---- DETERMINE SIGNAL ----
-                    let signal = 'NEUTRAL';
-                    let reasons = [];
-                    let earlyFlags = [];
-
-                    // FULL BUY: price above SMA, RSI > 50, ROC > 0, angle > threshold
-                    const fullBuy = priceAboveSMA && rsiAbove50 && rocAboveZero && angleCondition && angle > angleThreshold;
-                    const fullSell = priceBelowSMA && rsiBelow50 && rocBelowZero && angleCondition && angle < -angleThreshold;
-
-                    // WATCH BUY: early signs of bullish momentum
-                    const watchBuy =
-                        (angleBullishStart && (rsiAbove50 || rocAboveZero)) ||
-                        (priceApproachingSmaFromBelow && (rsiAbove50 || rocAboveZero)) ||
-                        (rsiCrossAbove50 && (rocAboveZero || angleBullishStart)) ||
-                        (rocTurningPositive && (rsiAbove50 || angleBullishStart)) ||
-                        (angleBullishStart && angleIncreasing);
-
-                    // WATCH SELL: early signs of bearish momentum
-                    const watchSell =
-                        (angleBearishStart && (rsiBelow50 || rocBelowZero)) ||
-                        (priceApproachingSmaFromAbove && (rsiBelow50 || rocBelowZero)) ||
-                        (rsiCrossBelow50 && (rocBelowZero || angleBearishStart)) ||
-                        (rocTurningNegative && (rsiBelow50 || angleBearishStart)) ||
-                        (angleBearishStart && angleDecreasing);
-
-                    if (fullBuy) {
-                        signal = 'BUY';
-                        reasons.push('✅ BUY: Full confluence – price > SMA, RSI > 50, ROC > 0, angle > ' + angleThreshold +
-                            '°');
-                    } else if (fullSell) {
-                        signal = 'SELL';
-                        reasons.push('✅ SELL: Full confluence – price < SMA, RSI < 50, ROC < 0, angle < -' + angleThreshold +
-                            '°');
-                    } else if (watchBuy) {
-                        signal = 'BUY_WATCH';
-                        let flags = [];
-                        if (angleBullishStart) flags.push('angle rising (' + angle.toFixed(1) + '°)');
-                        if (priceApproachingSmaFromBelow) flags.push('price approaching SMA');
-                        if (rsiCrossAbove50) flags.push('RSI crossing 50 (' + rsi.toFixed(1) + ')');
-                        if (rocTurningPositive) flags.push('ROC turning positive');
-                        if (angleIncreasing) flags.push('angle accelerating');
-                        reasons.push('🔍 BUY WATCH: Momentum starting – ' + flags.join(', '));
-                    } else if (watchSell) {
-                        signal = 'SELL_WATCH';
-                        let flags = [];
-                        if (angleBearishStart) flags.push('angle falling (' + angle.toFixed(1) + '°)');
-                        if (priceApproachingSmaFromAbove) flags.push('price approaching SMA');
-                        if (rsiCrossBelow50) flags.push('RSI crossing 50 (' + rsi.toFixed(1) + ')');
-                        if (rocTurningNegative) flags.push('ROC turning negative');
-                        if (angleDecreasing) flags.push('angle accelerating down');
-                        reasons.push('🔍 SELL WATCH: Momentum starting – ' + flags.join(', '));
-                    } else {
-                        signal = 'NEUTRAL';
-                        let missing = [];
-                        if (!priceAboveSMA && !priceBelowSMA) missing.push('price near SMA');
-                        else if (!priceAboveSMA) missing.push('price below SMA');
-                        else if (!priceBelowSMA) missing.push('price above SMA');
-                        if (!rsiAbove50 && !rsiBelow50) missing.push('RSI near 50');
-                        if (!rocAboveZero && !rocBelowZero) missing.push('ROC near 0');
-                        if (!angleCondition) missing.push('angle insufficient');
-                        else if (Math.abs(angle) < angleWatchThreshold) missing.push('angle too flat (' + angle.toFixed(1) +
-                            '°)');
-                        reasons.push('⛔ No signal: ' + (missing.length ? missing.join(', ') : 'conditions not met'));
-                        // Still add a note if something is close
-                        if (angleBullishStart || angleBearishStart) {
-                            earlyFlags.push('angle close to watch threshold (' + angle.toFixed(1) + '°)');
-                        }
-                        if (priceApproachingSmaFromBelow || priceApproachingSmaFromAbove) {
-                            earlyFlags.push('price approaching SMA');
-                        }
-                        if (rsiCrossAbove50 || rsiCrossBelow50) {
-                            earlyFlags.push('RSI near 50');
-                        }
-                        if (earlyFlags.length > 0) {
-                            reasons.push('⏳ Watch: ' + earlyFlags.join(', ') + ' (wait for confirmation)');
-                        }
-                    }
-
-                    let extreme = 'neutral';
-                    if (rsi !== null) {
-                        if (rsi > 70) extreme = 'overbought';
-                        else if (rsi < 30) extreme = 'oversold';
-                    }
-
-                    let duration = 5;
-                    let durationReason = 'No signal – waiting for confluence';
-                    if (signal === 'BUY' || signal === 'SELL') {
-                        let strength = 3;
-                        const distPct = ((currentPrice - sma) / sma) * 100;
-                        if (Math.abs(distPct) > 0.5) strength += 0.5;
-                        if (Math.abs(distPct) > 1.0) strength += 0.5;
-                        if (rsi && (rsi > 60 || rsi < 40)) strength += 0.5;
-                        if (roc !== null && Math.abs(roc) > 0.5) strength += 0.5;
-                        if (roc !== null && Math.abs(roc) > 1.0) strength += 0.5;
-                        if (Math.abs(angle) > 50) strength += 0.5;
-
-                        let rawDuration = 5;
-                        if (strength >= 4.5) rawDuration = 1;
-                        else if (strength >= 3.5) rawDuration = 2;
-                        else if (strength >= 2.5) rawDuration = 3;
-                        else if (strength >= 1.5) rawDuration = 4;
-                        else rawDuration = 5;
-                        duration = Math.min(5, Math.max(1, Math.round(rawDuration)));
-
-                        if (duration === 1) durationReason = '🏆 Strong confluence + steep angle – quick scalp';
-                        else if (duration === 2) durationReason = '✅ Good confluence – short trade';
-                        else if (duration === 3) durationReason = '✅ Moderate confluence – medium hold';
-                        else if (duration === 4) durationReason = '✅ Weak confluence – longer horizon';
-                        else durationReason = '✅ Weak momentum – extended view';
-                    } else if (signal === 'BUY_WATCH' || signal === 'SELL_WATCH') {
-                        duration = 3;
-                        durationReason = '🔍 Early momentum detected – watch for confirmation';
-                    } else {
-                        duration = 5;
-                        durationReason = '⏳ Waiting for confluence';
-                    }
-
-                    return {
-                        type: 'analysis',
-                        signal: signal,
-                        reasons: reasons,
-                        duration: duration,
-                        durationReason: durationReason,
-                        price: currentPrice,
-                        sma: sma,
-                        rsi: rsi,
-                        roc: roc,
-                        rocPeriod: rocPeriod,
-                        smaPeriod: smaPeriod,
-                        rsiPeriod: rsiPeriod,
-                        extreme: extreme,
-                        angle: angle,
-                        angleOk: angleCondition,
-                        priceAboveSMA: priceAboveSMA,
-                        priceBelowSMA: priceBelowSMA,
-                        rsiAbove50: rsiAbove50,
-                        rsiBelow50: rsiBelow50,
-                        rocAboveZero: rocAboveZero,
-                        rocBelowZero: rocBelowZero,
-                        // early flags
-                        angleBullishStart: angleBullishStart,
-                        angleBearishStart: angleBearishStart,
-                        priceApproachingSmaFromBelow: priceApproachingSmaFromBelow,
-                        priceApproachingSmaFromAbove: priceApproachingSmaFromAbove,
-                        rsiCrossAbove50: rsiCrossAbove50,
-                        rsiCrossBelow50: rsiCrossBelow50,
-                        rocTurningPositive: rocTurningPositive,
-                        rocTurningNegative: rocTurningNegative,
-                        angleIncreasing: angleIncreasing,
-                        angleDecreasing: angleDecreasing,
-                        distToSmaPct: distToSmaPct,
-                    };
-                }
-
                 function updateAnalysisForSymbol(sym) {
                     const data = marketData[sym];
                     if (!data) return;
                     data.analysisResult = computeAnalysis(sym);
                 }
 
-                // ---- RENDER CANDLE ----
+                // ---- RENDER FUNCTIONS ----
                 function renderCandleDisplay(sym) {
                     const candle = getCandle(sym);
                     const changeEl = document.getElementById(`candleChange_${sym}`);
@@ -3243,63 +2832,7 @@
                     svgWrapEl.innerHTML = svg;
                 }
 
-                // ---- PROCESS TICK ----
-                function processTick(sym, price, quoteDisplay, epoch) {
-                    if (!marketData[sym]) marketData[sym] = {
-                        rollingArray: [],
-                        last50Array: [],
-                        lastDigit: null,
-                        lastPriceDisplay: '—',
-                        directions: [],
-                        lastPrice: null,
-                        priceHistory: [],
-                        analysisResult: null
-                    };
-                    let d = marketData[sym];
-                    d.lastPriceDisplay = quoteDisplay || formatHistoryPrice(sym, price);
-                    d.lastDigit = lastDigitFromFormatted(d.lastPriceDisplay);
-                    d.rollingArray.push(d.lastDigit);
-                    while (d.rollingArray.length > 2000) d.rollingArray.shift();
-                    d.last50Array.push(d.lastDigit);
-                    if (d.last50Array.length > 50) d.last50Array.shift();
-                    if (d.lastPrice !== null) {
-                        d.directions.push(price > d.lastPrice ? 1 : price < d.lastPrice ? -1 : 0);
-                        while (d.directions.length > 100) d.directions.shift();
-                    }
-                    d.lastPrice = price;
-                    d.priceHistory.push(price);
-                    if (d.priceHistory.length > 500) d.priceHistory.shift();
-
-                    if (d.priceHistory.length % 10 === 0) {
-                        const sr = detectSupportResistance(sym);
-                        if (sr) _srCache[sym] = sr;
-                    }
-
-                    updateCandle(sym, price);
-                    closeCandleIfNeeded(sym);
-
-                    // Update analysis on every tick
-                    updateAnalysisForSymbol(sym);
-
-                    if (document.getElementById('alarmToggle').checked && currentMarket === 'analysis') {
-                        const anSig = d.analysisResult;
-                        if (anSig && (anSig.signal === 'BUY' || anSig.signal === 'SELL' || anSig.signal === 'BUY_WATCH' ||
-                                anSig.signal === 'SELL_WATCH')) {
-                            const now = Date.now();
-                            const last = _lastAlarmTime['analysis_' + sym] || 0;
-                            const s = getSettings();
-                            if ((now - last) > s.alarmCooldown * 1000) {
-                                playAlarm();
-                                _lastAlarmTime['analysis_' + sym] = now;
-                            }
-                        }
-                    }
-
-                    checkAlarm(sym, price);
-                    renderMarket(sym);
-                }
-
-                // ---- RENDER LETTER SEQUENCE ----
+                // ---- RENDER LETTER SEQUENCE (for Over/Under and Even/Odd) ----
                 function renderLetterSequence(sym, data, mode) {
                     const seq1 = document.getElementById(`letterSeq1_${sym}`);
                     const seq2 = document.getElementById(`letterSeq2_${sym}`);
@@ -3360,6 +2893,7 @@
                             dig2.innerHTML = '';
                         }
                     } else {
+                        // For other modes (predict, vanilla, hybrid, analysis) show direction arrows if available
                         const dirs = data.directions || [];
                         if (dirs.length >= 50) {
                             const len = Math.min(dirs.length, 100);
@@ -3394,7 +2928,78 @@
                     }
                 }
 
-                // ---- RENDER MARKET (with early signals) ----
+                // ============================================================
+                //  HELPER: Build the digit grid (used by all modes)
+                //  Uses the full analysisWindow, but pointer moves on every tick.
+                // ============================================================
+                function buildDigitGrid(sym, data, s) {
+                    const grid = document.getElementById(`digitsContainer_${sym}`);
+                    if (!grid) return;
+
+                    // Use the full analysisWindow for percentages
+                    const windowSize = s.analysisWindow;
+                    const freqData = getDigitPercentages(sym, windowSize);
+
+                    grid.innerHTML = '';
+
+                    if (freqData) {
+                        const evens = [0, 2, 4, 6, 8];
+                        const odds = [1, 3, 5, 7, 9];
+
+                        const makeRow = (digits) => {
+                            const row = document.createElement('div');
+                            row.className = 'digits-row';
+                            digits.forEach(d => {
+                                const cell = document.createElement('div');
+                                cell.className = 'digit-cell';
+                                if (freqData.most.has(d)) cell.classList.add('most');
+                                if (freqData.second.has(d)) cell.classList.add('second');
+                                if (freqData.least.has(d)) cell.classList.add('least');
+                                if (freqData.secondLeast.has(d)) cell.classList.add('secondleast');
+
+                                const pct = freqData.pct[d] !== undefined ? freqData.pct[d].toFixed(1) : '0.0';
+                                cell.innerHTML = `<span class="digit">${d}</span><div class="percent">${pct}%</div>`;
+
+                                // Highlight the last digit and add the pointer
+                                if (data.lastDigit === d) {
+                                    cell.classList.add('last-digit-highlight');
+                                    const ptr = document.createElement('div');
+                                    ptr.className = `pointer-marker ${s.pointerStyle}`;
+                                    if (s.pointerStyle === 'arrow') ptr.innerHTML = '›';
+                                    applyPointerSettings(ptr, s.pointerScale);
+                                    cell.appendChild(ptr);
+                                }
+                                row.appendChild(cell);
+                            });
+                            return row;
+                        };
+
+                        grid.appendChild(makeRow(evens));
+                        grid.appendChild(makeRow(odds));
+                    } else {
+                        // Fallback: just show digits with no percentages, but still highlight last digit
+                        const allDigits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+                        const row = document.createElement('div');
+                        row.className = 'digits-row';
+                        allDigits.forEach(d => {
+                            const cell = document.createElement('div');
+                            cell.className = 'digit-cell';
+                            cell.innerHTML = `<span class="digit">${d}</span>`;
+                            if (data.lastDigit === d) {
+                                cell.classList.add('last-digit-highlight');
+                                const ptr = document.createElement('div');
+                                ptr.className = `pointer-marker ${s.pointerStyle}`;
+                                if (s.pointerStyle === 'arrow') ptr.innerHTML = '›';
+                                applyPointerSettings(ptr, s.pointerScale);
+                                cell.appendChild(ptr);
+                            }
+                            row.appendChild(cell);
+                        });
+                        grid.appendChild(row);
+                    }
+                }
+
+                // ---- RENDER MARKET (full) ----
                 function renderMarket(sym) {
                     let data = marketData[sym];
                     if (!data || !data.rollingArray.length) return;
@@ -3407,6 +3012,7 @@
 
                     renderCandleDisplay(sym);
 
+                    // Stability & Condition
                     let stab = getDigitStability(sym);
                     let stabDiv = document.getElementById(`stability_${sym}`);
                     if (stabDiv && stab) {
@@ -3423,6 +3029,7 @@
                         condDiv.innerHTML = '📈 --';
                     }
 
+                    // Zone Memory
                     let zoneMem = document.getElementById(`zoneMemory_${sym}`);
                     if (zoneMem) {
                         const stats = computeZoneMemory(data.rollingArray, s.zoneWindow);
@@ -3456,6 +3063,9 @@
                         }
                     }
 
+                    // ---- BUILD THE DIGIT GRID (for ALL modes) ----
+                    buildDigitGrid(sym, data, s);
+
                     // ---- ANALYSIS MODE ----
                     if (currentMarket === 'analysis') {
                         const zoneBarContainer = document.getElementById(`zoneBarContainer_${sym}`);
@@ -3470,33 +3080,22 @@
 
                             if (anSig) {
                                 const signal = anSig.signal;
-                                const isBuy = signal === 'BUY';
-                                const isSell = signal === 'SELL';
-                                const isBuyWatch = signal === 'BUY_WATCH';
-                                const isSellWatch = signal === 'SELL_WATCH';
-                                const isNeutral = signal === 'NEUTRAL';
-
-                                let bannerClass = 'neutral';
-                                let icon = '⚪';
-                                let label = 'NEUTRAL';
-                                let subText = 'Conditions not met';
-
-                                if (isBuy) { bannerClass = 'buy';
+                                let bannerClass = 'neutral',
+                                    icon = '⚪',
+                                    label = 'NEUTRAL',
+                                    subText = 'Conditions not met';
+                                if (signal === 'BUY') { bannerClass = 'buy';
                                     icon = '🟢';
                                     label = 'BUY';
-                                    subText = 'Full confluence – strong momentum'; } else if (isSell) { bannerClass =
-                                        'sell';
+                                    subText = 'Price > SMA10, RSI > 50, angle > 50°'; } else if (signal === 'SELL') {
+                                    bannerClass = 'sell';
                                     icon = '🔴';
                                     label = 'SELL';
-                                    subText = 'Full confluence – strong momentum'; } else if (isBuyWatch) { bannerClass =
-                                        'buy-watch';
+                                    subText = 'Price < SMA10, RSI < 50, angle < -50°'; } else if (signal === 'WATCH') {
+                                    bannerClass = 'watch';
                                     icon = '🟡';
-                                    label = 'BUY WATCH';
-                                    subText = 'Early momentum detected – watch for entry'; } else if (isSellWatch) {
-                                    bannerClass = 'sell-watch';
-                                    icon = '🟠';
-                                    label = 'SELL WATCH';
-                                    subText = 'Early momentum detected – watch for entry'; }
+                                    label = 'WATCH';
+                                    subText = 'Approaching threshold'; }
 
                                 html += `
                                         <div class="analysis-signal-banner ${bannerClass}">
@@ -3506,7 +3105,7 @@
                                         </div>
                                     `;
 
-                                // Extreme indicator
+                                // Extreme
                                 const extreme = anSig.extreme || 'neutral';
                                 const extremeLabel = extreme === 'overbought' ? '🔴 Overbought' :
                                     extreme === 'oversold' ? '🟢 Oversold' : '⚪ Neutral';
@@ -3515,17 +3114,14 @@
                                 html += `
                                         <div style="text-align:center;margin:0.2rem 0;">
                                             <span class="analysis-extreme ${extremeClass}">${extremeLabel}</span>
-                                            ${(isBuyWatch || isSellWatch) ? '<span style="margin-left:0.5rem;font-size:0.7rem;color:var(--signal-watch);">⚡ Early detection active</span>' : ''}
                                         </div>
                                     `;
 
+                                // Metrics
                                 const priceStr = anSig.price !== undefined ? anSig.price.toFixed(4) : '—';
                                 const smaStr = anSig.sma !== null ? anSig.sma.toFixed(4) : '—';
                                 const rsiStr = anSig.rsi !== null ? anSig.rsi.toFixed(1) : '—';
-                                const rocStr = anSig.roc !== null ? anSig.roc.toFixed(2) + '%' : '—';
                                 const angleStr = anSig.angle !== undefined ? anSig.angle.toFixed(1) + '°' : '—';
-                                const distStr = anSig.distToSmaPct !== undefined ? anSig.distToSmaPct.toFixed(2) + '%' :
-                                '—';
 
                                 html += `
                                         <div class="analysis-metrics">
@@ -3537,7 +3133,7 @@
                                                 </div>
                                             </div>
                                             <div class="analysis-metric-card">
-                                                <div class="metric-label">SMA${anSig.smaPeriod}</div>
+                                                <div class="metric-label">SMA10</div>
                                                 <div class="metric-value">${smaStr}</div>
                                                 <div class="metric-status ${anSig.priceAboveSMA ? 'above' : (anSig.priceBelowSMA ? 'below' : 'flat')}">
                                                     ${anSig.priceAboveSMA ? '✅ Bullish' : (anSig.priceBelowSMA ? '❌ Bearish' : '—')}
@@ -3551,110 +3147,57 @@
                                                 </div>
                                             </div>
                                             <div class="analysis-metric-card">
-                                                <div class="metric-label">ROC (${anSig.rocPeriod})</div>
-                                                <div class="metric-value">${rocStr}</div>
-                                                <div class="metric-status ${anSig.rocAboveZero ? 'up' : 'down'}">
-                                                    ${anSig.rocAboveZero ? '✅ >0' : '❌ <0'}
-                                                </div>
-                                            </div>
-                                            <div class="analysis-metric-card">
                                                 <div class="metric-label">SMA Angle</div>
                                                 <div class="metric-value">${angleStr}</div>
                                                 <div class="metric-status ${anSig.angle > 20 ? 'up' : (anSig.angle < -20 ? 'down' : 'flat')}">
                                                     ${anSig.angle > 20 ? '📈 Steep' : (anSig.angle < -20 ? '📉 Steep' : 'Flat')}
                                                 </div>
                                             </div>
+                                            <div class="analysis-metric-card">
+                                                <div class="metric-label">Dist to SMA</div>
+                                                <div class="metric-value">${anSig.distToSmaPct !== undefined ? anSig.distToSmaPct.toFixed(2)+'%' : '—'}</div>
+                                                <div class="metric-status ${anSig.priceAboveSMA ? 'above' : (anSig.priceBelowSMA ? 'below' : 'flat')}">
+                                                    ${anSig.priceAboveSMA ? 'Above' : (anSig.priceBelowSMA ? 'Below' : 'At')}
+                                                </div>
+                                            </div>
                                         </div>
                                     `;
 
-                                // Early detection flags
-                                let earlyFlags = [];
-                                if (anSig.angleBullishStart) earlyFlags.push('📐 angle rising (' + anSig.angle.toFixed(1) +
-                                    '°)');
-                                if (anSig.angleBearishStart) earlyFlags.push('📐 angle falling (' + anSig.angle.toFixed(1) +
-                                    '°)');
-                                if (anSig.priceApproachingSmaFromBelow) earlyFlags.push('📊 price approaching SMA from below');
-                                if (anSig.priceApproachingSmaFromAbove) earlyFlags.push('📊 price approaching SMA from above');
-                                if (anSig.rsiCrossAbove50) earlyFlags.push('📈 RSI crossing 50 (' + anSig.rsi.toFixed(1) +
-                                    ')');
-                                if (anSig.rsiCrossBelow50) earlyFlags.push('📉 RSI crossing 50 (' + anSig.rsi.toFixed(1) +
-                                    ')');
-                                if (anSig.rocTurningPositive) earlyFlags.push('📈 ROC turning positive');
-                                if (anSig.rocTurningNegative) earlyFlags.push('📉 ROC turning negative');
-                                if (anSig.angleIncreasing) earlyFlags.push('⚡ angle accelerating up');
-                                if (anSig.angleDecreasing) earlyFlags.push('⚡ angle accelerating down');
-
-                                if (earlyFlags.length > 0) {
-                                    html +=
-                                        `<div style="display:flex;flex-wrap:wrap;gap:0.2rem;justify-content:center;padding:0.2rem 0;">`;
-                                    for (let flag of earlyFlags) {
-                                        const cls = (flag.includes('rising') || flag.includes('up') || flag.includes(
-                                            'positive') || flag.includes('accelerating up')) ? 'triggered' :
-                                            (flag.includes('falling') || flag.includes('down') || flag.includes(
-                                            'negative') || flag.includes('accelerating down')) ? 'triggered' :
-                                            'active';
-                                        html +=
-                                            `<span class="analysis-early-indicator ${cls}">${flag}</span>`;
-                                    }
-                                    html += `</div>`;
-                                }
-
-                                // Confluence checklist
-                                let check1, check2, check3, check4;
-                                let label1, label2, label3, label4;
-
-                                if (signal === 'BUY' || signal === 'BUY_WATCH') {
-                                    check1 = anSig.priceAboveSMA || anSig.priceApproachingSmaFromBelow;
-                                    check2 = anSig.rsiAbove50 || anSig.rsiCrossAbove50;
-                                    check3 = anSig.rocAboveZero || anSig.rocTurningPositive;
-                                    check4 = anSig.angle > angleWatchThreshold || anSig.angleBullishStart;
-                                    label1 = 'Price > SMA';
-                                    label2 = 'RSI > 50';
-                                    label3 = 'ROC > 0';
-                                    label4 = `Angle > ${angleWatchThreshold}°`;
-                                } else if (signal === 'SELL' || signal === 'SELL_WATCH') {
-                                    check1 = anSig.priceBelowSMA || anSig.priceApproachingSmaFromAbove;
-                                    check2 = anSig.rsiBelow50 || anSig.rsiCrossBelow50;
-                                    check3 = anSig.rocBelowZero || anSig.rocTurningNegative;
-                                    check4 = anSig.angle < -angleWatchThreshold || anSig.angleBearishStart;
-                                    label1 = 'Price < SMA';
+                                // Confluence (simplified)
+                                let check1 = anSig.priceAboveSMA;
+                                let check2 = anSig.rsiAbove50;
+                                let check3 = anSig.angle > 50;
+                                let label1 = 'Price > SMA10',
+                                    label2 = 'RSI > 50',
+                                    label3 = 'Angle > 50°';
+                                if (signal === 'SELL') {
+                                    check1 = anSig.priceBelowSMA;
+                                    check2 = anSig.rsiBelow50;
+                                    check3 = anSig.angle < -50;
+                                    label1 = 'Price < SMA10';
                                     label2 = 'RSI < 50';
-                                    label3 = 'ROC < 0';
-                                    label4 = `Angle < -${angleWatchThreshold}°`;
-                                } else {
-                                    check1 = anSig.priceAboveSMA;
-                                    check2 = anSig.rsiAbove50;
-                                    check3 = anSig.rocAboveZero;
-                                    check4 = anSig.angle > angleWatchThreshold;
-                                    label1 = 'Price > SMA';
-                                    label2 = 'RSI > 50';
-                                    label3 = 'ROC > 0';
-                                    label4 = `Angle > ${angleWatchThreshold}°`;
+                                    label3 = 'Angle < -50°';
+                                } else if (signal === 'WATCH') {
+                                    check1 = anSig.priceAboveSMA || anSig.priceBelowSMA;
+                                    check2 = anSig.rsiAbove50 || anSig.rsiBelow50;
+                                    check3 = Math.abs(anSig.angle) > 30;
                                 }
-
-                                // Determine if we show watch or full status
-                                const isWatchSignal = (signal === 'BUY_WATCH' || signal === 'SELL_WATCH');
                                 html += `
                                         <div class="analysis-confluence">
-                                            <div class="conf-item ${check1 ? (isWatchSignal ? 'active-watch' : 'active-true') : 'active-false'}">
+                                            <div class="conf-item ${check1 ? 'active-true' : 'active-false'}">
                                                 <span class="conf-check">${check1 ? '✅' : '❌'}</span>
                                                 <span class="conf-label">${label1}</span>
                                                 <span style="font-size:0.65rem;display:block;">${check1 ? 'Yes' : 'No'}</span>
                                             </div>
-                                            <div class="conf-item ${check2 ? (isWatchSignal ? 'active-watch' : 'active-true') : 'active-false'}">
+                                            <div class="conf-item ${check2 ? 'active-true' : 'active-false'}">
                                                 <span class="conf-check">${check2 ? '✅' : '❌'}</span>
                                                 <span class="conf-label">${label2}</span>
                                                 <span style="font-size:0.65rem;display:block;">${check2 ? 'Yes' : 'No'}</span>
                                             </div>
-                                            <div class="conf-item ${check3 ? (isWatchSignal ? 'active-watch' : 'active-true') : 'active-false'}">
+                                            <div class="conf-item ${check3 ? 'active-true' : 'active-false'}">
                                                 <span class="conf-check">${check3 ? '✅' : '❌'}</span>
                                                 <span class="conf-label">${label3}</span>
                                                 <span style="font-size:0.65rem;display:block;">${check3 ? 'Yes' : 'No'}</span>
-                                            </div>
-                                            <div class="conf-item ${check4 ? (isWatchSignal ? 'active-watch' : 'active-true') : 'active-false'}">
-                                                <span class="conf-check">${check4 ? '✅' : '❌'}</span>
-                                                <span class="conf-label">${label4}</span>
-                                                <span style="font-size:0.65rem;display:block;">${check4 ? 'Yes' : 'No'}</span>
                                             </div>
                                         </div>
                                     `;
@@ -3665,7 +3208,6 @@
                                         <div class="analysis-duration">
                                             <span class="duration-badge">⏱️ ${anSig.duration}m</span>
                                             <span class="duration-reason">${anSig.durationReason}</span>
-                                            ${isWatchSignal ? '<span style="margin-left:0.5rem;font-size:0.65rem;color:var(--signal-watch);">⚡ Early signal – confirmation pending</span>' : ''}
                                         </div>
                                     `;
                                 }
@@ -3690,62 +3232,10 @@
                             sigDiv.innerHTML = html;
                         }
 
-                        let freqData = getDigitPercentages(sym, s.analysisWindow);
-                        if (freqData) {
-                            let grid = document.getElementById(`digitsContainer_${sym}`);
-                            if (grid) {
-                                grid.innerHTML = '';
-                                let evens = [0, 2, 4, 6, 8],
-                                    odds = [1, 3, 5, 7, 9];
-                                let row1 = document.createElement('div');
-                                row1.className = 'digits-row';
-                                evens.forEach(d => {
-                                    let cell = document.createElement('div');
-                                    cell.className = 'digit-cell';
-                                    if (freqData.most.has(d)) cell.classList.add('most');
-                                    if (freqData.second.has(d)) cell.classList.add('second');
-                                    if (freqData.least.has(d)) cell.classList.add('least');
-                                    if (freqData.secondLeast.has(d)) cell.classList.add('secondleast');
-                                    cell.innerHTML =
-                                        `<span class="digit">${d}</span><div class="percent">${freqData.pct[d].toFixed(1)}%</div>`;
-                                    if (data.lastDigit === d) {
-                                        cell.classList.add('last-digit-highlight');
-                                        let ptr = document.createElement('div');
-                                        ptr.className = `pointer-marker ${s.pointerStyle}`;
-                                        if (s.pointerStyle === 'arrow') ptr.innerHTML = '›';
-                                        applyPointerSettings(ptr, s.pointerScale);
-                                        cell.appendChild(ptr);
-                                    }
-                                    row1.appendChild(cell);
-                                });
-                                let row2 = document.createElement('div');
-                                row2.className = 'digits-row';
-                                odds.forEach(d => {
-                                    let cell = document.createElement('div');
-                                    cell.className = 'digit-cell';
-                                    if (freqData.most.has(d)) cell.classList.add('most');
-                                    if (freqData.second.has(d)) cell.classList.add('second');
-                                    if (freqData.least.has(d)) cell.classList.add('least');
-                                    if (freqData.secondLeast.has(d)) cell.classList.add('secondleast');
-                                    cell.innerHTML =
-                                        `<span class="digit">${d}</span><div class="percent">${freqData.pct[d].toFixed(1)}%</div>`;
-                                    if (data.lastDigit === d) {
-                                        cell.classList.add('last-digit-highlight');
-                                        let ptr = document.createElement('div');
-                                        ptr.className = `pointer-marker ${s.pointerStyle}`;
-                                        if (s.pointerStyle === 'arrow') ptr.innerHTML = '›';
-                                        applyPointerSettings(ptr, s.pointerScale);
-                                        cell.appendChild(ptr);
-                                    }
-                                    row2.appendChild(cell);
-                                });
-                                grid.appendChild(row1);
-                                grid.appendChild(row2);
-                            }
-                        }
-
+                        // Letter sequence (for analysis, show direction arrows)
                         renderLetterSequence(sym, data, currentMarket);
 
+                        // Hide mode-specific elements
                         let eoDiv = document.getElementById(`eoTwo_${sym}`);
                         if (eoDiv) eoDiv.style.display = 'none';
                         let pairDiv = document.getElementById(`pairBias_${sym}`);
@@ -3761,69 +3251,7 @@
                         return;
                     }
 
-                    // ---- OTHER MODES (unchanged) ----
-                    const zoneBarContainer = document.getElementById(`zoneBarContainer_${sym}`);
-                    if (zoneBarContainer) { zoneBarContainer.style.display = 'none';
-                        zoneBarContainer.innerHTML = ''; }
-
-                    const wrapper = document.querySelector(`#market_${sym} .letter-sequence-wrapper`);
-                    if (wrapper) wrapper.style.display = 'block';
-                    renderLetterSequence(sym, data, currentMarket);
-
-                    let freqDataAll = getDigitPercentages(sym, s.analysisWindow);
-                    if (freqDataAll) {
-                        let grid = document.getElementById(`digitsContainer_${sym}`);
-                        if (grid) {
-                            grid.innerHTML = '';
-                            let evens = [0, 2, 4, 6, 8],
-                                odds = [1, 3, 5, 7, 9];
-                            let row1 = document.createElement('div');
-                            row1.className = 'digits-row';
-                            evens.forEach(d => {
-                                let cell = document.createElement('div');
-                                cell.className = 'digit-cell';
-                                if (freqDataAll.most.has(d)) cell.classList.add('most');
-                                if (freqDataAll.second.has(d)) cell.classList.add('second');
-                                if (freqDataAll.least.has(d)) cell.classList.add('least');
-                                if (freqDataAll.secondLeast.has(d)) cell.classList.add('secondleast');
-                                cell.innerHTML =
-                                    `<span class="digit">${d}</span><div class="percent">${freqDataAll.pct[d].toFixed(1)}%</div>`;
-                                if (data.lastDigit === d) {
-                                    cell.classList.add('last-digit-highlight');
-                                    let ptr = document.createElement('div');
-                                    ptr.className = `pointer-marker ${s.pointerStyle}`;
-                                    if (s.pointerStyle === 'arrow') ptr.innerHTML = '›';
-                                    applyPointerSettings(ptr, s.pointerScale);
-                                    cell.appendChild(ptr);
-                                }
-                                row1.appendChild(cell);
-                            });
-                            let row2 = document.createElement('div');
-                            row2.className = 'digits-row';
-                            odds.forEach(d => {
-                                let cell = document.createElement('div');
-                                cell.className = 'digit-cell';
-                                if (freqDataAll.most.has(d)) cell.classList.add('most');
-                                if (freqDataAll.second.has(d)) cell.classList.add('second');
-                                if (freqDataAll.least.has(d)) cell.classList.add('least');
-                                if (freqDataAll.secondLeast.has(d)) cell.classList.add('secondleast');
-                                cell.innerHTML =
-                                    `<span class="digit">${d}</span><div class="percent">${freqDataAll.pct[d].toFixed(1)}%</div>`;
-                                if (data.lastDigit === d) {
-                                    cell.classList.add('last-digit-highlight');
-                                    let ptr = document.createElement('div');
-                                    ptr.className = `pointer-marker ${s.pointerStyle}`;
-                                    if (s.pointerStyle === 'arrow') ptr.innerHTML = '›';
-                                    applyPointerSettings(ptr, s.pointerScale);
-                                    cell.appendChild(ptr);
-                                }
-                                row2.appendChild(cell);
-                            });
-                            grid.appendChild(row1);
-                            grid.appendChild(row2);
-                        }
-                    }
-
+                    // ---- PREDICT MODE ----
                     if (currentMarket === 'predict') {
                         let signal = getPredictSignal(sym);
                         let sigDiv = document.getElementById(`signalDisplay_${sym}`);
@@ -3849,7 +3277,13 @@
                             trendDivPred.innerHTML =
                                 `<div class="trend-bar-item"><div class="trend-bar-label">Even</div><div class="trend-bar-container"><div class="trend-bar-fill even" style="width:${overPct}%"></div></div><div class="trend-percent">${overPct.toFixed(1)}%</div></div><div class="trend-bar-item"><div class="trend-bar-label">Odd</div><div class="trend-bar-container"><div class="trend-bar-fill odd" style="width:${underPct}%"></div></div><div class="trend-percent">${underPct.toFixed(1)}%</div></div>`;
                         }
-                    } else if (currentMarket === 'overunder') {
+                        renderLetterSequence(sym, data, currentMarket);
+                        document.getElementById(`status_${sym}`).innerHTML = '🟢 live';
+                        return;
+                    }
+
+                    // ---- OVER/UNDER MODE ----
+                    if (currentMarket === 'overunder') {
                         let signal = getOverUnderSignal(sym);
                         let sigDiv = document.getElementById(`signalDisplay_${sym}`);
                         if (sigDiv) {
@@ -3930,7 +3364,13 @@
                         document.getElementById(`groupBias_${sym}`).style.display = 'none';
                         document.getElementById(`transitions_${sym}`).style.display = 'none';
                         document.getElementById(`trendBars_${sym}`).style.display = 'none';
-                    } else if (currentMarket === 'evenodd') {
+                        renderLetterSequence(sym, data, currentMarket);
+                        document.getElementById(`status_${sym}`).innerHTML = '🟢 live';
+                        return;
+                    }
+
+                    // ---- EVEN/ODD MODE ----
+                    if (currentMarket === 'evenodd') {
                         let signal = getEvenOddSignal(sym);
                         let sigDiv = document.getElementById(`signalDisplay_${sym}`);
                         if (sigDiv) {
@@ -3964,7 +3404,13 @@
                         document.getElementById(`groupBias_${sym}`).style.display = 'none';
                         document.getElementById(`transitions_${sym}`).style.display = 'none';
                         document.getElementById(`trendBars_${sym}`).style.display = 'none';
-                    } else if (currentMarket === 'vanilla') {
+                        renderLetterSequence(sym, data, currentMarket);
+                        document.getElementById(`status_${sym}`).innerHTML = '🟢 live';
+                        return;
+                    }
+
+                    // ---- VANILLA MODE ----
+                    if (currentMarket === 'vanilla') {
                         let signals = getVanillaSignals(sym);
                         let sigDiv = document.getElementById(`signalDisplay_${sym}`);
                         if (sigDiv) {
@@ -4052,7 +3498,13 @@
                         document.getElementById(`groupBias_${sym}`).style.display = 'none';
                         document.getElementById(`transitions_${sym}`).style.display = 'none';
                         document.getElementById(`trendBars_${sym}`).style.display = 'none';
-                    } else if (currentMarket === 'hybrid') {
+                        renderLetterSequence(sym, data, currentMarket);
+                        document.getElementById(`status_${sym}`).innerHTML = '🟢 live';
+                        return;
+                    }
+
+                    // ---- HYBRID MODE ----
+                    if (currentMarket === 'hybrid') {
                         let status = getHybridStatus(sym);
                         let sigDiv = document.getElementById(`signalDisplay_${sym}`);
                         if (sigDiv) {
@@ -4089,8 +3541,12 @@
                         document.getElementById(`pairBias_${sym}`).style.display = 'none';
                         document.getElementById(`transitions_${sym}`).style.display = 'none';
                         document.getElementById(`trendBars_${sym}`).style.display = 'none';
+                        renderLetterSequence(sym, data, currentMarket);
+                        document.getElementById(`status_${sym}`).innerHTML = '🟢 live';
+                        return;
                     }
 
+                    // Default fallback
                     document.getElementById(`status_${sym}`).innerHTML = '🟢 live';
                 }
 
@@ -4098,23 +3554,37 @@
                 function setFocus(sym) {
                     focusedSymbol = sym;
                     document.getElementById('focusBar').style.display = sym ? 'flex' : 'none';
-                    applyFocusVisibility();
-                    const container = document.getElementById('marketCardsContainer');
-                    const card = document.getElementById(`market_${sym}`);
-                    if (card && container) {
-                        const cardTop = card.offsetTop - container.offsetTop;
-                        container.scrollTo({ top: cardTop - 10, behavior: 'smooth' });
+                    let cards = document.querySelectorAll('.market-card');
+                    if (sym) {
+                        cards.forEach(c => c.style.display = c.id === `market_${sym}` ? 'flex' : 'none');
+                    } else {
+                        cards.forEach(c => c.style.display = 'flex');
+                    }
+                    if (sym) {
+                        const container = document.getElementById('marketCardsContainer');
+                        const card = document.getElementById(`market_${sym}`);
+                        if (card && container) {
+                            const cardTop = card.offsetTop - container.offsetTop;
+                            container.scrollTo({ top: cardTop - 10, behavior: 'smooth' });
+                        }
                     }
                 }
 
-                function applyFocusVisibility() {
-                    let cards = document.querySelectorAll('.market-card');
-                    if (focusedSymbol) {
-                        cards.forEach(c => c.style.display = c.id === `market_${focusedSymbol}` ? 'flex' : 'none');
-                    } else cards.forEach(c => c.style.display = 'flex');
-                }
-
                 function showAllMarkets() { setFocus(null); }
+
+                function applyPointerSettings(ptr, scale) {
+                    let style = ptr.style;
+                    if (ptr.classList.contains('triangle')) {
+                        style.borderLeftWidth = (5 * scale) + 'px';
+                        style.borderRightWidth = (5 * scale) + 'px';
+                        style.borderBottomWidth = (7 * scale) + 'px';
+                    } else if (ptr.classList.contains('arrow')) {
+                        style.fontSize = (0.9 * scale) + 'rem';
+                    } else if (ptr.classList.contains('dot')) {
+                        style.width = (6 * scale) + 'px';
+                        style.height = (6 * scale) + 'px';
+                    }
+                }
 
                 // ---- UPDATE ALL MARKETS LIST ----
                 function updateAllMarketsList() {
@@ -4139,58 +3609,56 @@
                                 hasActiveSignal = true;
                                 signalType = 'sell';
                                 signalLabel = 'SELL';
-                            } else if (signal && signal.signal === 'BUY_WATCH') {
-                                suffix = ` → 🟡 BUY WATCH`;
+                            } else if (signal && signal.signal === 'WATCH') {
+                                suffix = ` → 🟡 WATCH`;
                                 hasActiveSignal = true;
-                                signalType = 'buy-watch';
-                                signalLabel = 'B-W';
-                            } else if (signal && signal.signal === 'SELL_WATCH') {
-                                suffix = ` → 🟠 SELL WATCH`;
-                                hasActiveSignal = true;
-                                signalType = 'sell-watch';
-                                signalLabel = 'S-W';
+                                signalType = 'watch';
+                                signalLabel = 'WATCH';
                             } else if (signal && signal.signal === 'NEUTRAL') {
                                 suffix = ` → ⚪ NEUTRAL`;
                                 signalType = 'neutral';
                                 signalLabel = 'NEUTRAL';
                             }
-                        } else if (currentMarket === 'hybrid') {
-                            if (signal && signal.bothConfirmed) {
-                                suffix =
-                                    ` → ${signal.ouSide}/${signal.eoSide} (${signal.ouValue.toFixed(0)}%/${signal.eoValue.toFixed(0)}%)`;
+                        } else {
+                            // other modes
+                            if (signal) {
                                 hasActiveSignal = true;
-                                signalType = 'buy';
-                                signalLabel = signal.ouSide + '/' + signal.eoSide;
-                            }
-                        } else if (Array.isArray(signal)) {
-                            const activeSignals = signal.filter(sig => {
-                                if (sig.type === 'confluence') return (sig.side === 'BUY' || sig.side === 'SELL');
-                                if (sig.type === 'vanilla') return (sig.side === 'UP' || sig.side === 'DOWN');
-                                return false;
-                            });
-                            if (activeSignals.length > 0) {
-                                hasActiveSignal = true;
-                                const first = activeSignals[0];
-                                suffix = ` → ${first.side}`;
-                                signalType = first.side === 'BUY' || first.side === 'UP' ? 'buy' : 'sell';
-                                signalLabel = first.side;
-                            }
-                        } else if (signal && !Array.isArray(signal)) {
-                            if (signal.type === 'predict' || signal.type === 'overunder' || signal.type === 'evenodd') {
-                                hasActiveSignal = true;
-                                suffix = signal.type === 'predict' ?
-                                    ` → ${signal.digit} (${signal.percentage.toFixed(1)}%)` :
-                                    ` → ${signal.side}`;
-                                signalType = signal.side === 'BUY' || signal.side === 'UNDER' || signal.side === 'EVEN' ?
-                                    'buy' : 'sell';
-                                signalLabel = signal.side;
+                                if (signal.type === 'predict') {
+                                    suffix = ` → ${signal.digit} (${signal.percentage.toFixed(1)}%)`;
+                                    signalType = 'buy';
+                                    signalLabel = signal.digit;
+                                } else if (signal.type === 'overunder' || signal.type === 'evenodd') {
+                                    suffix = ` → ${signal.side}`;
+                                    signalType = (signal.side === 'UNDER' || signal.side === 'EVEN') ? 'buy' : 'sell';
+                                    signalLabel = signal.side;
+                                } else if (signal.type === 'vanilla' || signal.type === 'confluence') {
+                                    suffix = ` → ${signal.side}`;
+                                    signalType = (signal.side === 'UP' || signal.side === 'BUY') ? 'buy' : (signal.side ===
+                                        'DOWN' || signal.side === 'SELL') ? 'sell' : 'watch';
+                                    signalLabel = signal.side;
+                                } else if (signal.type === 'hybrid') {
+                                    if (signal.bothConfirmed) {
+                                        suffix =
+                                            ` → ${signal.ouSide}/${signal.eoSide} (${signal.ouValue.toFixed(0)}%/${signal.eoValue.toFixed(0)}%)`;
+                                        signalType = 'buy';
+                                        signalLabel = signal.ouSide + '/' + signal.eoSide;
+                                    } else if (signal.ouConfirmed || signal.eoConfirmed) {
+                                        suffix = ` → ${signal.ouSide}/${signal.eoSide} (partial)`;
+                                        signalType = 'watch';
+                                        signalLabel = 'partial';
+                                    }
+                                } else {
+                                    suffix = ' → signal';
+                                    signalType = 'buy';
+                                    signalLabel = 'SIG';
+                                }
                             }
                         }
 
                         let badgeHTML = '';
                         if (hasActiveSignal) {
                             const badgeClass = signalType === 'buy' ? '' : (signalType === 'sell' ? 'sell' : (signalType ===
-                                'buy-watch' ? 'buy-watch' : (signalType === 'sell-watch' ? 'sell-watch' : 'neutral')));
+                                'watch' ? 'watch' : 'neutral'));
                             badgeHTML = `<span class="signal-badge ${badgeClass}">${signalLabel}</span>`;
                         }
 
@@ -4211,8 +3679,8 @@
                         if (a.hasSignal && !b.hasSignal) return -1;
                         if (!a.hasSignal && b.hasSignal) return 1;
                         if (a.hasSignal && b.hasSignal) {
-                            const order = { buy: 0, 'buy-watch': 1, sell: 2, 'sell-watch': 3, neutral: 4 };
-                            return (order[a.signalType] || 5) - (order[b.signalType] || 5);
+                            const order = { buy: 0, watch: 1, sell: 2, neutral: 3 };
+                            return (order[a.signalType] || 4) - (order[b.signalType] || 4);
                         }
                         return 0;
                     });
@@ -4288,20 +3756,6 @@
                     if (ws && ws.readyState === WebSocket.OPEN && !invalidSymbols.has(sym)) {
                         ws.send(JSON.stringify({ ticks_history: sym, count: 1000, end: "latest", style: "ticks" }));
                         ws.send(JSON.stringify({ ticks: sym, subscribe: 1 }));
-                    }
-                }
-
-                function applyPointerSettings(ptr, scale) {
-                    let style = ptr.style;
-                    if (ptr.classList.contains('triangle')) {
-                        style.borderLeftWidth = (5 * scale) + 'px';
-                        style.borderRightWidth = (5 * scale) + 'px';
-                        style.borderBottomWidth = (7 * scale) + 'px';
-                    } else if (ptr.classList.contains('arrow')) {
-                        style.fontSize = (0.9 * scale) + 'rem';
-                    } else if (ptr.classList.contains('dot')) {
-                        style.width = (6 * scale) + 'px';
-                        style.height = (6 * scale) + 'px';
                     }
                 }
 
@@ -4387,14 +3841,187 @@
                 function startCandleTimer() {
                     if (candleTimerInterval) clearInterval(candleTimerInterval);
                     candleTimerInterval = setInterval(() => {
-                        const now = Date.now();
                         for (const sym of ALL_SYMBOLS) {
-                            if (!marketData[sym] || !marketData[sym].rollingArray || marketData[sym].rollingArray
-                                .length === 0) continue;
-                            closeCandleIfNeeded(sym);
-                            renderCandleDisplay(sym);
+                            if (marketData[sym] && marketData[sym].rollingArray && marketData[sym].rollingArray.length >
+                                0) {
+                                closeCandleIfNeeded(sym);
+                                renderCandleDisplay(sym);
+                            }
                         }
                     }, 1000);
+                }
+
+                // ---- GET SIGNAL FOR MODE ----
+                function getSignalForMode(sym, mode) {
+                    if (mode === 'analysis') {
+                        const data = marketData[sym];
+                        if (data && data.analysisResult) return data.analysisResult;
+                        return null;
+                    }
+                    if (mode === 'predict') return getPredictSignal(sym);
+                    else if (mode === 'overunder') return getOverUnderSignal(sym);
+                    else if (mode === 'evenodd') return getEvenOddSignal(sym);
+                    else if (mode === 'vanilla') {
+                        let signals = getVanillaSignals(sym);
+                        let best = null;
+                        for (let s of signals) {
+                            if (s.type === 'confluence' && (s.side === 'BUY' || s.side === 'SELL')) {
+                                if (!best || best.side !== 'BUY') best = s;
+                            }
+                            if (s.type === 'vanilla' && (s.side === 'UP' || s.side === 'DOWN')) {
+                                if (!best || best.side !== 'BUY') best = s;
+                            }
+                            if (s.type === 'confluence_progress') continue;
+                        }
+                        if (best) return best;
+                        return signals.length > 0 ? signals[0] : null;
+                    } else if (mode === 'hybrid') return getHybridStatus(sym);
+                    return null;
+                }
+
+                // ---- UPDATE SIGNAL SUMMARY ----
+                function updateSignalSummary() {
+                    const container = document.getElementById('signalSummaryContent');
+                    const bar = document.getElementById('signalSummaryBar');
+                    if (!container) return;
+
+                    let signalGroups = [];
+
+                    for (let sym of ALL_SYMBOLS) {
+                        let hasData = marketData[sym] && marketData[sym].rollingArray && marketData[sym].rollingArray.length >
+                            10;
+                        if (!hasData) continue;
+
+                        let modeStatus = {};
+                        let hasSignal = false;
+
+                        for (let mode of MODE_LABELS) {
+                            let sig = getSignalForMode(sym, mode);
+                            let status = 'none';
+                            if (sig) {
+                                if (sig.type === 'predict' || sig.type === 'overunder' || sig.type === 'evenodd') {
+                                    if (sig.side === 'UNDER' || sig.side === 'EVEN' || sig.side === 'BUY') status = 'buy';
+                                    else if (sig.side === 'OVER' || sig.side === 'ODD' || sig.side === 'SELL') status =
+                                    'sell';
+                                    else if (sig.side === 'WATCH') status = 'watch';
+                                } else if (sig.type === 'vanilla' || sig.type === 'confluence') {
+                                    if (sig.side === 'UP' || sig.side === 'BUY') status = 'buy';
+                                    else if (sig.side === 'DOWN' || sig.side === 'SELL') status = 'sell';
+                                    else if (sig.side === 'WATCH') status = 'watch';
+                                } else if (sig.type === 'hybrid' || sig.bothConfirmed) {
+                                    if (sig.bothConfirmed) status = 'buy';
+                                    else if (sig.ouConfirmed || sig.eoConfirmed) status = 'watch';
+                                } else if (sig.type === 'analysis') {
+                                    if (sig.signal === 'BUY') status = 'buy';
+                                    else if (sig.signal === 'SELL') status = 'sell';
+                                    else if (sig.signal === 'WATCH') status = 'watch';
+                                    else if (sig.signal === 'NEUTRAL') status = 'none';
+                                } else {
+                                    if (sig.side === 'BUY' || sig.side === 'UP' || sig.side === 'UNDER' || sig.side ===
+                                        'EVEN') status = 'buy';
+                                    else if (sig.side === 'SELL' || sig.side === 'DOWN' || sig.side === 'OVER' || sig
+                                        .side === 'ODD') status = 'sell';
+                                    else if (sig.side === 'WATCH') status = 'watch';
+                                }
+                            }
+                            modeStatus[mode] = status;
+                            if (status !== 'none') hasSignal = true;
+                        }
+
+                        if (hasSignal) {
+                            signalGroups.push({ sym, modes: modeStatus });
+                        }
+                    }
+
+                    if (signalGroups.length === 0) {
+                        bar.classList.remove('visible');
+                        container.innerHTML = '';
+                        return;
+                    }
+
+                    bar.classList.add('visible');
+
+                    let html = '';
+                    for (let group of signalGroups) {
+                        let cells = '';
+                        for (let mode of MODE_LABELS) {
+                            let status = group.modes[mode] || 'none';
+                            if (status === 'none') continue;
+                            let cls = status === 'buy' ? 'buy' : (status === 'sell' ? 'sell' : (status === 'watch' ?
+                                'watch' : ''));
+                            let display = status === 'buy' ? 'B' : (status === 'sell' ? 'S' : (status === 'watch' ?
+                                'W' : ''));
+                            let short = MODE_SHORT[mode] || mode;
+                            cells +=
+                            `<span class="summary-mode-cell ${cls}" title="${short}: ${status.toUpperCase()}">${display}</span>`;
+                        }
+
+                        if (cells) {
+                            html += `<div class="summary-market-group" onclick="setFocus('${group.sym}')" title="${FULL_NAMES[group.sym]}">
+                                        <span class="market-name">${MARKET_NAMES[group.sym]}</span>
+                                        ${cells}
+                                    </div>`;
+                        }
+                    }
+
+                    container.innerHTML = html;
+                }
+
+                // ---- PROCESS TICK ----
+                function processTick(sym, price, quoteDisplay, epoch) {
+                    if (!marketData[sym]) marketData[sym] = {
+                        rollingArray: [],
+                        last50Array: [],
+                        lastDigit: null,
+                        lastPriceDisplay: '—',
+                        directions: [],
+                        lastPrice: null,
+                        priceHistory: [],
+                        analysisResult: null
+                    };
+                    let d = marketData[sym];
+                    d.lastPriceDisplay = quoteDisplay || formatHistoryPrice(sym, price);
+                    d.lastDigit = lastDigitFromFormatted(d.lastPriceDisplay);
+                    d.rollingArray.push(d.lastDigit);
+                    while (d.rollingArray.length > 2000) d.rollingArray.shift();
+                    d.last50Array.push(d.lastDigit);
+                    if (d.last50Array.length > 50) d.last50Array.shift();
+                    if (d.lastPrice !== null) {
+                        d.directions.push(price > d.lastPrice ? 1 : price < d.lastPrice ? -1 : 0);
+                        while (d.directions.length > 100) d.directions.shift();
+                    }
+                    d.lastPrice = price;
+                    d.priceHistory.push(price);
+                    if (d.priceHistory.length > 500) d.priceHistory.shift();
+
+                    if (d.priceHistory.length % 10 === 0) {
+                        const sr = detectSupportResistance(sym);
+                        if (sr) _srCache[sym] = sr;
+                    }
+
+                    updateCandle(sym, price);
+                    closeCandleIfNeeded(sym);
+
+                    const candle = getCandle(sym);
+                    if (candle.history.length >= 10 && (candle.isClosed || candle.tickCount > 10)) {
+                        updateAnalysisForSymbol(sym);
+                    }
+
+                    if (document.getElementById('alarmToggle').checked && currentMarket === 'analysis') {
+                        const anSig = d.analysisResult;
+                        if (anSig && (anSig.signal === 'BUY' || anSig.signal === 'SELL' || anSig.signal === 'WATCH')) {
+                            const now = Date.now();
+                            const last = _lastAlarmTime['analysis_' + sym] || 0;
+                            const s = getSettings();
+                            if ((now - last) > s.alarmCooldown * 1000) {
+                                playAlarm();
+                                _lastAlarmTime['analysis_' + sym] = now;
+                            }
+                        }
+                    }
+
+                    checkAlarm(sym, price);
+                    renderMarket(sym);
                 }
 
                 // ---- INIT ----
@@ -4408,8 +4035,9 @@
                 window.onclick = e => { if (e.target === document.getElementById('settingsModal')) document.getElementById(
                         'settingsModal').style.display = 'none'; };
 
-                ['smaPeriod', 'rsiPeriod', 'rocPeriod', 'slopePeriod', 'angleThreshold', 'angleWatchThreshold',
-                    'priceSmaProximity'
+                // Settings change refresh
+                ['smaPeriod', 'rsiPeriod', 'slopePeriod', 'angleThreshold', 'angleWatchThreshold',
+                    'predThreshold', 'oppositeThreshold', 'streakThreshold', 'hybridThreshold'
                 ].forEach(id => {
                     document.getElementById(id)?.addEventListener('change', () => {
                         for (let s in marketData)
@@ -4422,7 +4050,7 @@
                 setTimeout(connectWebSocket, 500);
                 setMarket('analysis');
 
-                console.log('✅ TAJIRI TRADERS – Early SMA angle: signals fire when momentum starts, not when overextended.');
+                console.log('✅ FIXED: Digit grid uses full analysisWindow (1000) for percentages; pointer moves on every tick in all modes.');
             } catch (err) {
                 console.error('Error initializing app:', err);
                 document.body.innerHTML =
