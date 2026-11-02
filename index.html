@@ -394,7 +394,8 @@
                 🏆 <b>Strong</b> = strength score ≥ threshold.<br>
                 🎯 <b>ENTER NOW</b> = ≥2 hot digits in dominant group + 3 consecutive pullback ticks.<br>
                 <b>Over/Under</b>: contrarian (fade dominant side).<br>
-                <b>Even/Odd &amp; Rise/Fall</b>: same direction.
+                <b>Even/Odd &amp; Rise/Fall</b>: same direction.<br>
+                <b>EO parity competition</b>: most &amp; second tier must be same parity, gap ≤ 3%.
             </div>
         </div>
     </div>
@@ -979,6 +980,46 @@
                         bothConfirmed: ouValue >= threshold && eoValue >= threshold, threshold };
                 }
 
+                // ============================================================
+                // ========= EO PARITY COMPETITION (NEW, EVEN/ODD ONLY) =======
+                // ============================================================
+                // Fires when the most and second-most appearing tiers are
+                // BOTH all-even (or BOTH all-odd) AND their percentage gap
+                // is <= 3. Direction follows the parity (same-direction bet).
+                function computeEOParityCompetition(sym) {
+                    const data = marketData[sym];
+                    if (!data || !data.rollingArray || data.rollingArray.length < 20) return null;
+                    const freq = getDigitPercentages(sym, getSettings().analysisWindow);
+                    if (!freq) return null;
+                    const mostDigits = Array.from(freq.most);
+                    const secondDigits = Array.from(freq.second);
+                    if (mostDigits.length === 0 || secondDigits.length === 0) return null;
+                    const allEven = arr => arr.every(d => d % 2 === 0);
+                    const allOdd = arr => arr.every(d => d % 2 !== 0);
+                    let parity = null;
+                    if (allEven(mostDigits) && allEven(secondDigits)) parity = 'EVEN';
+                    else if (allOdd(mostDigits) && allOdd(secondDigits)) parity = 'ODD';
+                    else return null;
+                    const mostPct = freq.pct[mostDigits[0]];
+                    const secondPct = freq.pct[secondDigits[0]];
+                    if (mostPct === undefined || secondPct === undefined) return null;
+                    const gap = mostPct - secondPct;
+                    if (gap > 3) return null;
+                    return { parity, mostPct, secondPct, gap, mostDigits, secondDigits };
+                }
+
+                function renderEOParityPanel(result) {
+                    if (!result) return '';
+                    const isEven = result.parity === 'EVEN';
+                    const bg = isEven ? '#10b981' : '#f97316';
+                    const label = isEven ? '🟢 EVEN competing' : '🟠 ODD competing';
+                    return `
+                        <div style="margin-top:0.35rem;padding:0.45rem 0.6rem;border-radius:0.5rem;background:${bg};color:#fff;text-align:center;font-weight:800;font-size:0.9rem;letter-spacing:0.6px;box-shadow:0 0 10px ${bg};">
+                            ${label} · gap ${result.gap.toFixed(2)}%
+                            <div style="font-size:0.65rem;font-weight:600;opacity:0.9;margin-top:0.15rem;">Top: ${result.mostDigits.join(',')} vs ${result.secondDigits.join(',')}</div>
+                        </div>`;
+                }
+
                 // ============ ANALYSIS ============
                 function calcSMA(data, period) { if (data.length < period) return null; return data.slice(-period).reduce((a,b)=>a+b,0)/period; }
                 function calcRSI(closes, period=14) {
@@ -1383,8 +1424,9 @@
                     if (currentMarket === 'evenodd') {
                         const r = computeStrongSignal(sym, 'evenodd');
                         const e = evaluateEntryTrigger(sym, 'evenodd', r);
+                        const parityResult = computeEOParityCompetition(sym);
                         const sigDiv = document.getElementById(`signalDisplay_${sym}`);
-                        if (sigDiv) sigDiv.innerHTML = renderStrongPanel(sym, r, e, 'evenodd');
+                        if (sigDiv) sigDiv.innerHTML = renderStrongPanel(sym, r, e, 'evenodd') + renderEOParityPanel(parityResult);
                         let eoDiv = document.getElementById(`eoTwo_${sym}`);
                         if (eoDiv && r) {
                             eoDiv.style.display = 'flex';
@@ -1804,7 +1846,7 @@
                 setTimeout(connectWebSocket, 500);
                 setMarket('analysis');
 
-                console.log('✅ Strong + Entry Trigger Engine active. Hot digits, pullback confirmation, ENTER NOW.');
+                console.log('✅ Strong + Entry Trigger Engine active. Hot digits, pullback confirmation, ENTER NOW. EO parity competition enabled.');
             } catch (err) {
                 console.error('Error initializing app:', err);
                 document.body.innerHTML = `<div style="color:red;padding:20px;font-size:16px;">Error loading UI. Please refresh. Details: ${err.message}</div>`;
