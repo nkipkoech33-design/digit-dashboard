@@ -410,9 +410,42 @@
                 const MODE_LABELS = ['predict','overunder','evenodd','vanilla','hybrid','analysis'];
                 const MODE_SHORT = { predict:'Pred', overunder:'OU', evenodd:'EO', vanilla:'Van', hybrid:'Hyb', analysis:'Ana' };
 
+                // ========= CONNECTION STATE (keep-alive + backoff) =========
                 let marketData = {}, ws = null, invalidSymbols = new Set(), focusedSymbol = null;
                 let currentMarket = 'analysis', currentStrategy = 'reversal';
                 let _srCache = {}, _lastAlarmTime = {}, candleStore = {};
+
+                let pingInterval = null, pongTimeout = null, reconnectTimer = null, reconnectAttempts = 0;
+                const PING_EVERY_MS = 30000;
+                const PONG_TIMEOUT_MS = 10000;
+                // REVERTED to the working public endpoint. The v3 endpoint is legacy and may not accept public subscriptions reliably.
+                const WS_ENDPOINT = 'wss://api.derivws.com/trading/v1/options/ws/public';
+
+                function clearConnectionTimers() {
+                    if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
+                    if (pongTimeout) { clearTimeout(pongTimeout); pongTimeout = null; }
+                    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+                }
+
+                function sendPing() {
+                    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+                    try {
+                        ws.send(JSON.stringify({ ping: 1 }));
+                        if (pongTimeout) clearTimeout(pongTimeout);
+                        pongTimeout = setTimeout(() => {
+                            console.warn('⚠️ No pong received — forcing reconnect');
+                            try { ws.close(); } catch (e) {}
+                        }, PONG_TIMEOUT_MS);
+                    } catch (e) {}
+                }
+
+                function scheduleReconnect() {
+                    clearConnectionTimers();
+                    reconnectAttempts++;
+                    const delay = Math.min(30000, 1000 * Math.pow(2, reconnectAttempts - 1));
+                    console.log(`🔁 Reconnecting in ${delay / 1000}s (attempt ${reconnectAttempts})`);
+                    reconnectTimer = setTimeout(() => connectWebSocket(), delay);
+                }
 
                 // ============ CANDLES ============
                 function getCandle(sym) { if (!candleStore[sym]) candleStore[sym] = { open:null,high:null,low:null,close:null,minute:null,tickCount:0,isClosed:false,history:[] }; return candleStore[sym]; }
@@ -623,7 +656,7 @@
                 }
 
                 // ============================================================
-                // ========= STRONG SIGNAL ENGINE (unchanged) ================
+                // ========= STRONG SIGNAL ENGINE ============================
                 // ============================================================
                 function computeGroups(sym, windowSize) {
                     const d = marketData[sym];
@@ -751,10 +784,8 @@
                 }
 
                 // ============================================================
-                // ========= ENTRY TRIGGER ENGINE (NEW) ======================
+                // ========= ENTRY TRIGGER ENGINE ============================
                 // ============================================================
-
-                // Get or create entry state for a symbol+mode
                 function getEntryState(sym, key) {
                     const d = marketData[sym];
                     if (!d) return null;
@@ -770,7 +801,6 @@
                     return d._entry[key];
                 }
 
-                // Compute hot digits from candidate set: short(50)% - long(1000)% >= threshold
                 function computeHotDigits(sym, candidateDigits) {
                     const d = marketData[sym];
                     if (!d || d.rollingArray.length < 100) return [];
@@ -792,7 +822,6 @@
                     return hot;
                 }
 
-                // Compute rise/fall "hotness" for vanilla using window deltas
                 function computeVanillaMomentum(sym) {
                     const d = marketData[sym];
                     if (!d || !d.directions || d.directions.length < 100) return null;
@@ -816,8 +845,6 @@
                     };
                 }
 
-                // Evaluate entry trigger for a mode. Returns:
-                // { ready, trigger, entrySide, dominantSide, hotDigits, pullbackCount, pullbackDigit, ticksNeeded }
                 function evaluateEntryTrigger(sym, mode, strongResult) {
                     const d = marketData[sym];
                     if (!d || !strongResult) return null;
@@ -826,7 +853,6 @@
                     if (!st) return null;
                     const now = Date.now();
 
-                    // Only proceed if strong signal is set
                     if (strongResult.level === 'NEUTRAL') {
                         st.awaiting = false;
                         st.pullbackCount = 0;
@@ -834,8 +860,8 @@
                         return { ready: false, trigger: false, entrySide: null, dominantSide: null, hotDigits: [], pullbackCount: 0, pullbackDigit: null, ticksNeeded: s.pullbackTicks };
                     }
 
-                    const dominantSide = strongResult.ctx.dominant;   // 'UNDER' / 'OVER' / 'EVEN' / 'ODD' / 'RISE' / 'FALL'
-                    const entrySide = strongResult.side;              // what we'd trade (fade for OU, same for EO/Vanilla)
+                    const dominantSide = strongResult.ctx.dominant;
+                    const entrySide = strongResult.side;
 
                     let candidateDigits = [];
                     let pullbackTest = () => false;
@@ -843,7 +869,7 @@
                     if (mode === 'overunder') {
                         if (dominantSide === 'UNDER') {
                             candidateDigits = [0,1,2,3];
-                            pullbackTest = (dig) => dig >= 6; // Over digit prints
+                            pullbackTest = (dig) => dig >= 6;
                         } else {
                             candidateDigits = [6,7,8,9];
                             pullbackTest = (dig) => dig <= 3;
@@ -860,7 +886,6 @@
 
                     const lastDig = d.lastDigit;
 
-                    // ---- Vanilla handled separately ----
                     if (mode === 'vanilla') {
                         const vm = computeVanillaMomentum(sym);
                         if (!vm) return null;
@@ -900,7 +925,6 @@
                         }
                     }
 
-                    // ---- OU / EO digit-based ----
                     const hot = computeHotDigits(sym, candidateDigits);
                     const lastInDominant = candidateDigits.includes(lastDig);
 
@@ -981,11 +1005,8 @@
                 }
 
                 // ============================================================
-                // ========= EO PARITY COMPETITION (NEW, EVEN/ODD ONLY) =======
+                // ========= EO PARITY COMPETITION (EVEN/ODD ONLY) ============
                 // ============================================================
-                // Fires when the most and second-most appearing tiers are
-                // BOTH all-even (or BOTH all-odd) AND their percentage gap
-                // is <= 3. Direction follows the parity (same-direction bet).
                 function computeEOParityCompetition(sym) {
                     const data = marketData[sym];
                     if (!data || !data.rollingArray || data.rollingArray.length < 20) return null;
@@ -1209,7 +1230,6 @@
                     const r = strongResult;
                     const e = entryResult;
 
-                    // Direction class
                     const isSell = (r.side === 'OVER' || r.side === 'ODD' || r.side === 'FALL');
                     const dirClass = r.level === 'STRONG' ? (isSell ? 'sell' : 'buy') : (r.level === 'WATCH' ? 'watch' : 'neutral');
                     const panelClass = (e && e.trigger) ? 'entry-mode' : (r.level === 'STRONG' ? (isSell ? 'strong-sell' : 'strong-buy') : (r.level === 'WATCH' ? 'watch-mode' : ''));
@@ -1222,7 +1242,6 @@
                     let html = `<div class="strong-panel ${panelClass}">`;
                     html += `<div class="strong-badge ${badgeClass}">${badgeText}</div>`;
 
-                    // ENTRY badge
                     if (e) {
                         if (e.trigger) {
                             const eSell = (e.entrySide === 'OVER' || e.entrySide === 'ODD' || e.entrySide === 'FALL');
@@ -1234,7 +1253,6 @@
                         }
                     }
 
-                    // Hot digits row
                     if (e) {
                         html += `<div class="hot-digits-row"><span class="hot-label">🔥 HOT DIGITS</span>`;
                         if (e.hotDigits && e.hotDigits.length > 0) {
@@ -1249,7 +1267,6 @@
                         html += `</div>`;
                     }
 
-                    // Pullback counter
                     if (e && e.ready) {
                         let dots = '';
                         for (let i = 0; i < e.ticksNeeded; i++) {
@@ -1258,11 +1275,9 @@
                         html += `<div class="pullback-row"><span class="pb-label">PULLBACK</span>${dots}<span class="pb-label">${e.pullbackCount}/${e.ticksNeeded}</span>${e.pullbackDigit !== null && e.pullbackDigit !== undefined ? `<span class="pb-label">· last: ${e.pullbackDigit}</span>` : ''}</div>`;
                     }
 
-                    // Strength score
                     html += `<div class="strong-score-row"><span>STRENGTH SCORE</span><span class="score-val">${r.score}%</span></div>`;
                     html += `<div class="strong-bar-track"><div class="strong-bar-fill ${barClass}" style="width:${r.score}%"></div></div>`;
 
-                    // Context pills
                     if (mode === 'overunder') {
                         html += `<div class="strong-context">
                             <span class="ctx-pill dom">${r.ctx.dominant}: ${r.ctx.longPct}%</span>
@@ -1279,7 +1294,6 @@
                         </div>`;
                     }
 
-                    // Breakdown
                     html += `<div class="strong-breakdown">`;
                     for (let c of r.breakdown) {
                         html += `<div class="bk-row ${c.ok ? 'ok' : 'fail'}"><span class="bk-label">${c.label}</span><span class="bk-val">${c.val} · ${c.pts}/${c.max}</span></div>`;
@@ -1302,7 +1316,6 @@
                     const card = document.getElementById(`market_${sym}`);
                     if (!card) return;
 
-                    // Compute entry trigger EARLY so we can pass hot digits to grid
                     let entryForCurrent = null, hotDigitsForCurrent = [];
                     if (currentMarket === 'overunder' || currentMarket === 'evenodd' || currentMarket === 'vanilla') {
                         const strong = computeStrongSignal(sym, currentMarket);
@@ -1348,7 +1361,6 @@
 
                     buildDigitGrid(sym, data, s, hotDigitsForCurrent);
 
-                    // ---- ANALYSIS ----
                     if (currentMarket === 'analysis') {
                         const zbc = document.getElementById(`zoneBarContainer_${sym}`);
                         if (zbc) zbc.style.display = 'none';
@@ -1380,7 +1392,6 @@
                         return;
                     }
 
-                    // ---- PREDICT ----
                     if (currentMarket === 'predict') {
                         const signal = getPredictSignal(sym);
                         const sigDiv = document.getElementById(`signalDisplay_${sym}`);
@@ -1394,7 +1405,6 @@
                         return;
                     }
 
-                    // ---- OVER/UNDER (STRONG + ENTRY) ----
                     if (currentMarket === 'overunder') {
                         const r = computeStrongSignal(sym, 'overunder');
                         const e = evaluateEntryTrigger(sym, 'overunder', r);
@@ -1420,7 +1430,6 @@
                         return;
                     }
 
-                    // ---- EVEN/ODD ----
                     if (currentMarket === 'evenodd') {
                         const r = computeStrongSignal(sym, 'evenodd');
                         const e = evaluateEntryTrigger(sym, 'evenodd', r);
@@ -1444,7 +1453,6 @@
                         return;
                     }
 
-                    // ---- VANILLA ----
                     if (currentMarket === 'vanilla') {
                         const r = computeStrongSignal(sym, 'vanilla');
                         const e = evaluateEntryTrigger(sym, 'vanilla', r);
@@ -1459,7 +1467,6 @@
                         return;
                     }
 
-                    // ---- HYBRID ----
                     if (currentMarket === 'hybrid') {
                         let status = getHybridStatus(sym);
                         let sigDiv = document.getElementById(`signalDisplay_${sym}`);
@@ -1643,14 +1650,33 @@
                     }
                 }
 
+                // ============ WEBSOCKET (keep-alive + backoff) ============
                 function connectWebSocket() {
-                    if (ws) ws.close();
+                    clearConnectionTimers();
+                    if (ws) {
+                        try { ws.close(); } catch (e) {}
+                        ws = null;
+                    }
+
                     document.getElementById('connectionStatus').innerHTML = '⏳ Connecting...';
-                    ws = new WebSocket('wss://api.derivws.com/trading/v1/options/ws/public');
-                    ws.onopen = () => {
+
+                    let thisWs;
+                    try {
+                        thisWs = new WebSocket(WS_ENDPOINT);
+                    } catch (e) {
+                        console.error('WebSocket construction failed:', e);
+                        scheduleReconnect();
+                        return;
+                    }
+                    ws = thisWs;
+
+                    thisWs.onopen = () => {
                         document.getElementById('connectionStatus').innerHTML = '✅ Connected';
+                        reconnectAttempts = 0;
+
                         document.getElementById('marketsContainer').innerHTML = '';
                         marketData = {}; invalidSymbols.clear(); _srCache = {}; _lastAlarmTime = {}; candleStore = {};
+
                         ALL_SYMBOLS.forEach(s => createMarketUI(s));
                         let idx = 0;
                         let nextSub = () => {
@@ -1665,29 +1691,47 @@
                         };
                         nextSub();
                         startTimerRefresh();
+
+                        pingInterval = setInterval(sendPing, PING_EVERY_MS);
+                        sendPing();
                     };
-                    ws.onmessage = e => {
+
+                    thisWs.onmessage = (e) => {
+                        if (pongTimeout) { clearTimeout(pongTimeout); pongTimeout = null; }
                         try {
-                            let msg = JSON.parse(e.data);
+                            const msg = JSON.parse(e.data);
                             if (msg.error && msg.error.code === 'InvalidSymbol' && msg.echo_req?.ticks_history) {
-                                let sym = msg.echo_req.ticks_history;
+                                const sym = msg.echo_req.ticks_history;
                                 if (MARKET_NAMES[sym]) invalidSymbols.add(sym);
                             } else if (msg.msg_type === 'tick' && msg.tick) {
-                                let sym = msg.tick.symbol;
+                                const sym = msg.tick.symbol;
                                 if (MARKET_NAMES[sym] && !invalidSymbols.has(sym)) {
                                     processTick(sym, msg.tick.quote, msg.tick.quote_display, msg.tick.epoch);
-                                    document.getElementById(`status_${sym}`).innerHTML = '🟢 live';
+                                    const statusEl = document.getElementById(`status_${sym}`);
+                                    if (statusEl) statusEl.innerHTML = '🟢 live';
                                 }
                             } else if (msg.msg_type === 'history' && msg.history?.prices && msg.echo_req?.ticks_history) {
-                                let sym = msg.echo_req.ticks_history;
+                                const sym = msg.echo_req.ticks_history;
                                 if (MARKET_NAMES[sym] && !invalidSymbols.has(sym)) {
-                                    msg.history.prices.forEach((p, i) => processTick(sym, p, null, Date.now() - (msg.history.prices.length - i) * 1000));
+                                    msg.history.prices.forEach((p, i) =>
+                                        processTick(sym, p, null, Date.now() - (msg.history.prices.length - i) * 1000)
+                                    );
                                 }
                             }
                         } catch (err) {}
                     };
-                    ws.onerror = () => { document.getElementById('connectionStatus').innerHTML = '⚠️ Error'; };
-                    ws.onclose = () => { document.getElementById('connectionStatus').innerHTML = '🔴 Disconnected'; };
+
+                    thisWs.onerror = () => {
+                        document.getElementById('connectionStatus').innerHTML = '⚠️ Error';
+                    };
+
+                    thisWs.onclose = () => {
+                        if (ws !== thisWs) return;
+                        ws = null;
+                        clearConnectionTimers();
+                        document.getElementById('connectionStatus').innerHTML = '🔴 Disconnected';
+                        scheduleReconnect();
+                    };
                 }
 
                 function toggleMode() { document.body.classList.toggle('light'); }
@@ -1799,7 +1843,6 @@
                     updateCandle(sym, price);
                     closeCandleIfNeeded(sym);
 
-                    // Alarm on entry trigger
                     if (document.getElementById('alarmToggle').checked) {
                         const rOU = computeStrongSignal(sym, 'overunder');
                         const rEO = computeStrongSignal(sym, 'evenodd');
@@ -1836,7 +1879,6 @@
 
                 ['smaPeriod','rsiPeriod','slopePeriod','angleThreshold','angleWatchThreshold','predThreshold','oppositeThreshold','streakThreshold','hybridThreshold','strongThreshold','watchThreshold','signalCooldown','hotGainThreshold','minHotDigits','pullbackTicks','entryCooldown'].forEach(id => {
                     document.getElementById(id)?.addEventListener('change', () => {
-                        // Reset entry state so new thresholds take effect
                         for (let s in marketData) { if (marketData[s]) marketData[s]._entry = {}; if (marketData[s]?.rollingArray?.length) renderMarket(s); }
                         updateAllMarketsList();
                         updateSignalSummary();
@@ -1846,7 +1888,7 @@
                 setTimeout(connectWebSocket, 500);
                 setMarket('analysis');
 
-                console.log('✅ Strong + Entry Trigger Engine active. Hot digits, pullback confirmation, ENTER NOW. EO parity competition enabled.');
+                console.log('✅ Strong + Entry Trigger Engine active. EO parity enabled. Keep-alive + auto-reconnect active.');
             } catch (err) {
                 console.error('Error initializing app:', err);
                 document.body.innerHTML = `<div style="color:red;padding:20px;font-size:16px;">Error loading UI. Please refresh. Details: ${err.message}</div>`;
