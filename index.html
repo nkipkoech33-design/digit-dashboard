@@ -3,26 +3,27 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover" />
-    <title>TAJIRI TRADERS – Bars & Ticks</title>
+    <title>TAJIRI TRADERS – Streak Bot</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
             --bg-body: #0b1120; --bg-card: #111827; --bg-header: #1e293b; --bg-panel: #0a0f1c;
             --bg-digit: #1e293b; --border-color: #2d3a4e; --text-primary: #e2e8f0; --text-secondary: #94a3b8;
-            --price-color: #facc15; --btn-bg: #3b82f6; --trade-active: #10b981; --percent-accent: #facc15;
-            --last-digit-bg: #0f172a; --external-nav-height: 60px; --green: #10b981; --red: #ef4444;
-            --gold: #facc15; --zone-under: #3b82f6; --zone-middle: #facc15; --zone-over: #ef4444;
-            --seq-e: #10b981; --seq-o: #f97316; --digit-num-color: #cbd5e1;
+            --btn-bg: #3b82f6; --trade-active: #10b981; --percent-accent: #facc15;
+            --last-digit-bg: #0f172a; --external-nav-height: 60px; --gold: #facc15;
+            --zone-under: #3b82f6; --zone-middle: #facc15; --zone-over: #ef4444;
+            --seq-e: #10b981; --seq-o: #f97316;
         }
         body.light {
             --bg-body: #f8fafc; --bg-card: #ffffff; --bg-header: #e2e8f0; --bg-panel: #f1f5f9;
             --bg-digit: #ffffff; --border-color: #cbd5e1; --text-primary: #0f172a; --text-secondary: #475569;
-            --price-color: #eab308; --btn-bg: #2563eb; --trade-active: #059669; --percent-accent: #b45309;
-            --last-digit-bg: #e2e8f0; --gold: #eab308; --zone-under: #2563eb; --zone-middle: #ca8a04;
-            --zone-over: #dc2626; --seq-e: #059669; --seq-o: #b45309; --digit-num-color: #334155;
+            --btn-bg: #2563eb; --trade-active: #059669; --percent-accent: #b45309;
+            --last-digit-bg: #e2e8f0; --gold: #eab308;
+            --zone-under: #2563eb; --zone-middle: #ca8a04; --zone-over: #dc2626;
+            --seq-e: #059669; --seq-o: #b45309;
         }
         body { font-family: 'Segoe UI', Roboto, system-ui, sans-serif; background: var(--bg-body); color: var(--text-primary); height: 100vh; overflow: hidden; margin: 0; padding: 0; }
-        .top-spacer { height: var(--external-nav-height); width: 100%; background: transparent; flex-shrink: 0; }
+        .top-spacer { height: var(--external-nav-height); width: 100%; flex-shrink: 0; }
         .app-container { display: flex; flex-direction: column; height: calc(100vh - var(--external-nav-height)); overflow: hidden; }
         .top-slim-bar { background: var(--bg-header); border-bottom: 1px solid var(--border-color); padding: 0.4rem 0.8rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.4rem; flex-shrink: 0; }
         .logo-area h1 { font-size: 1.2rem; margin: 0; background: linear-gradient(135deg, var(--gold), #38bdf8); -webkit-background-clip: text; background-clip: text; color: transparent; }
@@ -32,62 +33,132 @@
         .connect-btn { background: var(--btn-bg); border: none; padding: 0.2rem 0.7rem; border-radius: 1.5rem; font-weight: bold; color: white; cursor: pointer; font-size: 0.7rem; }
         .settings-icon, .mode-toggle-small { background: var(--bg-panel); border: none; font-size: 1rem; cursor: pointer; border-radius: 1.5rem; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; }
         .status-badge { background: var(--bg-panel); padding: 0.2rem 0.6rem; border-radius: 1.5rem; font-size: 0.7rem; }
-        .alarm-toggle { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.7rem; background: var(--bg-panel); padding: 0.1rem 0.5rem; border-radius: 1.5rem; cursor: pointer; }
-        .alarm-toggle input { margin: 0; cursor: pointer; }
+        .status-badge.live { background: rgba(16,185,129,0.15); color: #4ade80; }
+        .status-badge.reconnecting { background: rgba(250,204,21,0.15); color: var(--gold); }
+
         .selector-row { background: var(--bg-header); padding: 0.3rem 0.8rem; display: flex; gap: 0.8rem; flex-wrap: wrap; border-bottom: 1px solid var(--border-color); flex-shrink: 0; align-items: center; }
         .market-type-selector { display: flex; gap: 0.3rem; background: var(--bg-panel); padding: 0.1rem 0.4rem; border-radius: 1.5rem; flex-wrap: wrap; }
         .market-btn { background: none; border: none; font-size: 0.8rem; padding: 0.2rem 0.8rem; border-radius: 1.2rem; cursor: pointer; opacity: 0.6; font-weight: bold; color: var(--text-primary); white-space: nowrap; transition: all 0.2s; }
         .market-btn.active { opacity: 1; background: var(--trade-active); }
-        .strategy-selector { display: flex; gap: 0.3rem; background: var(--bg-panel); padding: 0.1rem 0.4rem; border-radius: 1.5rem; margin-left: 0.5rem; flex-wrap: wrap; }
-        .strategy-btn { background: none; border: none; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 1.2rem; cursor: pointer; opacity: 0.6; font-weight: bold; color: var(--text-primary); white-space: nowrap; }
-        .strategy-btn.active { opacity: 1; background: var(--trade-active); }
 
-        .focus-bar { background: var(--bg-header); padding: 0.2rem 0.6rem; margin-bottom: 0.3rem; border-radius: 1.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; flex-shrink: 0; }
-        .focus-bar button { background: var(--btn-bg); border: none; padding: 0.1rem 0.5rem; border-radius: 1rem; color: white; cursor: pointer; font-size: 0.65rem; }
+        .signal-headline { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem; }
+        .signal-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.9rem; border-radius: 0.5rem; font-size: 1.05rem; font-weight: 900; letter-spacing: 0.5px; border: 2px solid transparent; }
+        .signal-badge.up { background: linear-gradient(135deg, #10b981, #059669); color: white; border-color: #34d399; box-shadow: 0 0 12px rgba(16,185,129,0.7); }
+        .signal-badge.down { background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; border-color: #f87171; box-shadow: 0 0 12px rgba(239,68,68,0.7); }
+        .signal-market { font-size: 0.95rem; font-weight: 700; }
+        .live-price-big { font-size: 0.78rem; background: var(--bg-body); padding: 0.1rem 0.5rem; border-radius: 0.8rem; font-family: monospace; }
+        .last-digit-badge { font-size: 1.4rem; font-weight: 800; background: var(--last-digit-bg); padding: 0 0.35rem; border-radius: 0.6rem; min-width: 38px; text-align: center; color: var(--gold); line-height: 1.35; }
+        .signal-score-box { font-size: 0.72rem; font-family: monospace; background: var(--bg-panel); padding: 0.2rem 0.55rem; border-radius: 0.4rem; border: 1px solid var(--border-color); }
+        .signal-score-box b { color: var(--gold); }
+
+        .grade-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; padding: 0 0.5rem; border-radius: 0.5rem; font-size: 1rem; font-weight: 900; letter-spacing: 0.5px; }
+        .grade-badge.grade-A { background: linear-gradient(135deg, #10b981, #059669); color: white; box-shadow: 0 0 10px rgba(16,185,129,0.6); }
+        .grade-badge.grade-B { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; box-shadow: 0 0 8px rgba(59,130,246,0.5); }
+        .grade-badge.grade-C { background: var(--bg-body); color: var(--text-secondary); border: 1px solid var(--border-color); }
+
+        .signal-section { background: var(--bg-panel); border-radius: 0.5rem; padding: 0.5rem 0.65rem; border: 1px solid var(--border-color); margin-top: 0.4rem; }
+        .signal-section-title { font-size: 0.65rem; font-weight: 800; color: var(--gold); letter-spacing: 0.5px; margin-bottom: 0.35rem; }
+        .signal-section .row { display: flex; gap: 0.5rem; align-items: flex-start; padding: 0.15rem 0; font-size: 0.7rem; line-height: 1.5; }
+        .signal-section .row .k { color: var(--text-secondary); flex-shrink: 0; min-width: 90px; }
+        .signal-section .row .v { flex: 1; font-family: monospace; }
+        .signal-section .row .v.highlight { color: var(--gold); font-weight: 800; }
+
+        .collapse-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; padding: 0.15rem 0; margin-bottom: 0 !important; transition: color 0.15s; }
+        .collapse-header:hover { color: #fde047; }
+        .collapse-header .chevron { font-weight: 900; font-size: 0.9rem; color: var(--gold); margin-left: 0.5rem; }
+        .collapse-body { padding-top: 0.35rem; }
+
+        .hot-cold-bar {
+            display: flex; gap: 0.6rem; padding: 0.4rem 0.5rem; margin-bottom: 0.35rem;
+            background: var(--bg-body); border-radius: 0.4rem; border: 1px solid var(--border-color);
+            flex-wrap: wrap; align-items: center; min-height: 38px;
+        }
+        .hot-cold-bar .hc-group { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
+        .hot-cold-bar .hc-label { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.4px; margin-right: 0.1rem; }
+        .hot-cold-bar .hc-label.hot { color: #4ade80; }
+        .hot-cold-bar .hc-label.cold { color: #93c5fd; }
+        .hot-cold-bar .hc-chip {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 22px; height: 22px; padding: 0 0.4rem;
+            border-radius: 0.3rem; font-weight: 900; font-size: 0.8rem; font-family: monospace;
+        }
+        .hot-cold-bar .hc-chip.hot { background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #4ade80; }
+        .hot-cold-bar .hc-chip.cold { background: rgba(59,130,246,0.2); border: 1px solid #3b82f6; color: #93c5fd; }
+
+        .context-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; margin-top: 0.3rem; font-family: monospace; font-size: 0.62rem; }
+        .context-cell { text-align: center; padding: 0.2rem 0.1rem; background: var(--bg-body); border-radius: 0.2rem; border: 1px solid var(--border-color); }
+        .context-cell.hot { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.6); color: #4ade80; }
+        .context-cell .d { font-weight: 900; font-size: 0.72rem; }
+        .context-cell .p { opacity: 0.9; font-size: 0.55rem; }
+
+        .checklist-row { display: flex; gap: 0.4rem; align-items: center; padding: 0.15rem 0; font-size: 0.68rem; }
+        .checklist-row .icon { width: 16px; text-align: center; font-weight: 900; }
+        .checklist-row.pass .icon { color: #4ade80; }
+        .checklist-row.fail .icon { color: #f87171; }
+        .checklist-row .label { flex: 1; }
+        .checklist-row .detail { color: var(--text-secondary); font-family: monospace; font-size: 0.62rem; }
+
+        .entry-steps { display: flex; flex-direction: column; gap: 0; }
+        .entry-step { display: flex; gap: 0.5rem; padding: 0.22rem 0; font-size: 0.7rem; line-height: 1.45; border-bottom: 1px solid rgba(45,58,78,0.4); align-items: flex-start; }
+        .entry-step:last-child { border-bottom: none; }
+        .entry-step .n { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; flex-shrink: 0; background: var(--gold); color: black; border-radius: 50%; font-weight: 900; font-size: 0.7rem; margin-top: 0.05rem; }
+        .entry-step .t { flex: 1; }
+        .entry-step .t b { color: var(--gold); }
+
+        .live-banner-slot {
+            min-height: 34px;
+            height: 34px;
+            margin-top: 0.35rem;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+        }
+
         .main-scroll-area { flex: 1; display: flex; overflow: hidden; padding: 0.5rem; gap: 0.6rem; min-height: 0; }
         .market-cards-container { flex: 1; overflow-y: auto; height: 100%; padding-right: 0.2rem; scroll-behavior: smooth; }
         .market-grid { display: flex; flex-direction: column; gap: 0.6rem; }
-        .market-card { background: var(--bg-card); border-radius: 0.8rem; border: 1px solid var(--border-color); cursor: pointer; display: flex; flex-direction: column; overflow: hidden; }
-        .market-header { background: var(--bg-header); padding: 0.4rem 0.6rem; display: flex; justify-content: space-between; align-items: center; gap: 0.3rem; flex-wrap: wrap; font-size: 0.8rem; }
-        .market-title { font-size: 0.9rem; font-weight: 700; display: flex; align-items: center; gap: 0.3rem; }
-        .focus-icon { cursor: pointer; font-size: 0.9rem; opacity: 0.7; }
-        .live-price-big { font-size: 0.8rem; background: var(--bg-body); padding: 0.1rem 0.5rem; border-radius: 0.8rem; }
-        .market-status { font-size: 0.65rem; padding: 0.1rem 0.3rem; border-radius: 0.8rem; background: var(--bg-panel); }
-        .last-digit-badge { font-size: 1.8rem; font-weight: 800; background: var(--last-digit-bg); padding: 0 0.3rem; border-radius: 0.8rem; min-width: 50px; text-align: center; color: var(--gold); line-height: 1.2; }
-        .card-content { display: flex; flex-direction: row; gap: 0.5rem; padding: 0.3rem 0.4rem; align-items: stretch; }
-        .card-main-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.3rem; }
 
-        .digits-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            padding: 0.3rem 0;
-            background: var(--bg-body);
-            border-radius: 0.4rem;
-            overflow-x: auto;
-            overflow-y: hidden;
+        .market-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--text-secondary);
+            border-radius: 0.6rem;
+            padding: 0.7rem 0.9rem;
+            display: flex; flex-direction: column;
         }
+        .market-card.grade-A { border-left-color: #10b981; }
+        .market-card.grade-B { border-left-color: #3b82f6; }
+        .market-card.grade-C { border-left-color: var(--text-secondary); }
 
-        .avg-legend-row {
-            display: flex; align-items: center; justify-content: center; gap: 0.4rem;
-            padding: 0.15rem 0.3rem 0.05rem 0.3rem;
-            font-size: 0.6rem; color: var(--text-secondary); font-weight: 600; letter-spacing: 0.3px;
-            position: sticky; left: 0; z-index: 6; background: var(--bg-body);
-        }
-        .avg-legend-line {
-            display: inline-block; width: 22px; height: 3px;
-            background: #fde047;
-            box-shadow: 0 0 4px #facc15, 0 0 8px rgba(250, 204, 21, 0.7);
-            border-radius: 2px;
-        }
+        .digits-grid { display: flex; flex-direction: column; gap: 4px; padding: 0.3rem 0; background: var(--bg-body); border-radius: 0.4rem; overflow-x: auto; overflow-y: hidden; }
+        .avg-legend-row { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; padding: 0.2rem 0.5rem 0.1rem 0.5rem; font-size: 0.6rem; color: var(--text-secondary); font-weight: 600; position: sticky; left: 0; z-index: 6; background: var(--bg-body); border-bottom: 1px solid var(--border-color); }
+        .avg-legend-line { display: inline-block; width: 18px; height: 3px; background: #fde047; box-shadow: 0 0 4px #facc15; border-radius: 2px; }
+        .avg-legend-row .legend-right { color: var(--gold); font-weight: 800; font-family: monospace; font-size: 0.62rem; }
+        .avg-legend-row .legend-right.full { color: #4ade80; }
 
-        .digit-cell { background: var(--bg-digit); border-radius: 0.5rem; padding: 0.35rem 0.1rem; text-align: center; position: relative; border: 1px solid var(--border-color); width: 100%; }
-        .digit-cell span.digit { font-size: 1.15rem; font-weight: 800; display: block; line-height: 1.15; }
-        .digit-cell .percent { font-size: 0.72rem; font-weight: 800; color: var(--percent-accent); margin-top: 3px; display: block; letter-spacing: 0.2px; white-space: nowrap; }
+        .digit-bar-row { display: grid; grid-template-columns: repeat(10, minmax(38px, 1fr)); gap: 4px; align-items: end; position: relative; }
+        .digit-bar-cell { display: flex; flex-direction: column; gap: 3px; align-items: center; min-width: 0; }
+        .digit-cell { background: var(--bg-digit); border-radius: 0.5rem; padding: 0.5rem 0.1rem; text-align: center; position: relative; border: 1px solid var(--border-color); width: 100%; }
+        .digit-cell span.digit { font-size: 1.2rem; font-weight: 800; display: block; line-height: 1.15; }
+        .digit-cell .percent { font-size: 0.75rem; font-weight: 800; color: var(--percent-accent); margin-top: 3px; display: block; white-space: nowrap; }
         .digit-cell.last-digit-highlight { border: 2px solid var(--gold); box-shadow: 0 0 8px var(--gold); }
         .most { background: #10b981; } .second { background: #3b82f6; } .least { background: #ef4444; } .secondleast { background: #f97316; }
+        .most .percent, .second .percent, .least .percent, .secondleast .percent { color: #fff; }
+        .most span.digit, .second span.digit, .least span.digit, .secondleast span.digit { color: #fff; }
 
-        .letter-sequence-wrapper { padding: 0.2rem 0.2rem; background: var(--bg-body); border-radius: 0.4rem; overflow-x: auto; text-align: center; margin: 0.1rem 0; }
+        .watermark-layer { position: absolute; inset: 0; display: flex; pointer-events: none; z-index: 5; overflow: hidden; user-select: none; }
+        .wm-half { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.16; min-width: 0; }
+        .wm-digits { font-size: 0.9rem; font-weight: 900; letter-spacing: 0.4rem; margin-bottom: 4px; text-shadow: 0 0 6px currentColor; white-space: nowrap; }
+        .wm-label { font-size: 1.9rem; font-weight: 900; letter-spacing: 0.4rem; text-shadow: 0 0 10px currentColor; white-space: nowrap; }
+
+        .pointer-slot { height: 18px; width: 100%; display: flex; align-items: center; justify-content: center; }
+        .pointer-marker-inline { animation: pointerPulse 1.2s ease-in-out infinite; }
+        .pointer-marker-inline.triangle { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 7px solid var(--gold); }
+        .pointer-marker-inline.arrow { font-size: 1rem; line-height: 1; color: var(--gold); font-weight: 900; }
+        .pointer-marker-inline.dot { width: 8px; height: 8px; background: var(--gold); border-radius: 50%; }
+        @keyframes pointerPulse { 0%, 100% { transform: translateY(0) scale(1); opacity: 0.85; } 50% { transform: translateY(-2px) scale(1.1); opacity: 1; } }
+
+        .letter-sequence-wrapper { padding: 0.2rem; background: var(--bg-body); border-radius: 0.4rem; overflow-x: auto; text-align: center; margin: 0.1rem 0; }
         .letter-sequence { display: flex; justify-content: center; gap: 1px; padding: 0.1rem 0; font-family: 'Courier New', monospace; }
         .letter-sequence .seq-u, .letter-sequence .seq-m, .letter-sequence .seq-o, .letter-sequence .seq-e, .letter-sequence .seq-odd, .letter-sequence .seq-r, .letter-sequence .seq-f, .letter-sequence .seq-dash { display: inline-block; width: 20px; text-align: center; font-weight: 700; font-size: 0.8rem; line-height: 1.5; border-radius: 2px; flex-shrink: 0; }
         .letter-sequence .seq-u { background: var(--zone-under); color: #fff; }
@@ -99,207 +170,48 @@
         .letter-sequence .seq-f { background: #ef4444; color: #fff; }
         .letter-sequence .seq-dash { background: var(--bg-panel); color: var(--text-secondary); }
 
-        .pair-panel {
-            background: var(--bg-panel); border-radius: 0.4rem; padding: 0.4rem 0.55rem; margin: 0.15rem 0;
-            font-size: 0.72rem; display: flex; flex-direction: column; gap: 0.25rem; border: 1px solid var(--border-color);
-        }
-        .pair-panel .pair-title { font-size: 0.6rem; font-weight: 800; color: var(--text-secondary); letter-spacing: 0.5px; margin-bottom: 0.05rem; }
-        .pair-panel .pair-row { display: grid; grid-template-columns: auto minmax(0,1fr) auto minmax(0,1fr) auto; gap: 0.3rem; align-items: center; padding: 0.2rem 0; border-bottom: 1px solid var(--border-color); }
-        .pair-panel .pair-row:last-child { border-bottom: none; }
-        .pair-panel .pair-label { font-weight: 800; font-size: 0.7rem; flex-shrink: 0; }
-        .pair-panel .pair-side { padding: 0.12rem 0.35rem; border-radius: 0.3rem; font-weight: 700; font-family: monospace; font-size: 0.65rem; text-align: center; background: var(--bg-body); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .pair-panel .pair-side.dominant-up { background: #10b981; color: white; box-shadow: 0 0 6px rgba(16,185,129,0.6); }
-        .pair-panel .pair-side.dominant-down { background: #ef4444; color: white; box-shadow: 0 0 6px rgba(239,68,68,0.6); }
-        .pair-panel .pair-side.weak-side { opacity: 0.55; }
-        .pair-panel .pair-vs { font-size: 0.52rem; color: var(--text-secondary); font-weight: 700; justify-self: center; }
-        .pair-panel .pair-status { font-size: 0.6rem; font-weight: 800; padding: 0.12rem 0.4rem; border-radius: 0.3rem; white-space: nowrap; justify-self: end; }
-        .pair-panel .pair-status.entry { background: linear-gradient(135deg, #facc15, #ef4444); color: black; animation: entryPulse 0.6s ease-in-out infinite; }
-        .pair-panel .pair-status.confirmed { background: #10b981; color: white; }
-        .pair-panel .pair-status.confirming { background: #facc15; color: black; }
-        .pair-panel .pair-status.cooldown { background: #3b82f6; color: white; }
-        .pair-panel .pair-status.weak { background: var(--bg-body); color: var(--text-secondary); border: 1px solid var(--border-color); }
-        .pair-panel .pair-status.idle { background: var(--bg-body); color: var(--text-secondary); opacity: 0.6; }
-        @keyframes entryPulse { 0%, 100% { box-shadow: 0 0 6px rgba(250,204,21,0.7); transform: scale(1); } 50% { box-shadow: 0 0 18px rgba(250,204,21,1); transform: scale(1.06); } }
-
-        .entry-log {
-            background: var(--bg-panel); border-radius: 0.4rem; padding: 0.3rem 0.5rem; margin: 0.1rem 0;
-            font-size: 0.62rem; color: var(--text-secondary); font-family: monospace; border: 1px solid var(--border-color);
-            max-height: 130px; overflow-y: auto;
-        }
-        .entry-log .log-title { font-size: 0.55rem; font-weight: 800; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 0.15rem; }
-        .entry-log .log-entry { padding: 0.06rem 0; color: var(--text-primary); border-bottom: 1px solid var(--border-color); display: flex; gap: 0.35rem; align-items: center; }
-        .entry-log .log-entry:last-child { border-bottom: none; }
-        .entry-log .log-type { font-weight: 800; color: var(--text-secondary); min-width: 26px; font-size: 0.58rem; }
-        .entry-log .log-side.up { color: #4ade80; font-weight: 800; flex: 1; }
-        .entry-log .log-side.down { color: #f87171; font-weight: 800; flex: 1; }
-        .entry-log .log-wr { color: #facc15; font-weight: 700; }
-        .entry-log .log-age { color: var(--text-secondary); min-width: 42px; text-align: right; }
-        .entry-log .log-empty { opacity: 0.5; font-size: 0.6rem; padding: 0.1rem 0; }
-
-        /* ===== ALL MARKETS SIDEBAR — STABLE ===== */
-        .all-markets-container {
-            flex: 0 0 320px;
-            background: var(--bg-header);
-            border-radius: 0.8rem;
-            padding: 0.4rem;
-            border-left: 2px solid var(--gold);
-            overflow-y: auto;
-        }
-        .all-markets-container h3 {
-            font-size: 0.8rem;
-            margin: 0 0 0.4rem 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 0.3rem;
-        }
-        .all-markets-container h3 .active-count {
-            font-size: 0.55rem;
-            font-weight: 800;
-            color: var(--gold);
-            background: rgba(250, 204, 21, 0.15);
-            padding: 0.1rem 0.4rem;
-            border-radius: 0.8rem;
-            border: 1px solid rgba(250, 204, 21, 0.4);
-            white-space: nowrap;
-        }
+        .all-markets-container { flex: 0 0 320px; background: var(--bg-header); border-radius: 0.8rem; padding: 0.4rem; border-left: 2px solid var(--gold); overflow-y: auto; }
+        .all-markets-container h3 { font-size: 0.8rem; margin: 0 0 0.4rem 0; display: flex; justify-content: space-between; align-items: center; gap: 0.3rem; }
+        .all-markets-container h3 .active-count { font-size: 0.55rem; font-weight: 800; color: var(--gold); background: rgba(250, 204, 21, 0.15); padding: 0.1rem 0.4rem; border-radius: 0.8rem; border: 1px solid rgba(250, 204, 21, 0.4); white-space: nowrap; }
         .markets-list { display: flex; flex-direction: column; gap: 0.35rem; }
-        .market-list-item {
-            background: var(--bg-panel);
-            padding: 0.35rem 0.45rem;
-            border-radius: 0.6rem;
-            cursor: pointer;
-            font-size: 0.8rem;
-            border: 1px solid transparent;
-            transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-            /* ===== FIX: fixed min-height reserves space for badges ===== */
-            min-height: 82px;
-            box-sizing: border-box;
-        }
+        .market-list-item { background: var(--bg-panel); padding: 0.4rem 0.5rem; border-radius: 0.6rem; cursor: pointer; font-size: 0.8rem; border: 1px solid transparent; transition: all 0.2s; display: flex; flex-direction: column; gap: 0.25rem; min-height: 68px; box-sizing: border-box; }
         .market-list-item:hover { background: var(--bg-card); }
         .market-list-item .item-header { display: flex; justify-content: space-between; align-items: center; gap: 0.3rem; }
         .market-list-item .item-name { font-weight: 700; font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
         .market-list-item .live-pip { font-size: 0.6rem; color: #4ade80; flex-shrink: 0; }
-        .market-list-item .item-signals {
-            display: flex;
-            flex-direction: column;
-            gap: 0.2rem;
-            /* ===== FIX: reserved space so badges showing/hiding don't collapse height ===== */
-            min-height: 48px;
-        }
-        .market-list-item .trade-row,
-        .market-list-item .align-row {
-            display: flex; flex-wrap: wrap; gap: 0.25rem;
-            min-height: 22px;
-            align-items: center;
-        }
-        .market-list-item .align-row { opacity: 0.75; }
-        .market-list-item .align-count { font-size: 0.55rem; font-weight: 800; color: var(--text-secondary); background: var(--bg-body); padding: 0.05rem 0.3rem; border-radius: 0.3rem; flex-shrink: 0; }
-
-        /* ===== MORE PROMINENT active row highlight (since no auto-sort anymore) ===== */
-        .market-list-item.signal-on {
-            border-color: var(--gold);
-            background: linear-gradient(135deg, rgba(250, 204, 21, 0.08), rgba(250, 204, 21, 0.02));
-            animation: rowAllAlignedPulse 1.2s ease-in-out infinite;
-        }
-        .market-list-item.signal-on .item-name {
-            color: var(--gold);
-        }
-        @keyframes rowAllAlignedPulse {
-            0%, 100% { box-shadow: 0 0 6px rgba(250,204,21,0.5); }
-            50% { box-shadow: 0 0 20px rgba(250,204,21,1); }
-        }
-
-        .alignment-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 0.25rem; border-radius: 0.3rem; font-size: 0.52rem; font-weight: 800; color: white; }
-        .alignment-badge.most { background: #10b981; }
-        .alignment-badge.second { background: #3b82f6; }
-        .alignment-badge.least { background: #ef4444; }
-        .alignment-badge.secondLeast { background: #f97316; }
-
-        .trade-badge { display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.14rem 0.45rem; border-radius: 0.4rem; font-size: 0.62rem; font-weight: 900; letter-spacing: 0.2px; color: white; border: 1.5px solid transparent; white-space: nowrap; }
-        .trade-badge.up { background: #10b981; }
-        .trade-badge.down { background: #ef4444; }
-        .trade-badge .badge-side { font-size: 0.65rem; }
-        .trade-badge .badge-wr { font-size: 0.6rem; opacity: 0.9; font-weight: 800; margin-left: 0.1rem; }
-        .trade-badge .badge-flag { font-size: 0.55rem; padding: 0.02rem 0.25rem; border-radius: 0.2rem; margin-left: 0.15rem; font-weight: 900; }
-        .trade-badge .badge-flag.entry { background: linear-gradient(135deg, #facc15, #ef4444); color: black; animation: flagFlash 0.55s ease-in-out infinite; }
-        @keyframes flagFlash { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
-        .trade-badge.state-entry { border-color: #fde047; box-shadow: 0 0 10px rgba(250, 204, 21, 0.9); animation: badgePulse 0.65s ease-in-out infinite; }
-        @keyframes badgePulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.3); } }
-        .trade-badge.state-confirmed { border-color: #34d399; box-shadow: 0 0 6px rgba(52, 211, 153, 0.6); }
-        .trade-badge.state-confirming { border-color: #facc15; box-shadow: 0 0 4px rgba(250, 204, 21, 0.4); }
-        .trade-badge.state-cooldown { border-color: #3b82f6; opacity: 0.85; }
-        .trade-badge.state-weak { opacity: 0.55; filter: grayscale(0.3); }
-        .trade-badge.state-idle { opacity: 0.35; }
+        .market-list-item .item-best { display: flex; align-items: center; justify-content: space-between; gap: 0.3rem; font-size: 0.68rem; font-family: monospace; }
+        .market-list-item .best-label { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.14rem 0.4rem; border-radius: 0.3rem; font-weight: 900; font-size: 0.62rem; color: white; }
+        .market-list-item .best-label.up { background: #10b981; }
+        .market-list-item .best-label.down { background: #ef4444; }
+        .market-list-item .best-rate { font-weight: 900; font-size: 0.72rem; color: var(--gold); }
+        .market-list-item .best-rate.pos { color: #4ade80; }
+        .market-list-item .no-signal { font-size: 0.6rem; color: var(--text-secondary); opacity: 0.6; font-family: monospace; text-align: center; padding: 0.15rem 0; }
+        .market-list-item.signal-on { border-color: var(--gold); background: linear-gradient(135deg, rgba(250, 204, 21, 0.1), rgba(250, 204, 21, 0.02)); animation: rowPulse 1.4s ease-in-out infinite; }
+        .market-list-item.signal-on .item-name { color: var(--gold); }
+        @keyframes rowPulse { 0%, 100% { box-shadow: 0 0 5px rgba(250,204,21,0.4); } 50% { box-shadow: 0 0 16px rgba(250,204,21,0.85); } }
 
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; }
-        .modal-content { background: var(--bg-card); border-radius: 0.8rem; padding: 0.8rem; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; font-size: 0.8rem; }
+        .modal-content { background: var(--bg-card); border-radius: 0.8rem; padding: 0.8rem; max-width: 560px; width: 90%; max-height: 85vh; overflow-y: auto; font-size: 0.8rem; }
         .close-modal { float: right; cursor: pointer; font-size: 1.2rem; }
         .settings-panel { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; }
         .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
         select, input[type="range"], input[type="number"] { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.1rem 0.3rem; font-size: 0.7rem; color: var(--text-primary); }
+        .refresh-btn { background: #f59e0b; border: none; padding: 0.3rem 0.8rem; border-radius: 1.2rem; font-weight: bold; color: white; cursor: pointer; font-size: 0.72rem; }
 
-        @media (max-width: 800px) {
-            .main-scroll-area { flex-direction: column; }
-            .all-markets-container { flex: none; width: 100%; max-height: 220px; }
-        }
-
-        .digit-bar-row {
-            display: grid;
-            grid-template-columns: repeat(10, minmax(38px, 1fr));
-            gap: 4px;
-            align-items: end;
-            position: relative;
-        }
-        .digit-bar-cell { display: flex; flex-direction: column; gap: 3px; align-items: center; min-width: 0; }
-        .bar-track { height: 6cm; width: 55%; max-width: 22px; margin: 0 auto; background: var(--bg-body); border-radius: 4px; overflow: hidden; border: 1px solid var(--border-color); display: flex; align-items: flex-end; position: relative; }
-        .avg-line { position: absolute; left: 0; right: 0; height: 2px; background: #fde047; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55), 0 0 6px #facc15, 0 0 12px rgba(250, 204, 21, 0.85); z-index: 10; pointer-events: none; }
-        .bar-fill { width: 100%; background: var(--text-secondary); border-radius: 3px 3px 0 0; transition: height 0.35s ease, background 0.3s; }
-        .bar-fill.most { background: linear-gradient(180deg, #34d399, #10b981); }
-        .bar-fill.second { background: linear-gradient(180deg, #60a5fa, #3b82f6); }
-        .bar-fill.least { background: linear-gradient(180deg, #f87171, #ef4444); }
-        .bar-fill.secondleast { background: linear-gradient(180deg, #fb923c, #f97316); }
-
-        .watermark-layer {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            pointer-events: none;
-            z-index: 5;
-            overflow: hidden;
-            user-select: none;
-        }
-        .wm-half { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.16; min-width: 0; }
-        .wm-digits { font-size: 0.95rem; font-weight: 900; letter-spacing: 0.4rem; line-height: 1; margin-bottom: 4px; text-shadow: 0 0 6px currentColor; white-space: nowrap; }
-        .wm-label { font-size: 2.2rem; font-weight: 900; letter-spacing: 0.4rem; line-height: 1; text-shadow: 0 0 10px currentColor; white-space: nowrap; }
-        @media (max-width: 900px) {
-            .wm-label { font-size: 1.6rem; letter-spacing: 0.3rem; }
-            .wm-digits { font-size: 0.75rem; letter-spacing: 0.3rem; }
-        }
-
-        .pointer-slot { height: 18px; width: 100%; display: flex; align-items: center; justify-content: center; }
-        .pointer-marker-inline { animation: pointerPulse 1.2s ease-in-out infinite; }
-        .pointer-marker-inline.triangle { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 7px solid var(--gold); }
-        .pointer-marker-inline.arrow { font-size: 1rem; line-height: 1; color: var(--gold); font-weight: 900; }
-        .pointer-marker-inline.dot { width: 8px; height: 8px; background: var(--gold); border-radius: 50%; }
-        @keyframes pointerPulse { 0%, 100% { transform: translateY(0) scale(1); opacity: 0.85; } 50% { transform: translateY(-2px) scale(1.1); opacity: 1; } }
+        @media (max-width: 800px) { .main-scroll-area { flex-direction: column; } .all-markets-container { flex: none; width: 100%; max-height: 220px; } }
     </style>
 </head>
 <body>
     <div class="top-spacer"></div>
     <div class="app-container">
         <div class="top-slim-bar">
-            <div class="logo-area"><h1>✨ TAJIRI TRADERS ✨</h1></div>
+            <div class="logo-area"><h1>✨ TAJIRI STREAK BOT ✨</h1></div>
             <div class="right-controls">
                 <div class="token-group">
-                    <input type="password" id="token" placeholder="API Token (optional)" />
+                    <input type="password" id="token" placeholder="API Token" />
                     <button onclick="connectWebSocket()" class="connect-btn">🚀 CONNECT</button>
                 </div>
                 <div class="status-badge" id="connectionStatus">⚫ Off</div>
-                <label class="alarm-toggle"><input type="checkbox" id="alarmToggle" checked /> 🔔 Alarm</label>
                 <button class="settings-icon" id="settingsBtn">⚙️</button>
                 <button class="mode-toggle-small" onclick="toggleMode()">🌓</button>
             </div>
@@ -307,30 +219,19 @@
 
         <div class="selector-row">
             <div class="market-type-selector">
-                <button class="market-btn" data-market="predict">🔁 Predict</button>
-                <button class="market-btn" data-market="overunder">📊 Over/Under</button>
                 <button class="market-btn active" data-market="evenodd">🎲 Even/Odd</button>
-                <button class="market-btn" data-market="vanilla">📈 Vanilla</button>
-                <button class="market-btn" data-market="hybrid">🔀 HYBRID</button>
-                <button class="market-btn" data-market="analysis">📊 Analysis</button>
-            </div>
-            <div class="strategy-selector" id="strategySelector" style="display:none;">
-                <button class="strategy-btn active" data-strategy="reversal">📉 Reversal</button>
-                <button class="strategy-btn" data-strategy="streak3">⚡ 3‑Streak</button>
+                <button class="market-btn" data-market="overunder">📊 Over/Under</button>
+                <button class="market-btn" data-market="vanilla">📈 Rise/Fall</button>
             </div>
         </div>
 
         <div class="main-scroll-area">
             <div class="market-cards-container" id="marketCardsContainer">
-                <div id="focusBar" class="focus-bar" style="display:none;">
-                    <span>🔍 Focus mode</span>
-                    <button id="showAllBtn">Show all</button>
-                </div>
                 <div id="marketsContainer" class="market-grid"></div>
             </div>
             <div class="all-markets-container">
                 <h3>
-                    <span>📋 ALL MARKETS</span>
+                    <span>📋 SIGNALS READY</span>
                     <span class="active-count" id="activeCount">0 active</span>
                 </h3>
                 <div id="marketsListContainer" class="markets-list"></div>
@@ -341,21 +242,38 @@
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" id="closeModal">&times;</span>
-            <h3>Settings</h3>
+            <h3>Streak Bot Settings</h3>
             <div class="settings-panel">
                 <div class="setting-row"><label>📍 Pointer Style</label><select id="pointerStyle"><option value="triangle">Triangle</option><option value="arrow">Arrow</option><option value="dot">Dot</option></select></div>
                 <div class="setting-row"><label>🔍 Pointer Scale</label><input type="range" id="pointerScale" min="1" max="20" step="0.5" value="3" /><span id="scaleValue">3.0</span></div>
-                <div class="setting-row"><label>📊 Analysis Window</label><input type="number" id="analysisWindow" value="1000" min="100" max="2000" step="100" /></div>
-                <div class="setting-row" style="border-top:1px solid var(--border-color);padding-top:0.4rem;margin-top:0.4rem;"><label>📏 Bar Calibration</label>
-                    <select id="barCalibration">
-                        <option value="auto" selected>Auto (zoom to min–max)</option>
-                        <option value="linear">Linear (0–100%)</option>
+                <div class="setting-row" style="border-top:1px solid var(--border-color);padding-top:0.4rem;margin-top:0.4rem;">
+                    <label>📊 Analysis Window</label><input type="number" id="analysisWindow" value="1000" min="100" max="2000" step="100" style="width:75px;" />
+                </div>
+                <div class="setting-row" style="border-top:1px solid var(--border-color);padding-top:0.4rem;margin-top:0.4rem;">
+                    <label>🎯 Min streak length</label><input type="number" id="minStreakLength" value="5" min="3" max="15" step="1" style="width:75px;" />
+                </div>
+                <div class="setting-row"><label>🔎 Min matching streaks</label><input type="number" id="minMatches" value="3" min="2" max="10" step="1" style="width:75px;" /></div>
+                <div class="setting-row"><label>📐 Min similarity score</label><input type="number" id="minSimilarity" value="0.72" min="0.5" max="0.95" step="0.02" style="width:75px;" /></div>
+                <div class="setting-row"><label>🎓 Signal strictness</label>
+                    <select id="signalStrictness">
+                        <option value="strict">Strict (A only)</option>
+                        <option value="balanced" selected>Balanced (A or B)</option>
+                        <option value="loose">Loose (any)</option>
                     </select>
                 </div>
-                <div class="setting-row"><label>🎚️ Min Calibration Spread (pp)</label><input type="number" id="minCalibrationSpread" value="1.5" min="0.5" max="10" step="0.5" /></div>
+                <div class="setting-row"><label>🔢 Show tick counts</label><input type="checkbox" id="showCounts" checked /></div>
+                <div class="setting-row"><label>🔄 Resync (resets all)</label><button id="refreshHistoryBtn" class="refresh-btn">Fetch latest</button></div>
             </div>
-            <p style="font-size:0.7rem; margin-top:0.6rem; opacity:0.75;">
-                <b>All Markets list:</b> fixed order (no auto-sort), fixed row heights. Active signals highlighted with pulsing gold glow. Scroll to find them, or check the "N active" counter in the header.
+
+            <div style="border-top:1px solid var(--border-color); margin-top:0.6rem; padding-top:0.5rem;">
+                <h4 style="font-size:0.78rem; color:var(--gold); margin-bottom:0.4rem;">📐 FIXED CARD HEIGHT</h4>
+                <div style="font-size:0.68rem; line-height:1.6; opacity:0.85;">
+                    Every market card uses the same unified structure — current context, checklist header, and procedure header are <b>always present</b>. When no signal is present, checklist and procedure show placeholder text inside their collapsed bodies. Cards never expand or contract when signals appear/disappear, no matter how strict the thresholds are.
+                </div>
+            </div>
+
+            <p style="font-size:0.65rem; margin-top:0.6rem; color:#f59e0b; font-weight:600; line-height:1.5;">
+                ⚠️ Deriv digit outcomes are random. Past streak patterns do not guarantee future streaks. Trade with strict risk management only.
             </p>
         </div>
     </div>
@@ -363,46 +281,49 @@
     <script>
         (function() {
             try {
-                const MARKET_NAMES = { "1HZ10V":"V10","1HZ15V":"V15","1HZ25V":"V25","1HZ30V":"V30","1HZ50V":"V50","1HZ75V":"V75","1HZ90V":"V90","1HZ100V":"V100","R_10":"R10","R_25":"R25","R_50":"R50","R_75":"R75","R_100":"R100","JD10":"J10","JD25":"J25","JD50":"J50","JD75":"J75","JD100":"J100" };
-                const FULL_NAMES = { "1HZ10V":"Volatility 10 (1s)","1HZ15V":"Volatility 15 (1s)","1HZ25V":"Volatility 25 (1s)","1HZ30V":"Volatility 30 (1s)","1HZ50V":"Volatility 50 (1s)","1HZ75V":"Volatility 75 (1s)","1HZ90V":"Volatility 90 (1s)","1HZ100V":"Volatility 100 (1s)","R_10":"Volatility 10 Index","R_25":"Volatility 25 Index","R_50":"Volatility 50 Index","R_75":"Volatility 75 Index","R_100":"Volatility 100 Index","JD10":"Jump 10 Index","JD25":"Jump 25 Index","JD50":"Jump 50 Index","JD75":"Jump 75 Index","JD100":"Jump 100 Index" };
-                const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":2,"1HZ25V":2,"1HZ30V":2,"1HZ50V":2,"1HZ75V":2,"1HZ90V":2,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2,"JD100":2 };
-                const ALL_SYMBOLS = Object.keys(MARKET_NAMES);
-                // Fixed display order — alphabetical by display name so list never re-sorts
-                const FROZEN_ORDER = ALL_SYMBOLS.slice().sort((a, b) => FULL_NAMES[a].localeCompare(FULL_NAMES[b]));
+                const MARKET_NAMES = { "1HZ10V":"V10","1HZ15V":"V15","1HZ25V":"V25","1HZ30V":"V30","1HZ50V":"V50","1HZ75V":"V75","1HZ90V":"V90","1HZ100V":"V100","R_10":"R10","R_25":"R25","R_50":"R50","R_75":"R75","R_100":"R100","JD10":"J10","JD25":"J25","JD50":"J50","JD75":"J75" };
+                const FULL_NAMES = { "1HZ10V":"Volatility 10 (1s)","1HZ15V":"Volatility 15 (1s)","1HZ25V":"Volatility 25 (1s)","1HZ30V":"Volatility 30 (1s)","1HZ50V":"Volatility 50 (1s)","1HZ75V":"Volatility 75 (1s)","1HZ90V":"Volatility 90 (1s)","1HZ100V":"Volatility 100 (1s)","R_10":"Volatility 10 Index","R_25":"Volatility 25 Index","R_50":"Volatility 50 Index","R_75":"Volatility 75 Index","R_100":"Volatility 100 Index","JD10":"Jump 10 Index","JD25":"Jump 25 Index","JD50":"Jump 50 Index","JD75":"Jump 75 Index" };
+                const DECIMAL_MAP = { "1HZ10V":2,"1HZ15V":2,"1HZ25V":2,"1HZ30V":2,"1HZ50V":2,"1HZ75V":2,"1HZ90V":2,"1HZ100V":2,"R_10":3,"R_25":3,"R_50":4,"R_75":4,"R_100":2,"JD10":2,"JD25":2,"JD50":2,"JD75":2 };
+                const FROZEN_ORDER = ["1HZ10V","1HZ15V","1HZ25V","1HZ30V","1HZ50V","1HZ75V","1HZ90V","1HZ100V","R_10","R_25","R_50","R_75","R_100","JD10","JD25","JD50","JD75"];
+                const ALL_SYMBOLS = FROZEN_ORDER.slice();
 
-                const SIDES = ['RISE', 'FALL', 'EVEN', 'ODD', 'OVER4', 'UNDER5'];
-                const PAIRS = [
-                    { label: 'R/F', emoji: '📈', up: 'RISE', down: 'FALL', type: 'vanilla', upLabel: 'RISE', downLabel: 'FALL' },
-                    { label: 'E/O', emoji: '🎲', up: 'EVEN', down: 'ODD', type: 'evenodd', upLabel: 'EVEN', downLabel: 'ODD' },
-                    { label: 'O/U', emoji: '📊', up: 'OVER4', down: 'UNDER5', type: 'overunder', upLabel: 'OVER 4', downLabel: 'UNDER 5' },
+                const STRATEGIES = [
+                    { id: 'OVER4',  label: '📊 OVER 4',  short: 'OVER4',  baselinePct: 50, direction: 'up', mode: 'overunder',
+                      contractHint: 'OVER 4 (digit > 4) · duration 1–5 ticks', desc: 'Wins when last digit ∈ {5,6,7,8,9}', test: (d) => d >= 5 },
+                    { id: 'UNDER4', label: '📊 UNDER 4', short: 'UNDER4', baselinePct: 40, direction: 'down', mode: 'overunder',
+                      contractHint: 'UNDER 4 (digit < 4) · duration 1–5 ticks', desc: 'Wins when last digit ∈ {0,1,2,3}', test: (d) => d <= 3 },
+                    { id: 'EVEN',   label: '🎲 EVEN',    short: 'EVEN',   baselinePct: 50, direction: 'up', mode: 'evenodd',
+                      contractHint: 'EVEN · duration 1–5 ticks', desc: 'Wins when last digit ∈ {0,2,4,6,8}', test: (d) => d % 2 === 0 },
+                    { id: 'ODD',    label: '🎲 ODD',     short: 'ODD',    baselinePct: 50, direction: 'down', mode: 'evenodd',
+                      contractHint: 'ODD · duration 1–5 ticks', desc: 'Wins when last digit ∈ {1,3,5,7,9}', test: (d) => d % 2 === 1 },
+                    { id: 'RISE',   label: '📈 RISE',    short: 'RISE',   baselinePct: 50, direction: 'up', mode: 'vanilla',
+                      contractHint: 'RISE · duration 1–5 ticks', desc: 'Wins when next price > current price', test: (d, p, pp) => (pp === null || p === pp) ? null : (p > pp) },
+                    { id: 'FALL',   label: '📈 FALL',    short: 'FALL',   baselinePct: 50, direction: 'down', mode: 'vanilla',
+                      contractHint: 'FALL · duration 1–5 ticks', desc: 'Wins when next price < current price', test: (d, p, pp) => (pp === null || p === pp) ? null : (p < pp) },
                 ];
-                const PAIR_LABEL = { vanilla: 'R/F', evenodd: 'E/O', overunder: 'O/U' };
 
-                const ENTRY_CONFIG = {
-                    historySize: 50, minTotalTicks: 5, winRateMin: 51, edgeMin: 2,
-                    confirmTicks: 1, cooldownTicks: 2,
-                };
-
-                const RENDER_MIN_INTERVAL_MS = 200;
                 const RENDER_PUMP_MS = 100;
+                const FOCUSED_RENDER_MS = 200;
+                const UNFOCUSED_RENDER_MS = 800;
+                const MAX_STREAK_HISTORY = 100;
+                const CONTEXT_WINDOW = 100;
+                const BOT_ROLLING_WINDOW = 500;
+                const WARMUP_TICKS = 200;
 
                 let marketData = {}, ws = null, invalidSymbols = new Set(), focusedSymbol = null;
                 let currentMarket = 'evenodd';
                 let pingInterval = null, pongTimeout = null, reconnectTimer = null, reconnectAttempts = 0;
-                let renderPumpTimer = null;
-                const PING_EVERY_MS = 30000;
-                const PONG_TIMEOUT_MS = 10000;
+                let renderPumpTimer = null, timerRefresh = null;
+                const signalCache = {};
+                const PING_EVERY_MS = 30000, PONG_TIMEOUT_MS = 10000;
                 const WS_ENDPOINT = 'wss://api.derivws.com/trading/v1/options/ws/public';
 
+                function getStrategiesForMode(mode) { return STRATEGIES.filter(s => s.mode === mode); }
+
                 function getWatermarkConfig(mode) {
-                    if (mode === 'evenodd') {
-                        return { left: { digits: '0 2 4 6 8', label: 'EVEN', color: '#10b981' },
-                                 right: { digits: '1 3 5 7 9', label: 'ODD', color: '#f97316' } };
-                    }
-                    if (mode === 'overunder') {
-                        return { left: { digits: '0 1 2 3 4', label: 'UNDER', color: '#3b82f6' },
-                                 right: { digits: '5 6 7 8 9', label: 'OVER', color: '#ef4444' } };
-                    }
+                    if (mode === 'evenodd') return { left: { digits: '0 2 4 6 8', label: 'EVEN', color: '#10b981' }, right: { digits: '1 3 5 7 9', label: 'ODD', color: '#f97316' } };
+                    if (mode === 'overunder') return { left: { digits: '0 1 2 3', label: 'UNDER 4', color: '#3b82f6' }, right: { digits: '5 6 7 8 9', label: 'OVER 4', color: '#ef4444' } };
+                    if (mode === 'vanilla') return { left: { digits: '↓ price down', label: 'FALL', color: '#ef4444' }, right: { digits: '↑ price up', label: 'RISE', color: '#10b981' } };
                     return null;
                 }
 
@@ -422,7 +343,7 @@
                 function scheduleReconnect() {
                     clearConnectionTimers();
                     reconnectAttempts++;
-                    const delay = Math.min(30000, 1000 * Math.pow(2, reconnectAttempts - 1));
+                    const delay = Math.min(15000, 1000 * Math.pow(2, Math.min(reconnectAttempts - 1, 4)));
                     reconnectTimer = setTimeout(() => connectWebSocket(), delay);
                 }
                 function getSettings() {
@@ -430,366 +351,446 @@
                         pointerStyle: document.getElementById('pointerStyle')?.value || 'triangle',
                         pointerScale: parseFloat(document.getElementById('pointerScale')?.value || 3),
                         analysisWindow: parseInt(document.getElementById('analysisWindow')?.value) || 1000,
-                        barCalibration: document.getElementById('barCalibration')?.value || 'auto',
-                        minCalibrationSpread: parseFloat(document.getElementById('minCalibrationSpread')?.value || 1.5),
+                        minStreakLength: parseInt(document.getElementById('minStreakLength')?.value) || 5,
+                        minMatches: parseInt(document.getElementById('minMatches')?.value) || 3,
+                        minSimilarity: parseFloat(document.getElementById('minSimilarity')?.value) || 0.72,
+                        signalStrictness: document.getElementById('signalStrictness')?.value || 'balanced',
+                        showCounts: !!document.getElementById('showCounts')?.checked,
                     };
                 }
-                function lastDigitFromFormatted(s) { let d = s.replace(/\./g, ''); return d.length ? parseInt(d.charAt(d.length-1), 10) : 0; }
-                function formatHistoryPrice(s, p) { return p.toFixed(DECIMAL_MAP[s] ?? 2); }
+                function lastDigitFromFormatted(s) {
+                    if (!s || typeof s !== 'string') return 0;
+                    const d = s.replace(/[\s,]/g, '').replace(/\./g, '');
+                    return d.length ? parseInt(d.charAt(d.length-1), 10) : 0;
+                }
 
                 function getDigitPercentages(sym, windowSize) {
-                    let data = marketData[sym];
+                    const data = marketData[sym];
                     if (!data || data.rollingArray.length < Math.min(windowSize, 5)) return null;
                     const actualWindow = Math.min(windowSize, data.rollingArray.length);
                     const arr = data.rollingArray.slice(-actualWindow);
-                    let cnt = Array(10).fill(0);
-                    for (let d of arr) cnt[d]++;
-                    let total = arr.length, pct = cnt.map(c => (c/total)*100);
-                    let countMap = {};
-                    for (let d = 0; d < 10; d++) { let c = cnt[d]; if (!countMap[c]) countMap[c] = []; countMap[c].push(d); }
-                    let distinctCounts = Object.keys(countMap).map(Number).sort((a,b) => b-a);
-                    let assigned = new Set(), most = new Set(), second = new Set(), least = new Set(), secondLeast = new Set();
-                    if (distinctCounts.length > 0) { for (let d of countMap[distinctCounts[0]]) { most.add(d); assigned.add(d); } }
+                    const cnt = Array(10).fill(0);
+                    for (const d of arr) cnt[d]++;
+                    const total = arr.length;
+                    const pct = cnt.map(c => (c/total)*100);
+                    const countMap = {};
+                    for (let d = 0; d < 10; d++) { const c = cnt[d]; if (!countMap[c]) countMap[c] = []; countMap[c].push(d); }
+                    const distinctCounts = Object.keys(countMap).map(Number).sort((a,b) => b-a);
+                    const assigned = new Set(); const most = new Set(), second = new Set(), least = new Set(), secondLeast = new Set();
+                    if (distinctCounts.length > 0) { for (const d of countMap[distinctCounts[0]]) { most.add(d); assigned.add(d); } }
                     if (distinctCounts.length > 1) {
                         for (let i = 1; i < distinctCounts.length; i++) {
-                            let digits = countMap[distinctCounts[i]].filter(d => !assigned.has(d));
-                            if (digits.length > 0) { for (let d of digits) { second.add(d); assigned.add(d); } break; }
+                            const digits = countMap[distinctCounts[i]].filter(d => !assigned.has(d));
+                            if (digits.length > 0) { for (const d of digits) { second.add(d); assigned.add(d); } break; }
                         }
                     }
                     let unassigned = distinctCounts.filter(c => countMap[c].some(d => !assigned.has(d))).sort((a,b) => a-b);
-                    if (unassigned.length > 0) { for (let d of countMap[unassigned[0]]) { if (!assigned.has(d)) { least.add(d); assigned.add(d); } } }
+                    if (unassigned.length > 0) { for (const d of countMap[unassigned[0]]) { if (!assigned.has(d)) { least.add(d); assigned.add(d); } } }
                     unassigned = distinctCounts.filter(c => countMap[c].some(d => !assigned.has(d))).sort((a,b) => a-b);
-                    if (unassigned.length > 0) { for (let d of countMap[unassigned[0]]) { if (!assigned.has(d)) { secondLeast.add(d); assigned.add(d); } } }
-                    return { pct, most, second, least, secondLeast };
+                    if (unassigned.length > 0) { for (const d of countMap[unassigned[0]]) { if (!assigned.has(d)) { secondLeast.add(d); assigned.add(d); } } }
+                    return { pct, most, second, least, secondLeast, total, counts: cnt };
                 }
 
-                function computeAlignmentSignal(sym) {
-                    const data = marketData[sym];
-                    if (!data || !data.rollingArray || data.rollingArray.length < 100) return null;
-                    const w100  = getDigitPercentages(sym, 100);
-                    const w250  = getDigitPercentages(sym, 250);
-                    const w1000 = getDigitPercentages(sym, 1000);
-                    if (!w100 || !w250 || !w1000) return null;
-                    const intersect3 = (a, b, c) => { const r = new Set(); for (let d of a) if (b.has(d) && c.has(d)) r.add(d); return r; };
-                    const mostAlign = Array.from(intersect3(w100.most, w250.most, w1000.most)).sort((a,b)=>a-b);
-                    const secondAlign = Array.from(intersect3(w100.second, w250.second, w1000.second)).sort((a,b)=>a-b);
-                    const leastAlign = Array.from(intersect3(w100.least, w250.least, w1000.least)).sort((a,b)=>a-b);
-                    const secondLeastAlign = Array.from(intersect3(w100.secondLeast, w250.secondLeast, w1000.secondLeast)).sort((a,b)=>a-b);
-                    const alignCount = (mostAlign.length > 0 ? 1 : 0) + (secondAlign.length > 0 ? 1 : 0) + (leastAlign.length > 0 ? 1 : 0) + (secondLeastAlign.length > 0 ? 1 : 0);
-                    if (alignCount === 0) return null;
-                    return { mostAlign, secondAlign, leastAlign, secondLeastAlign, alignCount };
+                function captureContext(d, skipLast = 0) {
+                    const L = d.rollingArray.length;
+                    const end = L - skipLast;
+                    if (end < CONTEXT_WINDOW) return null;
+                    const slice = d.rollingArray.slice(end - CONTEXT_WINDOW, end);
+                    const counts = new Array(10).fill(0);
+                    for (const digit of slice) counts[digit]++;
+                    const pct = counts.map(c => c / slice.length);
+                    const evenPct = (counts[0]+counts[2]+counts[4]+counts[6]+counts[8]) / slice.length;
+                    const overPct = (counts[5]+counts[6]+counts[7]+counts[8]+counts[9]) / slice.length;
+                    const sorted = counts.map((c, i) => ({ d: i, c })).sort((a,b) => b.c - a.c);
+                    const hotDigits = sorted.slice(0, 3).filter(x => x.c > 0).map(x => x.d);
+                    const coldDigits = sorted.slice(-2).filter(x => x.c > 0).map(x => x.d);
+                    const dirs = d.directions || [];
+                    const dirEnd = Math.max(0, dirs.length - skipLast);
+                    const dirSlice = dirs.slice(Math.max(0, dirEnd - CONTEXT_WINDOW), dirEnd);
+                    const riseCount = dirSlice.filter(x => x === 1).length;
+                    const fallCount = dirSlice.filter(x => x === -1).length;
+                    const dirTotal = riseCount + fallCount;
+                    const risePct = dirTotal ? riseCount / dirTotal : 0.5;
+                    return { pct, evenPct, overPct, risePct, hotDigits, coldDigits, tick: d.tickCount };
                 }
 
-                function initSideStats(d) {
-                    if (!d.sideStats) d.sideStats = {};
-                    if (!d.entryState) d.entryState = {};
-                    if (!d.entryLog) d.entryLog = [];
-                    for (const s of SIDES) if (!d.sideStats[s]) d.sideStats[s] = { wins: 0, losses: 0 };
-                    for (const p of PAIRS) {
-                        if (!d.entryState[p.type]) {
-                            d.entryState[p.type] = { dominant: null, dominantPct: 0, edge: 0, persistence: 0, lastEntryTick: -1000, confirmed: false, lastStatus: 'idle', lastFiredTick: -1000 };
-                        }
+                function similarity(a, b) {
+                    if (!a || !b) return 0;
+                    let distSq = 0;
+                    for (let i = 0; i < 10; i++) { const diff = a.pct[i] - b.pct[i]; distSq += diff * diff; }
+                    const pctSim = Math.max(0, 1 - Math.sqrt(distSq / 2));
+                    const evenSim = 1 - Math.abs(a.evenPct - b.evenPct);
+                    const overSim = 1 - Math.abs(a.overPct - b.overPct);
+                    const riseSim = 1 - Math.abs(a.risePct - b.risePct);
+                    const union = new Set([...a.hotDigits, ...b.hotDigits]);
+                    const inter = a.hotDigits.filter(x => b.hotDigits.includes(x)).length;
+                    const hotSim = union.size ? inter / union.size : 1;
+                    return pctSim * 0.40 + evenSim * 0.15 + overSim * 0.20 + riseSim * 0.15 + hotSim * 0.10;
+                }
+
+                function initBotStats(d) {
+                    if (!d.botStats) {
+                        d.botStats = {};
+                        for (const strat of STRATEGIES) d.botStats[strat.id] = { history: [], wins: 0, losses: 0 };
                     }
                 }
-                function recordOutcome(d, side, isWin) {
-                    const s = d.sideStats[side]; if (!s) return;
-                    if (isWin) s.wins++; else s.losses++;
-                }
-                function getTickWinners(digit, price, prevPrice) {
-                    const w = {};
-                    w.evenodd = (digit % 2 === 0) ? 'EVEN' : 'ODD';
-                    w.overunder = (digit >= 5) ? 'OVER4' : 'UNDER5';
-                    w.vanilla = (prevPrice !== null && prevPrice !== price) ? (price > prevPrice ? 'RISE' : 'FALL') : null;
-                    return w;
-                }
-                function recordSideOutcomes(d, tw) {
-                    recordOutcome(d, 'EVEN', tw.evenodd === 'EVEN');
-                    recordOutcome(d, 'ODD', tw.evenodd === 'ODD');
-                    recordOutcome(d, 'OVER4', tw.overunder === 'OVER4');
-                    recordOutcome(d, 'UNDER5', tw.overunder === 'UNDER5');
-                    if (tw.vanilla) { recordOutcome(d, 'RISE', tw.vanilla === 'RISE'); recordOutcome(d, 'FALL', tw.vanilla === 'FALL'); }
-                }
-                function computePairSignals(d) {
-                    const out = [];
-                    for (const p of PAIRS) {
-                        const up = d.sideStats[p.up], down = d.sideStats[p.down];
-                        const total = up.wins + down.wins;
-                        if (total < ENTRY_CONFIG.minTotalTicks) {
-                            out.push({ ...p, ready: false, total, upWr: null, downWr: null, confirmed: false });
-                            continue;
-                        }
-                        const upWr = (up.wins / total) * 100;
-                        const downWr = (down.wins / total) * 100;
-                        const dominant = upWr >= downWr ? p.up : p.down;
-                        const dominantPct = Math.max(upWr, downWr);
-                        const edge = Math.abs(upWr - downWr);
-                        const confirmed = dominantPct >= ENTRY_CONFIG.winRateMin && edge >= ENTRY_CONFIG.edgeMin;
-                        out.push({ ...p, ready: true, total, upWr, downWr, dominant, dominantPct, edge, confirmed });
-                    }
-                    return out;
-                }
-                function evaluateEntry(d, sig, currentTick) {
-                    const st = d.entryState[sig.type];
-                    if (!sig.ready || !sig.confirmed) {
-                        st.persistence = 0; st.confirmed = false; st.dominant = null;
-                        st.dominantPct = 0; st.edge = 0;
-                        st.lastStatus = sig.ready ? 'weak' : 'idle';
-                        return;
-                    }
-                    if (st.dominant !== sig.dominant) st.persistence = 0;
-                    st.dominant = sig.dominant; st.dominantPct = sig.dominantPct;
-                    st.edge = sig.edge; st.confirmed = true; st.persistence++;
-                    if (st.persistence < ENTRY_CONFIG.confirmTicks) { st.lastStatus = 'confirming'; return; }
-                    if ((currentTick - st.lastEntryTick) < ENTRY_CONFIG.cooldownTicks) { st.lastStatus = 'cooldown'; return; }
-                    st.lastEntryTick = currentTick; st.lastFiredTick = currentTick; st.lastStatus = 'entry';
-                    const entry = {
-                        type: sig.type, emoji: sig.emoji, side: sig.dominant,
-                        sideLabel: sig.dominant === sig.up ? sig.upLabel : sig.downLabel,
-                        isUp: (sig.dominant === sig.up),
-                        winRate: sig.dominantPct, edge: sig.edge,
-                        tick: currentTick, time: Date.now(),
-                    };
-                    d.entryLog.push(entry);
-                    if (d.entryLog.length > 20) d.entryLog.shift();
-                }
-
-                function applyPointerSettingsInline(ptr, scale) {
-                    const s = scale / 3;
-                    if (ptr.classList.contains('triangle')) {
-                        ptr.style.borderLeftWidth = (4*s) + 'px';
-                        ptr.style.borderRightWidth = (4*s) + 'px';
-                        ptr.style.borderBottomWidth = (6*s) + 'px';
-                    } else if (ptr.classList.contains('arrow')) {
-                        ptr.style.fontSize = (1*s) + 'rem';
-                    } else if (ptr.classList.contains('dot')) {
-                        ptr.style.width = (6*s) + 'px';
-                        ptr.style.height = (6*s) + 'px';
-                    }
-                }
-
-                const BAR_FLOOR_PCT = 6;
-                const AVG_DIGIT_PCT = 10;
-                function computeBarHeights(pctArray, s) {
-                    if (s.barCalibration === 'linear') {
-                        const heights = pctArray.map(p => Math.min(100, (p || 0) * 5));
-                        const avgHeight = Math.min(100, AVG_DIGIT_PCT * 5);
-                        return { heights, avgHeight };
-                    }
-                    const vals = pctArray.map(p => p || 0);
-                    const hi = Math.max(...vals), lo = Math.min(...vals);
-                    const actualSpread = Math.max(0, hi - lo);
-                    const minSpread = Math.max(0.1, s.minCalibrationSpread || 1.5);
-                    const spread = Math.max(actualSpread, minSpread);
-                    const heights = vals.map(p => {
-                        const rel = (p - lo) / spread;
-                        const clamped = Math.max(0, Math.min(1, rel));
-                        return BAR_FLOOR_PCT + clamped * (100 - BAR_FLOOR_PCT);
-                    });
-                    const avgRel = (AVG_DIGIT_PCT - lo) / spread;
-                    const avgClamped = Math.max(0, Math.min(1, avgRel));
-                    const avgHeight = BAR_FLOOR_PCT + avgClamped * (100 - BAR_FLOOR_PCT);
-                    return { heights, avgHeight };
-                }
-
-                function buildDigitGrid(sym, data, s, grid) {
-                    if (!grid) return;
-                    const freqData = getDigitPercentages(sym, s.analysisWindow);
-                    grid.innerHTML = '';
-                    if (!freqData) return;
-
-                    const digitOrder = (currentMarket === 'evenodd')
-                        ? [0,2,4,6,8,1,3,5,7,9]
-                        : [0,1,2,3,4,5,6,7,8,9];
-
-                    const { heights, avgHeight } = computeBarHeights(freqData.pct, s);
-                    const displayAvgPos = Math.max(2, Math.min(98, avgHeight));
-
-                    const row = document.createElement('div');
-                    row.className = 'digit-bar-row';
-
-                    const wmConfig = getWatermarkConfig(currentMarket);
-                    if (wmConfig) {
-                        const wmLayer = document.createElement('div');
-                        wmLayer.className = 'watermark-layer';
-                        wmLayer.innerHTML = `
-                            <div class="wm-half">
-                                <div class="wm-digits" style="color:${wmConfig.left.color};">${wmConfig.left.digits}</div>
-                                <div class="wm-label" style="color:${wmConfig.left.color};">${wmConfig.left.label}</div>
-                            </div>
-                            <div class="wm-half">
-                                <div class="wm-digits" style="color:${wmConfig.right.color};">${wmConfig.right.digits}</div>
-                                <div class="wm-label" style="color:${wmConfig.right.color};">${wmConfig.right.label}</div>
-                            </div>`;
-                        row.appendChild(wmLayer);
-                    }
-
-                    digitOrder.forEach(d => {
-                        const wrap = document.createElement('div');
-                        wrap.className = 'digit-bar-cell';
-                        const track = document.createElement('div');
-                        track.className = 'bar-track';
-                        const fill = document.createElement('div');
-                        fill.className = 'bar-fill';
-                        const pct = freqData.pct[d] || 0;
-                        fill.style.height = heights[d] + '%';
-                        if (freqData.most.has(d)) fill.classList.add('most');
-                        if (freqData.second.has(d)) fill.classList.add('second');
-                        if (freqData.least.has(d)) fill.classList.add('least');
-                        if (freqData.secondLeast.has(d)) fill.classList.add('secondleast');
-                        track.appendChild(fill);
-                        const avgLine = document.createElement('div');
-                        avgLine.className = 'avg-line';
-                        avgLine.style.bottom = `calc(${displayAvgPos}% - 1px)`;
-                        track.appendChild(avgLine);
-                        wrap.appendChild(track);
-
-                        const ptrSlot = document.createElement('div');
-                        ptrSlot.className = 'pointer-slot';
-                        if (data.lastDigit === d) {
-                            const ptr = document.createElement('div');
-                            ptr.className = `pointer-marker-inline ${s.pointerStyle}`;
-                            if (s.pointerStyle === 'arrow') ptr.innerHTML = '↑';
-                            applyPointerSettingsInline(ptr, s.pointerScale);
-                            ptrSlot.appendChild(ptr);
-                        }
-                        wrap.appendChild(ptrSlot);
-
-                        const cell = document.createElement('div');
-                        cell.className = 'digit-cell';
-                        if (freqData.most.has(d)) cell.classList.add('most');
-                        if (freqData.second.has(d)) cell.classList.add('second');
-                        if (freqData.least.has(d)) cell.classList.add('least');
-                        if (freqData.secondLeast.has(d)) cell.classList.add('secondleast');
-                        if (data.lastDigit === d) cell.classList.add('last-digit-highlight');
-                        const aboveAvg = pct > AVG_DIGIT_PCT, belowAvg = pct < AVG_DIGIT_PCT;
-                        const arrow = aboveAvg ? '▲' : belowAvg ? '▼' : '·';
-                        const arrowColor = aboveAvg ? '#4ade80' : belowAvg ? '#f87171' : '#94a3b8';
-                        cell.innerHTML = `<span class="digit">${d}</span><div class="percent"><span style="color:${arrowColor}; font-size:0.7em; margin-right:1px;">${arrow}</span>${pct.toFixed(1)}%</div>`;
-                        wrap.appendChild(cell);
-                        row.appendChild(wrap);
-                    });
-
-                    const legend = document.createElement('div');
-                    legend.className = 'avg-legend-row';
-                    legend.innerHTML = `<span class="avg-legend-line"></span><span>10% avg — above = over, below = under</span>`;
-                    grid.appendChild(legend);
-                    grid.appendChild(row);
-                }
-
-                function renderLetterSequence(sym, data, mode, dom) {
-                    const seq1 = dom.seq1, seq2 = dom.seq2;
-                    if (!seq1 || !seq2) return;
-                    let mapFunc = null;
-                    if (mode === 'overunder') mapFunc = (d) => d <= 3 ? 'U' : d <= 5 ? 'M' : 'O';
-                    else if (mode === 'evenodd') mapFunc = (d) => d % 2 === 0 ? 'E' : 'O';
-                    if (mapFunc) {
-                        const digits = data.rollingArray || [];
-                        if (digits.length >= 5) {
-                            const slice = digits.slice(-100);
-                            const older = slice.slice(0, Math.ceil(slice.length / 2));
-                            const newer = slice.slice(Math.ceil(slice.length / 2));
-                            const buildRow = (arr) => arr.map(d => {
-                                const letter = mapFunc(d);
-                                let cls = 'seq-dash';
-                                if (letter === 'U') cls = 'seq-u';
-                                else if (letter === 'M') cls = 'seq-m';
-                                else if (letter === 'O') cls = mode === 'overunder' ? 'seq-o' : 'seq-odd';
-                                else if (letter === 'E') cls = 'seq-e';
-                                return `<span class="${cls}">${letter}</span>`;
-                            }).join('');
-                            seq1.innerHTML = buildRow(older);
-                            seq2.innerHTML = buildRow(newer);
-                        }
-                    } else {
-                        const dirs = data.directions || [];
-                        if (dirs.length >= 5) {
-                            const slice = dirs.slice(-100);
-                            const older = slice.slice(0, Math.ceil(slice.length / 2));
-                            const newer = slice.slice(Math.ceil(slice.length / 2));
-                            const mapRF = d => d === 1 ? 'R' : d === -1 ? 'F' : '–';
-                            const buildRow = (arr) => arr.map(d => {
-                                const cls = d === 1 ? 'seq-r' : d === -1 ? 'seq-f' : 'seq-dash';
-                                return `<span class="${cls}">${mapRF(d)}</span>`;
-                            }).join('');
-                            seq1.innerHTML = buildRow(older);
-                            seq2.innerHTML = buildRow(newer);
+                function initStreakTracking(d) {
+                    if (!d.streaks) {
+                        d.streaks = {};
+                        d.streakState = {};
+                        for (const strat of STRATEGIES) {
+                            d.streaks[strat.id] = [];
+                            d.streakState[strat.id] = { currentCount: 0, startTick: null, startContext: null };
                         }
                     }
                 }
 
-                function renderPairPanel(sym, pairSignals, dom) {
-                    const el = dom.pairPanel;
-                    if (!el) return;
+                function processStrategyOutcomes(sym, digit, price, prevPrice) {
                     const d = marketData[sym];
                     if (!d) return;
-                    let html = `<div class="pair-title">⚡ PAIR SIGNALS (rolling ${ENTRY_CONFIG.historySize})</div>`;
-                    for (const sig of pairSignals) {
-                        const st = d.entryState[sig.type];
-                        let leftCls = 'pair-side', rightCls = 'pair-side';
-                        let leftTxt = sig.upLabel, rightTxt = sig.downLabel;
-                        let leftWr = '—', rightWr = '—';
-                        if (sig.ready) {
-                            leftWr = sig.upWr.toFixed(0) + '%';
-                            rightWr = sig.downWr.toFixed(0) + '%';
-                            if (sig.dominant === sig.up) { leftCls += ' dominant-up'; rightCls += ' weak-side'; }
-                            else { rightCls += ' dominant-down'; leftCls += ' weak-side'; }
+                    const s = getSettings();
+                    const W = BOT_ROLLING_WINDOW;
+                    const contextBefore = captureContext(d, 1);
+                    for (const strat of STRATEGIES) {
+                        let won;
+                        try { won = strat.test(digit, price, prevPrice); } catch (e) { won = null; }
+                        if (won === null) continue;
+                        const st = d.botStats[strat.id];
+                        if (st.history.length >= W) {
+                            const old = st.history.shift();
+                            if (old) st.wins--; else st.losses--;
                         }
-                        let statusCls = st.lastStatus || 'idle';
-                        let statusTxt = '· idle';
-                        if (statusCls === 'entry') statusTxt = '⚡ ENTRY ' + (sig.dominant === sig.up ? sig.upLabel : sig.downLabel);
-                        else if (statusCls === 'confirming') statusTxt = `⏳ ${st.persistence}/${ENTRY_CONFIG.confirmTicks}`;
-                        else if (statusCls === 'cooldown') statusTxt = `⏸ ${Math.max(0, ENTRY_CONFIG.cooldownTicks - (d.tickCount - st.lastEntryTick))}`;
-                        else if (statusCls === 'weak') statusTxt = '⏳ weak';
-                        html += `<div class="pair-row">
-                            <span class="pair-label">${sig.emoji} ${sig.label}</span>
-                            <span class="${leftCls}">${leftTxt} ${leftWr}</span>
-                            <span class="pair-vs">vs</span>
-                            <span class="${rightCls}">${rightTxt} ${rightWr}</span>
-                            <span class="pair-status ${statusCls}">${statusTxt}</span>
-                        </div>`;
+                        st.history.push(won ? 1 : 0);
+                        if (won) st.wins++; else st.losses++;
+
+                        const state = d.streakState[strat.id];
+                        if (won) {
+                            if (state.currentCount === 0) { state.startTick = d.tickCount; state.startContext = contextBefore; }
+                            state.currentCount++;
+                        } else {
+                            if (state.currentCount >= s.minStreakLength && state.startContext) {
+                                d.streaks[strat.id].push({ startTick: state.startTick, endTick: d.tickCount - 1, length: state.currentCount, signature: state.startContext });
+                                if (d.streaks[strat.id].length > MAX_STREAK_HISTORY) d.streaks[strat.id].shift();
+                            }
+                            state.currentCount = 0; state.startTick = null; state.startContext = null;
+                        }
                     }
-                    el.innerHTML = html;
                 }
 
-                function renderEntryLog(sym, dom) {
-                    const el = dom.entryLog;
-                    if (!el) return;
+                function generateStreakSignal(sym, strat) {
                     const d = marketData[sym];
-                    if (!d || !d.entryLog || d.entryLog.length === 0) {
-                        el.innerHTML = `<div class="log-title">📜 SIGNAL FEED (live)</div><div class="log-empty">waiting for first signal…</div>`;
-                        return;
+                    if (!d || !d.streaks || !d.streaks[strat.id]) return null;
+                    const cacheKey = sym + '_' + strat.id;
+                    const cached = signalCache[cacheKey];
+                    if (cached && cached.tick === d.tickCount) return cached.sig;
+                    if (d.rollingArray.length < WARMUP_TICKS) { signalCache[cacheKey] = { tick: d.tickCount, sig: null }; return null; }
+                    const s = getSettings();
+                    const currentCtx = captureContext(d, 0);
+                    if (!currentCtx) { signalCache[cacheKey] = { tick: d.tickCount, sig: null }; return null; }
+                    const minSim = s.minSimilarity, minMatches = s.minMatches;
+                    const matches = [];
+                    for (const streak of d.streaks[strat.id]) {
+                        const sim = similarity(currentCtx, streak.signature);
+                        if (sim >= minSim) matches.push({ streak, sim });
                     }
-                    const recent = d.entryLog.slice(-8).reverse();
-                    const now = Date.now();
-                    let html = `<div class="log-title">📜 SIGNAL FEED (live · ${ENTRY_CONFIG.cooldownTicks}-tick cooldown)</div>`;
-                    for (const e of recent) {
-                        const ageSec = Math.floor((now - e.time) / 1000);
-                        const ageStr = ageSec < 60 ? `${ageSec}s ago` : `${Math.floor(ageSec/60)}m ago`;
-                        const sideCls = e.isUp ? 'up' : 'down';
-                        html += `<div class="log-entry">
-                            <span class="log-type">${e.emoji} ${PAIR_LABEL[e.type]}</span>
-                            <span class="log-side ${sideCls}">${e.sideLabel}</span>
-                            <span class="log-wr">${e.winRate.toFixed(0)}%</span>
-                            <span class="log-age">${ageStr}</span>
+                    matches.sort((a, b) => b.sim - a.sim);
+                    if (matches.length < minMatches) { signalCache[cacheKey] = { tick: d.tickCount, sig: null }; return null; }
+                    const matchCount = matches.length;
+                    const avgLength = matches.reduce((sum, m) => sum + m.streak.length, 0) / matchCount;
+                    const maxLength = Math.max(...matches.map(m => m.streak.length));
+                    const avgSim = matches.reduce((sum, m) => sum + m.sim, 0) / matchCount;
+                    const state = d.streakState[strat.id];
+                    const liveStreak = state.currentCount;
+                    const st = d.botStats[strat.id];
+                    const total = st.wins + st.losses;
+                    const currentWr = total > 0 ? (st.wins / total) * 100 : 0;
+                    const currentEdge = currentWr - strat.baselinePct;
+                    const countScore = Math.min(100, (matchCount / 5) * 100);
+                    const avgLenScore = Math.min(100, (avgLength / 8) * 100);
+                    const maxLenScore = Math.min(100, (maxLength / 12) * 100);
+                    const simScore = avgSim * 100;
+                    const composite = countScore * 0.30 + avgLenScore * 0.30 + maxLenScore * 0.20 + simScore * 0.20;
+                    let grade = 'C';
+                    if (composite >= 78 && matchCount >= 5 && avgLength >= 6 && maxLength >= 8) grade = 'A';
+                    else if (composite >= 55 && matchCount >= 3 && avgLength >= 5) grade = 'B';
+                    const result = { strat, matches, matchCount, avgLength, maxLength, avgSim, composite: Math.round(composite), grade, currentCtx, currentWr, currentEdge, liveStreak };
+                    signalCache[cacheKey] = { tick: d.tickCount, sig: result };
+                    return result;
+                }
+
+                function getBestSigForMarket(sym) {
+                    let bestSig = null, bestStrat = null;
+                    for (const strat of getStrategiesForMode(currentMarket)) {
+                        const sig = generateStreakSignal(sym, strat);
+                        if (!sig) continue;
+                        if (!bestSig || sig.composite > bestSig.composite) { bestSig = sig; bestStrat = strat; }
+                    }
+                    if (!bestSig) return null;
+                    return { sig: bestSig, strat: bestStrat };
+                }
+
+                function buildSignalDigitCellsHTML(sym) {
+                    const data = marketData[sym];
+                    if (!data) return '';
+                    const s = getSettings();
+                    const freqData = getDigitPercentages(sym, s.analysisWindow);
+                    if (!freqData) return '';
+                    const digitOrder = (currentMarket === 'evenodd') ? [0,2,4,6,8,1,3,5,7,9] : [0,1,2,3,4,5,6,7,8,9];
+                    const wmConfig = getWatermarkConfig(currentMarket);
+                    let html = '';
+                    const isFull = freqData.total >= s.analysisWindow;
+                    html += `<div class="avg-legend-row"><span><span class="avg-legend-line"></span> 10% avg</span><span class="legend-right ${isFull ? 'full' : ''}">${freqData.total}/${s.analysisWindow} ticks ${isFull ? '✓' : '⏳'}</span></div>`;
+                    html += `<div class="digit-bar-row">`;
+                    if (wmConfig) {
+                        html += `<div class="watermark-layer">
+                            <div class="wm-half"><div class="wm-digits" style="color:${wmConfig.left.color};">${wmConfig.left.digits}</div><div class="wm-label" style="color:${wmConfig.left.color};">${wmConfig.left.label}</div></div>
+                            <div class="wm-half"><div class="wm-digits" style="color:${wmConfig.right.color};">${wmConfig.right.digits}</div><div class="wm-label" style="color:${wmConfig.right.color};">${wmConfig.right.label}</div></div>
                         </div>`;
                     }
-                    el.innerHTML = html;
+                    const sc = s.pointerScale / 3;
+                    digitOrder.forEach(d => {
+                        const pct = freqData.pct[d] || 0;
+                        const count = freqData.counts[d] || 0;
+                        let cellCls = 'digit-cell';
+                        if (freqData.most.has(d)) cellCls += ' most';
+                        if (freqData.second.has(d)) cellCls += ' second';
+                        if (freqData.least.has(d)) cellCls += ' least';
+                        if (freqData.secondLeast.has(d)) cellCls += ' secondleast';
+                        if (data.lastDigit === d) cellCls += ' last-digit-highlight';
+                        const aboveAvg = pct > 10, belowAvg = pct < 10;
+                        const arrow = aboveAvg ? '▲' : belowAvg ? '▼' : '·';
+                        const arrowColor = aboveAvg ? '#4ade80' : belowAvg ? '#f87171' : '#94a3b8';
+                        const countHtml = s.showCounts ? `<div class="digit-count" style="font-size:0.55rem;opacity:0.65;font-family:monospace;color:#fff;">${count}/${freqData.total}</div>` : '';
+                        let ptrHtml = '';
+                        if (data.lastDigit === d) {
+                            if (s.pointerStyle === 'triangle') ptrHtml = `<div class="pointer-marker-inline triangle" style="border-left-width:${4*sc}px;border-right-width:${4*sc}px;border-bottom-width:${6*sc}px;"></div>`;
+                            else if (s.pointerStyle === 'arrow') ptrHtml = `<div class="pointer-marker-inline arrow" style="font-size:${1*sc}rem;">↑</div>`;
+                            else ptrHtml = `<div class="pointer-marker-inline dot" style="width:${6*sc}px;height:${6*sc}px;"></div>`;
+                        }
+                        html += `<div class="digit-bar-cell">
+                            <div class="pointer-slot">${ptrHtml}</div>
+                            <div class="${cellCls}">
+                                <span class="digit">${d}</span>
+                                <div class="percent"><span style="color:${arrowColor}; font-size:0.7em; margin-right:1px;">${arrow}</span>${pct.toFixed(1)}%</div>
+                                ${countHtml}
+                            </div>
+                        </div>`;
+                    });
+                    html += `</div>`;
+                    return html;
+                }
+
+                function buildPlaceholderDigitCells(s) {
+                    const digitOrder = (currentMarket === 'evenodd') ? [0,2,4,6,8,1,3,5,7,9] : [0,1,2,3,4,5,6,7,8,9];
+                    let html = `<div class="avg-legend-row"><span><span class="avg-legend-line"></span> 10% avg</span><span class="legend-right">— waiting</span></div>`;
+                    html += `<div class="digit-bar-row">`;
+                    digitOrder.forEach(d => {
+                        const countHtml = s.showCounts ? `<div class="digit-count" style="font-size:0.55rem;opacity:0.65;font-family:monospace;color:#fff;">—/—</div>` : '';
+                        html += `<div class="digit-bar-cell">
+                            <div class="pointer-slot"></div>
+                            <div class="digit-cell" style="opacity:0.35;">
+                                <span class="digit">${d}</span>
+                                <div class="percent">—</div>
+                                ${countHtml}
+                            </div>
+                        </div>`;
+                    });
+                    html += `</div>`;
+                    return html;
+                }
+
+                function buildSignalTickLettersHTML(sym) {
+                    const data = marketData[sym];
+                    if (!data) return '';
+                    let sourceArr = null, mapFunc = null;
+                    if (currentMarket === 'overunder') { sourceArr = data.rollingArray || []; mapFunc = (d) => d <= 3 ? 'U' : d <= 5 ? 'M' : 'O'; }
+                    else if (currentMarket === 'evenodd') { sourceArr = data.rollingArray || []; mapFunc = (d) => d % 2 === 0 ? 'E' : 'O'; }
+                    else if (currentMarket === 'vanilla') { sourceArr = data.directions || []; mapFunc = (d) => d === 1 ? 'R' : d === -1 ? 'F' : '–'; }
+                    if (!sourceArr || !mapFunc || sourceArr.length < 5) return '';
+                    const slice = sourceArr.slice(-100);
+                    const older = slice.slice(0, Math.ceil(slice.length / 2));
+                    const newer = slice.slice(Math.ceil(slice.length / 2));
+                    const buildRow = (arr) => arr.map(d => {
+                        const letter = mapFunc(d);
+                        let cls = 'seq-dash';
+                        if (letter === 'U') cls = 'seq-u';
+                        else if (letter === 'M') cls = 'seq-m';
+                        else if (letter === 'O') cls = currentMarket === 'overunder' ? 'seq-o' : 'seq-odd';
+                        else if (letter === 'E') cls = 'seq-e';
+                        else if (letter === 'R') cls = 'seq-r';
+                        else if (letter === 'F') cls = 'seq-f';
+                        return `<span class="${cls}">${letter}</span>`;
+                    }).join('');
+                    return `<div class="letter-sequence">${buildRow(older)}</div><div class="letter-sequence">${buildRow(newer)}</div>`;
+                }
+
+                function buildPlaceholderTickLetters() {
+                    const dashRow = Array(50).fill('<span class="seq-dash">–</span>').join('');
+                    return `<div class="letter-sequence">${dashRow}</div><div class="letter-sequence">${dashRow}</div>`;
+                }
+
+                function buildHotColdBarHTML(ctx) {
+                    if (!ctx) {
+                        return `<div class="hot-cold-bar"><span style="opacity:0.5;font-size:0.65rem;">⏳ hot/cold will appear once 100+ ticks collected</span></div>`;
+                    }
+                    let html = `<div class="hot-cold-bar">`;
+                    html += `<div class="hc-group"><span class="hc-label hot">🔥 HOT</span>`;
+                    if (ctx.hotDigits && ctx.hotDigits.length) ctx.hotDigits.forEach(d => { html += `<span class="hc-chip hot">${d}</span>`; });
+                    else html += `<span style="opacity:0.5;font-size:0.6rem;">none</span>`;
+                    html += `</div>`;
+                    html += `<div class="hc-group"><span class="hc-label cold">🧊 COLD</span>`;
+                    if (ctx.coldDigits && ctx.coldDigits.length) ctx.coldDigits.forEach(d => { html += `<span class="hc-chip cold">${d}</span>`; });
+                    else html += `<span style="opacity:0.5;font-size:0.6rem;">none</span>`;
+                    html += `</div></div>`;
+                    return html;
+                }
+
+                // ===== UNIFIED PANEL BUILDER =====
+                // Always same structure — card never grows/shrinks when signals appear/disappear
+                function buildMarketPanel(sym, data) {
+                    const s = getSettings();
+                    const uiState = data._uiState || { checklist: false, procedure: false };
+
+                    // Best signal (may be null — that's fine)
+                    const r = getBestSigForMarket(sym);
+                    const sig = r ? r.sig : null;
+                    const strat = r ? r.strat : null;
+                    const currentCtx = sig ? sig.currentCtx : captureContext(data, 0);
+                    const grade = sig ? sig.grade : 'C';
+                    const isUp = strat ? strat.direction === 'up' : true;
+                    const badgeClass = isUp ? 'up' : 'down';
+                    const priceDisplay = data.lastPriceDisplay || '—';
+                    const digitDisplay = (data.lastDigit !== null && data.lastDigit !== undefined) ? data.lastDigit : '?';
+
+                    // Headline
+                    const headlineBadge = strat
+                        ? `<span class="signal-badge ${badgeClass}">${strat.label}</span>`
+                        : `<span class="signal-badge" style="background:var(--bg-body);color:var(--text-secondary);border:1px solid var(--border-color);font-weight:700;">⏸️ Monitoring</span>`;
+                    const scoreBox = sig
+                        ? `<span class="signal-score-box">score <b>${sig.composite}</b>/100 · ${sig.matchCount} matches</span>`
+                        : `<span class="signal-score-box">monitoring · no matches</span>`;
+
+                    // Banner content (slot always reserved at 34px)
+                    let bannerContent = '';
+                    if (sig && sig.liveStreak >= s.minStreakLength) {
+                        bannerContent = `<div style="width:100%;padding:0.35rem 0.55rem;background:rgba(16,185,129,0.15);border:1px solid #10b981;border-radius:0.4rem;font-size:0.72rem;color:#4ade80;font-weight:800;">🔥 LIVE STREAK — ${strat.label} has won ${sig.liveStreak} in a row right now</div>`;
+                    } else if (sig && sig.liveStreak > 0) {
+                        bannerContent = `<div style="width:100%;padding:0.3rem 0.55rem;background:rgba(250,204,21,0.1);border:1px solid rgba(250,204,21,0.5);border-radius:0.4rem;font-size:0.7rem;color:#facc15;">⏳ Building — ${sig.liveStreak} consecutive wins (need ${s.minStreakLength} for "live" status)</div>`;
+                    }
+
+                    // Digit cells + hot/cold + tick letters (placeholders if not ready)
+                    const digitCellsHTML = buildSignalDigitCellsHTML(sym) || buildPlaceholderDigitCells(s);
+                    const hotColdHTML = buildHotColdBarHTML(currentCtx);
+                    const tickLettersHTML = buildSignalTickLettersHTML(sym) || buildPlaceholderTickLetters();
+
+                    // Current context — always rendered
+                    let ctxGrid = `<div class="context-grid">`;
+                    for (let d = 0; d < 10; d++) {
+                        if (currentCtx) {
+                            const pctVal = currentCtx.pct[d] * 100;
+                            const isHot = currentCtx.hotDigits.includes(d);
+                            ctxGrid += `<div class="context-cell ${isHot ? 'hot' : ''}"><div class="d">${d}</div><div class="p">${pctVal.toFixed(0)}%</div></div>`;
+                        } else {
+                            ctxGrid += `<div class="context-cell" style="opacity:0.4;"><div class="d">${d}</div><div class="p">—</div></div>`;
+                        }
+                    }
+                    ctxGrid += `</div>`;
+                    const balanceText = currentCtx
+                        ? `Even ${(currentCtx.evenPct*100).toFixed(0)}% · Over 4 ${(currentCtx.overPct*100).toFixed(0)}% · Rise ${(currentCtx.risePct*100).toFixed(0)}%`
+                        : 'Even —% · Over 4 —% · Rise —%';
+                    const wrText = sig
+                        ? `<span class="v ${sig.currentEdge > 0 ? 'highlight' : ''}">${sig.currentWr.toFixed(1)}% (${sig.currentEdge >= 0 ? '+' : ''}${sig.currentEdge.toFixed(1)}pp vs baseline)</span>`
+                        : `<span class="v" style="opacity:0.5;">— vs baseline</span>`;
+
+                    // Checklist content (real checks if sig, else placeholder text)
+                    let checklistContent = '';
+                    if (sig) {
+                        const checks = [
+                            { ok: sig.matchCount >= s.minMatches, label: 'Matching streaks', detail: `${sig.matchCount} (need ${s.minMatches}+)` },
+                            { ok: sig.avgLength >= s.minStreakLength, label: 'Avg past streak length', detail: `${sig.avgLength.toFixed(1)} (need ${s.minStreakLength}+)` },
+                            { ok: sig.maxLength >= s.minStreakLength + 2, label: 'Longest past streak', detail: `${sig.maxLength} (need ${s.minStreakLength + 2}+)` },
+                            { ok: sig.avgSim >= s.minSimilarity, label: 'Avg similarity', detail: `${sig.avgSim.toFixed(2)} (need ${s.minSimilarity}+)` },
+                            { ok: sig.grade === 'A' || sig.grade === 'B', label: 'Signal grade', detail: sig.grade },
+                        ];
+                        for (const c of checks) checklistContent += `<div class="checklist-row ${c.ok ? 'pass' : 'fail'}"><span class="icon">${c.ok ? '✓' : '✗'}</span><span class="label">${c.label}</span><span class="detail">${c.detail}</span></div>`;
+                    } else {
+                        checklistContent = `<div style="font-size:0.7rem;color:var(--text-secondary);padding:0.25rem 0;">⏳ Waiting for qualifying signal before checklist can be evaluated.</div>`;
+                    }
+
+                    // Procedure content (real steps if sig, else placeholder text)
+                    let procedureContent = '';
+                    if (sig && strat) {
+                        const steps = [
+                            `<b>Confirm still Grade ${sig.grade}</b> — verify signal hasn't dropped to C before entering.`,
+                            `<b>Open <u>${strat.contractHint}</u></b> on <b>${FULL_NAMES[sym]}</b>.`,
+                            `<b>Stake:</b> 1–2% of capital per trade. Fixed, never martingale.`,
+                            `<b>Stop-loss:</b> 2 consecutive losses → pause 5 minutes.`,
+                            `<b>Take-profit:</b> 3 consecutive wins → consider pausing.`,
+                            `<b>Re-verify</b> — if grade drops below B or match count drops below ${s.minMatches}, skip the trade.`,
+                        ];
+                        steps.forEach((st, i) => { procedureContent += `<div class="entry-step"><span class="n">${i+1}</span><span class="t">${st}</span></div>`; });
+                    } else {
+                        procedureContent = `<div style="font-size:0.7rem;color:var(--text-secondary);padding:0.25rem 0;">⏳ Entry procedure will appear once a qualifying signal fires.</div>`;
+                    }
+
+                    return `
+                        <div class="signal-headline">
+                            <span class="grade-badge grade-${grade}">${grade}</span>
+                            ${headlineBadge}
+                            <span class="signal-market">📈 ${FULL_NAMES[sym]}</span>
+                            <span class="live-price-big">${priceDisplay}</span>
+                            <span class="last-digit-badge">${digitDisplay}</span>
+                            ${scoreBox}
+                            <span class="focus-icon" data-sym="${sym}" style="cursor:pointer;opacity:0.7;">👁️</span>
+                        </div>
+                        <div class="live-banner-slot">${bannerContent}</div>
+                        <div class="signal-section">
+                            <div class="signal-section-title">📊 DIGIT CELLS — ${FULL_NAMES[sym]}</div>
+                            ${hotColdHTML}
+                            <div class="digits-grid">${digitCellsHTML}</div>
+                        </div>
+                        <div class="signal-section">
+                            <div class="signal-section-title">🎯 TICK LETTERS — last 100 ticks</div>
+                            <div class="letter-sequence-wrapper">${tickLettersHTML}</div>
+                        </div>
+                        <div class="signal-section">
+                            <div class="signal-section-title">🎯 CURRENT CONTEXT</div>
+                            ${ctxGrid}
+                            <div class="row"><span class="k">Balance:</span><span class="v">${balanceText}</span></div>
+                            <div class="row"><span class="k">Current WR:</span>${wrText}</div>
+                        </div>
+                        <div class="signal-section collapsible">
+                            <div class="signal-section-title collapse-header" data-section="checklist">
+                                <span>✓ PRE-TRADE CHECKLIST</span>
+                                <span class="chevron">${uiState.checklist ? '▾' : '▸'}</span>
+                            </div>
+                            <div class="collapse-body" style="display:${uiState.checklist ? 'block' : 'none'};">
+                                ${checklistContent}
+                            </div>
+                        </div>
+                        <div class="signal-section collapsible">
+                            <div class="signal-section-title collapse-header" data-section="procedure">
+                                <span>🎯 ENTRY PROCEDURE</span>
+                                <span class="chevron">${uiState.procedure ? '▾' : '▸'}</span>
+                            </div>
+                            <div class="collapse-body" style="display:${uiState.procedure ? 'block' : 'none'};">
+                                ${procedureContent}
+                            </div>
+                        </div>
+                    `;
                 }
 
                 function renderMarket(sym) {
                     const data = marketData[sym];
-                    if (!data || !data.rollingArray.length || !data._dom) return;
+                    if (!data || !data._dom) return;
                     const card = data._dom.card;
                     if (!card) return;
                     if (card.style.display === 'none') return;
-                    const s = getSettings();
-                    const dom = data._dom;
-                    if (dom.price) dom.price.innerText = data.lastPriceDisplay;
-                    if (dom.digit) dom.digit.innerText = data.lastDigit;
-                    buildDigitGrid(sym, data, s, dom.grid);
-                    renderLetterSequence(sym, data, currentMarket, dom);
-                    if (data.cachedPairSignals) renderPairPanel(sym, data.cachedPairSignals, dom);
-                    renderEntryLog(sym, dom);
+                    const r = getBestSigForMarket(sym);
+                    const grade = r ? r.sig.grade : 'C';
+                    card.classList.remove('grade-A', 'grade-B', 'grade-C');
+                    card.classList.add('grade-' + grade);
+                    card.innerHTML = buildMarketPanel(sym, data);
                 }
 
                 function pumpRender() {
@@ -798,7 +799,8 @@
                     for (const sym in marketData) {
                         const d = marketData[sym];
                         if (!d._dirty) continue;
-                        if (now - (d._lastRender || 0) < RENDER_MIN_INTERVAL_MS) continue;
+                        const interval = (focusedSymbol === sym) ? FOCUSED_RENDER_MS : UNFOCUSED_RENDER_MS;
+                        if (now - (d._lastRender || 0) < interval) continue;
                         if (focusedSymbol && sym !== focusedSymbol) continue;
                         renderMarket(sym);
                         d._lastRender = performance.now();
@@ -809,16 +811,10 @@
                     if (renderPumpTimer) clearInterval(renderPumpTimer);
                     renderPumpTimer = setInterval(pumpRender, RENDER_PUMP_MS);
                 }
-                function stopRenderPump() {
-                    if (renderPumpTimer) { clearInterval(renderPumpTimer); renderPumpTimer = null; }
-                }
-                document.addEventListener('visibilitychange', () => {
-                    if (!document.hidden) for (const sym in marketData) marketData[sym]._dirty = true;
-                });
+                document.addEventListener('visibilitychange', () => { if (!document.hidden) for (const sym in marketData) marketData[sym]._dirty = true; });
 
                 function setFocus(sym) {
                     focusedSymbol = sym;
-                    document.getElementById('focusBar').style.display = sym ? 'flex' : 'none';
                     const cards = document.querySelectorAll('.market-card');
                     if (sym) cards.forEach(c => c.style.display = c.id === `market_${sym}` ? 'flex' : 'none');
                     else cards.forEach(c => c.style.display = 'flex');
@@ -827,97 +823,57 @@
                         const card = document.getElementById(`market_${sym}`);
                         if (card && container) container.scrollTo({ top: card.offsetTop - container.offsetTop - 10, behavior: 'smooth' });
                         const d = marketData[sym];
-                        if (d && d._dom) {
-                            renderMarket(sym);
-                            d._lastRender = performance.now();
-                            d._dirty = false;
-                        }
-                    } else {
-                        for (const s in marketData) marketData[s]._dirty = true;
-                    }
-                }
-                function showAllMarkets() { setFocus(null); }
-
-                function renderTradeBadges(pairSignals, entryState) {
-                    if (!pairSignals) return '';
-                    const badges = [];
-                    for (const sig of pairSignals) {
-                        if (!sig.ready) continue;
-                        const st = entryState[sig.type];
-                        const isUp = sig.dominant === sig.up;
-                        const cls = isUp ? 'up' : 'down';
-                        const sideLabel = isUp ? sig.upLabel : sig.downLabel;
-                        const wr = sig.dominantPct.toFixed(0);
-                        let stateCls = 'state-idle', flag = '';
-                        if (st.lastStatus === 'entry') { stateCls = 'state-entry'; flag = `<span class="badge-flag entry">⚡</span>`; }
-                        else if (st.lastStatus === 'confirmed') { stateCls = 'state-confirmed'; flag = `<span class="badge-flag" style="background:#10b981;color:white;">✓</span>`; }
-                        else if (st.lastStatus === 'confirming') { stateCls = 'state-confirming'; flag = `<span class="badge-flag" style="background:#facc15;color:black;">⏳</span>`; }
-                        else if (st.lastStatus === 'cooldown') { stateCls = 'state-cooldown'; flag = `<span class="badge-flag" style="background:#3b82f6;color:white;">⏸</span>`; }
-                        else if (st.lastStatus === 'weak') { stateCls = 'state-weak'; }
-                        badges.push(`<span class="trade-badge ${cls} ${stateCls}" title="${sig.emoji} ${sideLabel} — ${wr}% win rate · edge +${sig.edge.toFixed(0)}pp">
-                            <span class="badge-side">${sig.emoji} ${sideLabel}</span>
-                            <span class="badge-wr">${wr}%</span>${flag}
-                        </span>`);
-                    }
-                    return badges.join('');
-                }
-                function renderAlignmentBadges(align) {
-                    if (!align) return '';
-                    let html = '';
-                    if (align.mostAlign.length) html += `<span class="alignment-badge most" title="Most aligned: ${align.mostAlign.join(',')}">M</span>`;
-                    if (align.secondAlign.length) html += `<span class="alignment-badge second" title="Second aligned: ${align.secondAlign.join(',')}">2</span>`;
-                    if (align.leastAlign.length) html += `<span class="alignment-badge least" title="Least aligned: ${align.leastAlign.join(',')}">L</span>`;
-                    if (align.secondLeastAlign.length) html += `<span class="alignment-badge secondLeast" title="Second-least aligned: ${align.secondLeastAlign.join(',')}">2L</span>`;
-                    return html;
+                        if (d && d._dom) { renderMarket(sym); d._lastRender = performance.now(); d._dirty = false; }
+                    } else { for (const s in marketData) marketData[s]._dirty = true; }
                 }
 
-                // ===== FROZEN ORDER: no sorting, fixed positions =====
                 function updateAllMarketsList() {
-                    let activeCount = 0;
+                    const s = getSettings();
+                    const allowed = s.signalStrictness === 'strict' ? ['A'] : s.signalStrictness === 'balanced' ? ['A','B'] : ['A','B','C'];
+                    let signalCount = 0;
                     let html = '';
                     for (const sym of FROZEN_ORDER) {
                         const data = marketData[sym];
                         const hasData = data && data.rollingArray.length > 0;
-                        const align = hasData ? computeAlignmentSignal(sym) : null;
-                        if (data) data.cachedAlign = align;
-                        const pairSignals = data ? data.cachedPairSignals : null;
-                        const entryState = data ? data.entryState : null;
-
-                        // Determine if this market has ANY active signal (for highlight)
-                        let hasActiveSignal = false;
-                        if (pairSignals && entryState) {
-                            for (const sig of pairSignals) {
-                                if (!sig.ready) continue;
-                                const st = entryState[sig.type];
-                                if (st.lastStatus === 'entry' || st.lastStatus === 'confirmed' || st.lastStatus === 'confirming') {
-                                    hasActiveSignal = true;
-                                    break;
-                                }
+                        let bestSig = null, bestEntry = null;
+                        if (hasData) {
+                            for (const strat of getStrategiesForMode(currentMarket)) {
+                                const sig = generateStreakSignal(sym, strat);
+                                if (!sig || !allowed.includes(sig.grade)) continue;
+                                if (!bestSig || sig.composite > bestSig.composite) { bestSig = sig; bestEntry = strat; }
                             }
                         }
-                        if (hasActiveSignal) activeCount++;
-
-                        const rowClass = hasActiveSignal ? 'market-list-item signal-on' : 'market-list-item';
-                        const tradeBadges = (pairSignals && entryState) ? renderTradeBadges(pairSignals, entryState) : '';
-                        const alignBadges = align ? renderAlignmentBadges(align) : '';
-                        const alignCount = align ? `<span class="align-count">${align.alignCount}/4</span>` : '';
-                        // Always render item-signals (min-height reserved via CSS)
+                        const hasSignal = !!bestSig;
+                        if (hasSignal) signalCount++;
+                        const rowClass = hasSignal ? 'market-list-item signal-on' : 'market-list-item';
+                        let bestHTML = '';
+                        if (bestSig) {
+                            const dir = bestEntry.direction === 'up' ? 'up' : 'down';
+                            bestHTML = `<div class="item-best"><span class="best-label ${dir}">${bestEntry.label}</span><span class="best-rate pos">${bestSig.grade} · ${bestSig.matchCount}×avg${bestSig.avgLength.toFixed(0)}w</span></div>`;
+                        } else {
+                            let closestInfo = hasData ? 'building…' : '—';
+                            if (hasData && data.streaks) {
+                                let closestMatch = null;
+                                const currentCtx = captureContext(data, 0);
+                                if (currentCtx) {
+                                    for (const strat of getStrategiesForMode(currentMarket)) {
+                                        for (const streak of data.streaks[strat.id]) {
+                                            const sim = similarity(currentCtx, streak.signature);
+                                            if (!closestMatch || sim > closestMatch.sim) closestMatch = { strat, streak, sim };
+                                        }
+                                    }
+                                }
+                                if (closestMatch && closestMatch.sim >= s.minSimilarity * 0.7) closestInfo = `closest: ${closestMatch.strat.short} @ ${(closestMatch.sim*100).toFixed(0)}%`;
+                            }
+                            bestHTML = `<div class="no-signal">${closestInfo}</div>`;
+                        }
                         html += `<div class="${rowClass}" data-symbol="${sym}">
-                            <div class="item-header">
-                                <span class="item-name">${FULL_NAMES[sym]}</span>
-                                ${hasData ? '<span class="live-pip">●</span>' : ''}
-                            </div>
-                            <div class="item-signals">
-                                <div class="trade-row">${tradeBadges}</div>
-                                <div class="align-row">${alignBadges}${alignCount}</div>
-                            </div>
+                            <div class="item-header"><span class="item-name">${FULL_NAMES[sym]}</span>${hasData ? '<span class="live-pip">●</span>' : ''}</div>
+                            ${bestHTML}
                         </div>`;
                     }
-
-                    // Update count in header
                     const countEl = document.getElementById('activeCount');
-                    if (countEl) countEl.textContent = `${activeCount} active`;
-
+                    if (countEl) countEl.textContent = `${signalCount} active`;
                     document.getElementById('marketsListContainer').innerHTML = html;
                     document.querySelectorAll('.market-list-item').forEach(el => { el.onclick = () => setFocus(el.dataset.symbol); });
                 }
@@ -925,79 +881,98 @@
                 function createMarketUI(sym) {
                     if (document.getElementById(`market_${sym}`)) return;
                     const card = document.createElement('div');
-                    card.className = 'market-card';
+                    card.className = 'market-card grade-C';
                     card.id = `market_${sym}`;
-                    card.innerHTML = `
-                        <div class="market-header">
-                            <div class="market-title"><span>📈 ${FULL_NAMES[sym]}</span><span class="focus-icon" onclick="setFocus('${sym}')">👁️</span></div>
-                            <div><span class="live-price-big" id="livePriceBig_${sym}">—</span></div>
-                            <div class="market-status" id="status_${sym}">🔴 no data</div>
-                            <span class="last-digit-badge" id="lastDigit_${sym}">?</span>
-                        </div>
-                        <div class="card-content">
-                            <div class="card-main-info">
-                                <div id="digitsContainer_${sym}" class="digits-grid"></div>
-                                <div class="letter-sequence-wrapper">
-                                    <div class="letter-sequence" id="letterSeq1_${sym}"></div>
-                                    <div class="letter-sequence" id="letterSeq2_${sym}"></div>
-                                </div>
-                                <div id="pairPanel_${sym}" class="pair-panel"><div class="pair-title">⚡ PAIR SIGNALS</div></div>
-                                <div id="entryLog_${sym}" class="entry-log"></div>
-                            </div>
-                        </div>`;
+                    card.dataset.symbol = sym;
                     document.getElementById('marketsContainer').appendChild(card);
                     if (!marketData[sym]) marketData[sym] = {
                         rollingArray: [], lastDigit: null, lastPriceDisplay: '—',
                         directions: [], lastPrice: null, tickCount: 0,
-                        sideStats: null, entryState: null, entryLog: null,
-                        cachedPairSignals: null, cachedAlign: null,
-                        _dirty: false, _lastRender: 0,
+                        botStats: null, streaks: null, streakState: null,
+                        _dirty: false, _lastRender: 0, _decimals: undefined,
+                        _uiState: { checklist: false, procedure: false },
                     };
-                    marketData[sym]._dom = {
-                        card,
-                        price: document.getElementById(`livePriceBig_${sym}`),
-                        digit: document.getElementById(`lastDigit_${sym}`),
-                        grid: document.getElementById(`digitsContainer_${sym}`),
-                        seq1: document.getElementById(`letterSeq1_${sym}`),
-                        seq2: document.getElementById(`letterSeq2_${sym}`),
-                        pairPanel: document.getElementById(`pairPanel_${sym}`),
-                        entryLog: document.getElementById(`entryLog_${sym}`),
-                    };
+                    marketData[sym]._dom = { card };
+                    initBotStats(marketData[sym]);
+                    initStreakTracking(marketData[sym]);
+                    // Render immediately with placeholder content — no "Loading" flicker
+                    renderMarket(sym);
                 }
 
-                function subscribeToMarket(sym) {
-                    if (ws && ws.readyState === WebSocket.OPEN && !invalidSymbols.has(sym)) {
-                        ws.send(JSON.stringify({ ticks_history: sym, count: 1000, end: "latest", style: "ticks" }));
-                        ws.send(JSON.stringify({ ticks: sym, subscribe: 1 }));
+                document.getElementById('marketsContainer').addEventListener('click', (e) => {
+                    const focusIcon = e.target.closest('.focus-icon');
+                    if (focusIcon && focusIcon.dataset.sym) { e.stopPropagation(); setFocus(focusIcon.dataset.sym); return; }
+                    const header = e.target.closest('.collapse-header');
+                    if (header) {
+                        e.stopPropagation();
+                        const card = header.closest('.market-card');
+                        if (!card) return;
+                        const sym = card.dataset.symbol;
+                        const section = header.dataset.section;
+                        const d = marketData[sym];
+                        if (!d) return;
+                        if (!d._uiState) d._uiState = { checklist: false, procedure: false };
+                        d._uiState[section] = !d._uiState[section];
+                        const body = header.nextElementSibling;
+                        if (body) body.style.display = d._uiState[section] ? 'block' : 'none';
+                        const chevron = header.querySelector('.chevron');
+                        if (chevron) chevron.textContent = d._uiState[section] ? '▾' : '▸';
                     }
+                });
+
+                function subscribeToMarket(sym, withHistory) {
+                    if (!ws || ws.readyState !== WebSocket.OPEN || invalidSymbols.has(sym)) return;
+                    const s = getSettings();
+                    if (withHistory) ws.send(JSON.stringify({ ticks_history: sym, count: s.analysisWindow, end: "latest", style: "ticks" }));
+                    ws.send(JSON.stringify({ ticks: sym, subscribe: 1 }));
+                }
+
+                function refreshAllHistory() {
+                    if (!ws || ws.readyState !== WebSocket.OPEN) { alert('Not connected.'); return; }
+                    const s = getSettings();
+                    Object.keys(signalCache).forEach(k => delete signalCache[k]);
+                    ALL_SYMBOLS.forEach(sym => {
+                        if (!invalidSymbols.has(sym)) ws.send(JSON.stringify({ ticks_history: sym, count: s.analysisWindow, end: "latest", style: "ticks" }));
+                    });
+                    document.getElementById('settingsModal').style.display = 'none';
                 }
 
                 function connectWebSocket() {
                     clearConnectionTimers();
                     if (ws) { try { ws.close(); } catch (e) {} ws = null; }
-                    document.getElementById('connectionStatus').innerHTML = '⏳ Connecting...';
+                    const isFirstConnect = Object.keys(marketData).length === 0;
+                    const statusEl = document.getElementById('connectionStatus');
+                    statusEl.className = 'status-badge';
+                    statusEl.innerHTML = isFirstConnect ? '⏳ Connecting...' : '⏳ Reconnecting...';
                     let thisWs;
-                    try { thisWs = new WebSocket(WS_ENDPOINT); }
-                    catch (e) { console.error('WebSocket construction failed:', e); scheduleReconnect(); return; }
+                    try { thisWs = new WebSocket(WS_ENDPOINT); } catch (e) { scheduleReconnect(); return; }
                     ws = thisWs;
                     thisWs.onopen = () => {
-                        document.getElementById('connectionStatus').innerHTML = '✅ Connected';
+                        statusEl.className = 'status-badge live';
+                        statusEl.innerHTML = '✅ Connected';
                         reconnectAttempts = 0;
-                        document.getElementById('marketsContainer').innerHTML = '';
-                        marketData = {}; invalidSymbols.clear();
-                        ALL_SYMBOLS.forEach(s => createMarketUI(s));
+                        if (isFirstConnect) {
+                            document.getElementById('marketsContainer').innerHTML = '';
+                            marketData = {}; invalidSymbols.clear();
+                            Object.keys(signalCache).forEach(k => delete signalCache[k]);
+                            ALL_SYMBOLS.forEach(s => createMarketUI(s));
+                        }
                         let idx = 0;
-                        const nextSub = () => {
+                        const next = () => {
                             if (idx >= ALL_SYMBOLS.length) {
-                                document.getElementById('connectionStatus').innerHTML = `✅ ${currentMarket.toUpperCase()}`;
+                                statusEl.innerHTML = '✅ Live';
                                 startTimerRefresh();
                                 startRenderPump();
+                                for (const sym in marketData) marketData[sym]._dirty = true;
                                 return;
                             }
-                            subscribeToMarket(ALL_SYMBOLS[idx]); idx++;
-                            setTimeout(nextSub, 200);
+                            const sym = ALL_SYMBOLS[idx];
+                            subscribeToMarket(sym, isFirstConnect);
+                            idx++;
+                            setTimeout(next, 200);
                         };
-                        nextSub();
+                        next();
+                        if (pingInterval) clearInterval(pingInterval);
                         pingInterval = setInterval(sendPing, PING_EVERY_MS);
                         sendPing();
                     };
@@ -1012,27 +987,32 @@
                                 const sym = msg.tick.symbol;
                                 if (MARKET_NAMES[sym] && !invalidSymbols.has(sym)) {
                                     processTick(sym, msg.tick.quote, msg.tick.quote_display, msg.tick.epoch, { fromHistory: false });
-                                    const statusEl = document.getElementById(`status_${sym}`);
-                                    if (statusEl) statusEl.innerHTML = '🟢 live';
                                 }
                             } else if (msg.msg_type === 'history' && msg.history?.prices && msg.echo_req?.ticks_history) {
                                 const sym = msg.echo_req.ticks_history;
                                 if (MARKET_NAMES[sym] && !invalidSymbols.has(sym)) {
-                                    const len = msg.history.prices.length;
-                                    for (let i = 0; i < len; i++) {
-                                        processTick(sym, msg.history.prices[i], null, Date.now() - (len - i) * 1000, { fromHistory: true });
-                                    }
                                     const d = marketData[sym];
+                                    if (d) {
+                                        const pipSize = parseInt(msg.pip_size);
+                                        if (!isNaN(pipSize) && pipSize >= 0) d._decimals = pipSize;
+                                        d.rollingArray = []; d.directions = []; d.botStats = null; d.streaks = null; d.streakState = null;
+                                        d.tickCount = 0; d.lastPrice = null;
+                                        initBotStats(d); initStreakTracking(d);
+                                        Object.keys(signalCache).forEach(k => { if (k.startsWith(sym + '_')) delete signalCache[k]; });
+                                    }
+                                    const len = msg.history.prices.length;
+                                    for (let i = 0; i < len; i++) processTick(sym, msg.history.prices[i], null, Date.now() - (len - i) * 1000, { fromHistory: true });
                                     if (d) d._dirty = true;
                                 }
                             }
                         } catch (err) {}
                     };
-                    thisWs.onerror = () => { document.getElementById('connectionStatus').innerHTML = '⚠️ Error'; };
+                    thisWs.onerror = () => { statusEl.innerHTML = '⚠️ Error'; };
                     thisWs.onclose = () => {
                         if (ws !== thisWs) return;
-                        ws = null; clearConnectionTimers(); stopRenderPump();
-                        document.getElementById('connectionStatus').innerHTML = '🔴 Disconnected';
+                        ws = null; clearConnectionTimers();
+                        statusEl.className = 'status-badge reconnecting';
+                        statusEl.innerHTML = '🔄 Reconnecting...';
                         scheduleReconnect();
                     };
                 }
@@ -1042,9 +1022,7 @@
                 function setMarket(m) {
                     currentMarket = m;
                     document.querySelectorAll('.market-btn').forEach(b => b.classList.toggle('active', b.dataset.market === m));
-                    const showStrategy = (m === 'evenodd' || m === 'hybrid');
-                    document.getElementById('strategySelector').style.display = showStrategy ? 'flex' : 'none';
-                    for (let s in marketData) marketData[s]._dirty = true;
+                    for (const s in marketData) marketData[s]._dirty = true;
                     updateAllMarketsList();
                     if (focusedSymbol && marketData[focusedSymbol]?._dom) {
                         renderMarket(focusedSymbol);
@@ -1052,11 +1030,7 @@
                         marketData[focusedSymbol]._dirty = false;
                     }
                 }
-                function setStrategy(str) {
-                    document.querySelectorAll('.strategy-btn').forEach(b => b.classList.toggle('active', b.dataset.strategy === str));
-                }
 
-                let timerRefresh;
                 function startTimerRefresh() {
                     if (timerRefresh) clearInterval(timerRefresh);
                     timerRefresh = setInterval(() => { updateAllMarketsList(); }, 1000);
@@ -1067,14 +1041,29 @@
                     if (!marketData[sym]) marketData[sym] = {
                         rollingArray: [], lastDigit: null, lastPriceDisplay: '—',
                         directions: [], lastPrice: null, tickCount: 0,
-                        sideStats: null, entryState: null, entryLog: null,
-                        cachedPairSignals: null, cachedAlign: null,
-                        _dirty: false, _lastRender: 0,
+                        botStats: null, streaks: null, streakState: null,
+                        _dirty: false, _lastRender: 0, _decimals: undefined,
+                        _uiState: { checklist: false, procedure: false },
                     };
                     const d = marketData[sym];
                     const prevPrice = d.lastPrice;
-                    d.lastPriceDisplay = quoteDisplay || formatHistoryPrice(sym, price);
-                    d.lastDigit = lastDigitFromFormatted(d.lastPriceDisplay);
+                    if (quoteDisplay && d._decimals === undefined) {
+                        const dotIdx = quoteDisplay.indexOf('.');
+                        d._decimals = dotIdx >= 0 ? quoteDisplay.length - dotIdx - 1 : 0;
+                    }
+                    const dec = (d._decimals !== undefined) ? d._decimals : (DECIMAL_MAP[sym] ?? 2);
+                    let display, lastDigit;
+                    if (quoteDisplay) {
+                        display = quoteDisplay;
+                        lastDigit = lastDigitFromFormatted(display);
+                    } else {
+                        const m = Math.pow(10, dec);
+                        const truncated = Math.floor(price * m + 1e-9) / m;
+                        display = truncated.toFixed(dec);
+                        lastDigit = lastDigitFromFormatted(display);
+                    }
+                    d.lastPriceDisplay = display;
+                    d.lastDigit = lastDigit;
                     d.rollingArray.push(d.lastDigit);
                     while (d.rollingArray.length > 2000) d.rollingArray.shift();
                     if (prevPrice !== null) {
@@ -1083,37 +1072,30 @@
                     }
                     d.lastPrice = price;
                     d.tickCount = (d.tickCount || 0) + 1;
-
-                    initSideStats(d);
-                    const tw = getTickWinners(d.lastDigit, price, prevPrice);
-                    recordSideOutcomes(d, tw);
-                    const pairSignals = computePairSignals(d);
-                    d.cachedPairSignals = pairSignals;
-
-                    if (!fromHistory) {
-                        for (const sig of pairSignals) evaluateEntry(d, sig, d.tickCount);
-                        d._dirty = true;
-                    }
+                    if (!d.botStats) initBotStats(d);
+                    if (!d.streaks) initStreakTracking(d);
+                    processStrategyOutcomes(sym, lastDigit, price, prevPrice);
+                    if (!fromHistory) d._dirty = true;
                 }
 
                 document.querySelectorAll('.market-btn').forEach(b => b.onclick = () => setMarket(b.dataset.market));
-                document.querySelectorAll('.strategy-btn').forEach(b => b.onclick = () => setStrategy(b.dataset.strategy));
-                document.getElementById('showAllBtn')?.addEventListener('click', showAllMarkets);
                 document.getElementById('settingsBtn').onclick = () => document.getElementById('settingsModal').style.display = 'flex';
                 document.getElementById('closeModal').onclick = () => document.getElementById('settingsModal').style.display = 'none';
+                document.getElementById('refreshHistoryBtn').onclick = () => refreshAllHistory();
                 window.onclick = e => { if (e.target === document.getElementById('settingsModal')) document.getElementById('settingsModal').style.display = 'none'; };
 
-                ['pointerStyle','pointerScale','analysisWindow','barCalibration','minCalibrationSpread'].forEach(id => {
+                document.getElementById('analysisWindow')?.addEventListener('change', () => refreshAllHistory());
+                document.getElementById('showCounts')?.addEventListener('change', () => { for (const s in marketData) marketData[s]._dirty = true; });
+
+                ['pointerStyle','pointerScale','minStreakLength','minMatches','minSimilarity','signalStrictness'].forEach(id => {
                     document.getElementById(id)?.addEventListener('change', () => {
-                        for (let s in marketData) marketData[s]._dirty = true;
+                        for (const s in marketData) marketData[s]._dirty = true;
                     });
                     document.getElementById(id)?.addEventListener('input', () => {
                         if (id === 'pointerScale') {
                             const sv = document.getElementById('scaleValue');
                             if (sv) sv.textContent = parseFloat(document.getElementById('pointerScale').value).toFixed(1);
-                        }
-                        if (id === 'pointerScale' || id === 'minCalibrationSpread') {
-                            for (let s in marketData) marketData[s]._dirty = true;
+                            for (const s in marketData) marketData[s]._dirty = true;
                         }
                     });
                 });
@@ -1121,9 +1103,9 @@
                 setTimeout(connectWebSocket, 500);
                 setMarket('evenodd');
 
-                console.log('✅ TAJIRI: frozen market list + fixed row heights.');
+                console.log('✅ TAJIRI STREAK BOT: unified panel — cards never expand/contract with thresholds or signal state.');
             } catch (err) {
-                console.error('Error initializing app:', err);
+                console.error('Error initializing:', err);
                 document.body.innerHTML = `<div style="color:red;padding:20px;font-size:16px;">Error: ${err.message}</div>`;
             }
         })();
