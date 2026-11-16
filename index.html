@@ -420,7 +420,6 @@
                 const FLOW_TARGET_PCT = 60;
                 const FLOW_TREND_PP = 10;
 
-                // === CYCLE CONFIG ===
                 const TRADES_PER_SIGNAL = 3;
                 const SIGNALS_PER_CYCLE = 50;
 
@@ -432,7 +431,6 @@
                 const PING_EVERY_MS = 30000, PONG_TIMEOUT_MS = 10000;
                 const WS_ENDPOINT = 'wss://api.derivws.com/trading/v1/options/ws/public';
 
-                // === GLOBAL CYCLE STATE ===
                 const sessionState = {
                     cycleNum: 1,
                     signalsInCycle: 0,
@@ -559,7 +557,6 @@
 
                 function getStrategiesForMode(mode) { return STRATEGIES.filter(s => s.mode === mode); }
 
-                // === CYCLE: signal lifecycle ===
                 function startNewSignal(sym, d, r) {
                     const c = d._tradeCycle;
                     c.state = 'active';
@@ -572,7 +569,6 @@
                     if (sessionState.signalsInCycle >= SIGNALS_PER_CYCLE) {
                         sessionState.cycleEndPending = true;
                     }
-                    // Arm first trade
                     d._pendingSignal = { stratId: r.strat.id, grade: r.sig.grade, at: d.tickCount };
                 }
 
@@ -593,7 +589,6 @@
                 function checkCycleEnd() {
                     if (!sessionState.cycleEndPending) return;
                     if (sessionState.signalsCompleted < sessionState.signalsInCycle) return;
-                    // All signals in this cycle are complete
                     endGlobalCycle();
                 }
 
@@ -616,7 +611,6 @@
                     const emoji = rate >= 55 ? '🟢' : rate < 45 ? '🔴' : '⚪';
                     showToast(`${emoji} CYCLE #${record.cycleNum} COMPLETE — ${rate.toFixed(1)}% · ${record.wins}W/${record.losses}L over ${total} trades · next cycle starting`, tone);
                     console.log(`📊 CYCLE #${record.cycleNum}: ${record.signals} signals · ${total} trades · ${record.wins}W/${record.losses}L (${rate.toFixed(1)}%)`);
-                    // Reset
                     sessionState.cycleNum++;
                     sessionState.signalsInCycle = 0;
                     sessionState.signalsCompleted = 0;
@@ -629,23 +623,6 @@
                     renderCycleHistory();
                 }
 
-                function resetAllCycles() {
-                    sessionState.cycleNum = 1;
-                    sessionState.signalsInCycle = 0;
-                    sessionState.signalsCompleted = 0;
-                    sessionState.tradesInCycle = 0;
-                    sessionState.winsInCycle = 0;
-                    sessionState.lossesInCycle = 0;
-                    sessionState.cycleStartedAt = Date.now();
-                    sessionState.cycleEndPending = false;
-                    sessionState.history = [];
-                    for (const sym in marketData) {
-                        marketData[sym]._tradeCycle = newTradeCycle();
-                        marketData[sym]._lastSignalEndTick = null;
-                    }
-                }
-
-                // === Live flow (unchanged) ===
                 function getLiveFlow(sym, windowSize) {
                     const d = marketData[sym];
                     if (!d || !d.rollingArray) return null;
@@ -994,7 +971,6 @@
                             d.signalHistory.push({ stratId: ps.stratId, grade: ps.grade, won, at: d.tickCount });
                             if (d.signalHistory.length > MAX_SIGNAL_HISTORY) d.signalHistory.shift();
 
-                            // === Cycle tracking ===
                             const c = d._tradeCycle;
                             if (c && c.state === 'active') {
                                 c.tradesInSignal++;
@@ -1011,7 +987,6 @@
                     d._lastResolvedTick = d.tickCount;
                 }
 
-                // === NEW: Cycle-aware signal firing ===
                 function maybeSnapshotSignal(sym) {
                     const d = marketData[sym];
                     if (!d) return;
@@ -1022,29 +997,25 @@
                     const r = getBestSigForMarket(sym);
                     const isTrade = !!(r && !r.paused && r.sig && r.flowOk && (r.sig.grade === 'A' || r.sig.grade === 'B'));
 
-                    // Idle → Active (new signal)
                     if (c.state === 'idle' && isTrade) {
-                        if (sessionState.cycleEndPending) return; // block new signals during cycle end
+                        if (sessionState.cycleEndPending) return;
                         const cooldown = getSignalCooldown();
                         if (d._lastSignalEndTick != null && d.tickCount - d._lastSignalEndTick < cooldown) return;
                         startNewSignal(sym, d, r);
                         return;
                     }
 
-                    // Exhausted → Idle (signal dropped away)
                     if (c.state === 'exhausted' && !isTrade) {
                         c.state = 'idle';
                         c.activeStrat = null;
                         return;
                     }
 
-                    // Active: check still valid, otherwise complete early
                     if (c.state === 'active') {
                         if (!isTrade || (r && r.strat.id !== c.activeStrat)) {
                             completeSignal(sym, d);
                             return;
                         }
-                        // Still valid, under 3 trades → fire next trade (no cooldown within signal)
                         if (c.tradesInSignal < TRADES_PER_SIGNAL) {
                             d._pendingSignal = { stratId: r.strat.id, grade: r.sig.grade, at: d.tickCount };
                         }
@@ -1315,7 +1286,6 @@
                     const priceDisplay = data.lastPriceDisplay || '—';
                     const digitDisplay = (data.lastDigit !== null && data.lastDigit !== undefined) ? data.lastDigit : '?';
 
-                    // Trade progress badge
                     let tradeBadge = '';
                     if (c.state === 'active') {
                         tradeBadge = `<span class="trade-progress-badge active">🎯 trade ${c.tradesInSignal + (data._pendingSignal ? 1 : 0)}/${TRADES_PER_SIGNAL}</span>`;
@@ -1540,7 +1510,6 @@
                             accEl.className = 'sb-val ' + (acc >= 55 ? 'pos' : acc < 45 ? 'neg' : '');
                         } else { accEl.textContent = '—'; accEl.className = 'sb-val'; }
                     }
-                    // === Cycle banner ===
                     if (el('sbCycle')) {
                         const pending = sessionState.cycleEndPending ? ' (ending)' : '';
                         el('sbCycle').textContent = `#${sessionState.cycleNum} · ${sessionState.signalsInCycle}/${SIGNALS_PER_CYCLE}${pending}`;
@@ -1886,22 +1855,83 @@
                     showToast('✅ All markets resumed', 'pos');
                 };
 
-                document.getElementById('resetStatsBtn').onclick = () => {
-                    if (!confirm('Reset ALL session stats AND cycle progress? This clears everything.')) return;
-                    for (const sym in marketData) {
-                        const d = marketData[sym];
-                        d.signalHistory = [];
-                        d._pendingSignal = null; d._lastSignalKey = null; d._lastResolvedTick = null; d._lastSignalEndTick = null;
-                        d._pausedAtTick = null; d._lastResumeTick = 0; d._resumeAttempts = 0;
-                        d._hardPaused = false; d._manualResume = false; d._manualResumeTick = 0;
-                        d._tradeCycle = newTradeCycle();
-                        d._dirty = true;
+                // === FIXED RESET BUTTON (inline confirm + full synchronous reset) ===
+                let _resetConfirmTimer = null;
+                document.getElementById('resetStatsBtn').onclick = function() {
+                    const btn = this;
+                    if (btn.dataset.confirming !== 'true') {
+                        btn.dataset.confirming = 'true';
+                        btn.textContent = '⚠️ Click again to confirm';
+                        btn.style.background = '#dc2626';
+                        if (_resetConfirmTimer) clearTimeout(_resetConfirmTimer);
+                        _resetConfirmTimer = setTimeout(() => {
+                            btn.dataset.confirming = 'false';
+                            btn.textContent = 'Reset all';
+                            btn.style.background = '#ef4444';
+                        }, 4000);
+                        return;
                     }
-                    resetAllCycles();
-                    updateSessionBanner();
-                    renderCycleHistory();
-                    showToast('🔄 Session + cycles reset', 'info');
+                    if (_resetConfirmTimer) clearTimeout(_resetConfirmTimer);
+                    btn.dataset.confirming = 'false';
+                    btn.textContent = 'Reset all';
+                    btn.style.background = '#ef4444';
+                    performFullReset();
                 };
+
+                function performFullReset() {
+                    try {
+                        console.log('🔄 Full reset initiated');
+
+                        sessionState.cycleNum = 1;
+                        sessionState.signalsInCycle = 0;
+                        sessionState.signalsCompleted = 0;
+                        sessionState.tradesInCycle = 0;
+                        sessionState.winsInCycle = 0;
+                        sessionState.lossesInCycle = 0;
+                        sessionState.cycleStartedAt = Date.now();
+                        sessionState.cycleEndPending = false;
+                        sessionState.history = [];
+
+                        for (const sym in marketData) {
+                            const d = marketData[sym];
+                            if (!d) continue;
+                            d.signalHistory = [];
+                            d._pendingSignal = null;
+                            d._lastSignalKey = null;
+                            d._lastResolvedTick = null;
+                            d._lastSignalEndTick = d.tickCount;
+                            d._pausedAtTick = null;
+                            d._lastResumeTick = d.tickCount;
+                            d._resumeAttempts = 0;
+                            d._hardPaused = false;
+                            d._manualResume = false;
+                            d._manualResumeTick = d.tickCount;
+                            d._tradeCycle = newTradeCycle();
+                            d._dirty = true;
+                        }
+
+                        Object.keys(signalCache).forEach(k => delete signalCache[k]);
+
+                        updateSessionBanner();
+                        updateAllMarketsList();
+                        renderCycleHistory();
+
+                        for (const sym in marketData) {
+                            const d = marketData[sym];
+                            if (d && d._dom && d._dom.card) {
+                                renderMarket(sym);
+                                d._lastRender = performance.now();
+                                d._dirty = false;
+                            }
+                        }
+
+                        showToast('🔄 All stats & cycles reset — signals paused ' + getSignalCooldown() + ' ticks', 'info');
+                        console.log('✅ Full reset complete');
+                    } catch (err) {
+                        console.error('Reset error:', err);
+                        showToast('❌ Reset failed: ' + err.message, 'neg');
+                    }
+                }
 
                 document.getElementById('analysisWindow')?.addEventListener('change', () => refreshAllHistory());
                 document.getElementById('showCounts')?.addEventListener('change', () => { for (const s in marketData) marketData[s]._dirty = true; });
@@ -1924,7 +1954,7 @@
                 setMarket('evenodd');
                 renderCycleHistory();
 
-                console.log('✅ TAJIRI STREAK BOT: 3-trade signal limit + 50-signal cycles active.');
+                console.log('✅ TAJIRI STREAK BOT: 3-trade signal limit + 50-signal cycles + fixed reset.');
             } catch (err) {
                 console.error('Error initializing:', err);
                 document.body.innerHTML = `<div style="color:red;padding:20px;font-size:16px;">Error: ${err.message}</div>`;
