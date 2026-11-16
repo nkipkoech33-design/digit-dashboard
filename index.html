@@ -175,9 +175,14 @@
         .digit-cell span.digit { font-size: 1.2rem; font-weight: 800; display: block; line-height: 1.15; }
         .digit-cell .percent { font-size: 0.75rem; font-weight: 800; color: var(--percent-accent); margin-top: 3px; display: block; white-space: nowrap; }
         .digit-cell.last-digit-highlight { border: 2px solid var(--gold); box-shadow: 0 0 8px var(--gold); }
-        .most { background: #10b981; } .second { background: #3b82f6; } .least { background: #ef4444; } .secondleast { background: #f97316; }
+        .most { background: #10b981; }
+        .second { background: #3b82f6; }
+        .thirdmost { background: #facc15; }
+        .least { background: #ef4444; }
+        .secondleast { background: #f97316; }
         .most .percent, .second .percent, .least .percent, .secondleast .percent { color: #fff; }
         .most span.digit, .second span.digit, .least span.digit, .secondleast span.digit { color: #fff; }
+        .thirdmost .percent, .thirdmost span.digit, .thirdmost .digit-count { color: #000 !important; }
 
         .watermark-layer { position: absolute; inset: 0; display: flex; pointer-events: none; z-index: 5; overflow: hidden; user-select: none; }
         .wm-half { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.16; min-width: 0; }
@@ -360,6 +365,17 @@
                 </div>
             </div>
 
+            <div style="border-top:1px solid var(--border-color); margin-top:0.6rem; padding-top:0.5rem;">
+                <h4 style="font-size:0.78rem; color:#fbbf24; margin-bottom:0.4rem;">🎨 DIGIT CELL COLOR KEY</h4>
+                <div style="font-size:0.68rem; line-height:1.9; opacity:0.9;">
+                    <span style="display:inline-block;width:12px;height:12px;background:#10b981;border-radius:2px;vertical-align:middle;margin-right:4px;"></span> 1st most appearing digit<br>
+                    <span style="display:inline-block;width:12px;height:12px;background:#3b82f6;border-radius:2px;vertical-align:middle;margin-right:4px;"></span> 2nd most appearing digit<br>
+                    <span style="display:inline-block;width:12px;height:12px;background:#facc15;border-radius:2px;vertical-align:middle;margin-right:4px;"></span> <b>3rd most appearing digit — potential market mover</b><br>
+                    <span style="display:inline-block;width:12px;height:12px;background:#f97316;border-radius:2px;vertical-align:middle;margin-right:4px;"></span> 2nd least appearing digit<br>
+                    <span style="display:inline-block;width:12px;height:12px;background:#ef4444;border-radius:2px;vertical-align:middle;margin-right:4px;"></span> least appearing digit
+                </div>
+            </div>
+
             <p style="font-size:0.65rem; margin-top:0.6rem; color:#f59e0b; font-weight:600; line-height:1.5;">
                 ⚠️ Deriv digit outcomes are random. These filters reduce false positives and overtrading — they cannot guarantee profits. Trade only with strict risk management.
             </p>
@@ -402,11 +418,11 @@
                 const AUTO_PAUSE_WIN_RATE = 0.4;
 
                 // === LIVE FLOW GATE CONFIG ===
-                const FLOW_WINDOW = 40;       // recent ticks used for live flow reading
-                const TREND_WINDOW = 20;      // window compared to prior window for trend
-                const FLOW_DOMINANT_PCT = 55; // opposing side at/above this → hard block
-                const FLOW_TARGET_PCT = 55;   // target side at/above this → confirm
-                const FLOW_TREND_PP = 5;      // percentage-point move to count as strengthening/weakening
+                const FLOW_WINDOW = 40;
+                const TREND_WINDOW = 20;
+                const FLOW_DOMINANT_PCT = 55;
+                const FLOW_TARGET_PCT = 55;
+                const FLOW_TREND_PP = 5;
 
                 let marketData = {}, ws = null, invalidSymbols = new Set(), focusedSymbol = null;
                 let currentMarket = 'evenodd';
@@ -467,7 +483,7 @@
                 function getStrategiesForMode(mode) { return STRATEGIES.filter(s => s.mode === mode); }
 
                 // ============================================================
-                // LIVE FLOW GATE — reads recent tick flow to verify a signal
+                // LIVE FLOW GATE
                 // ============================================================
                 function getLiveFlow(sym, windowSize) {
                     const d = marketData[sym];
@@ -603,7 +619,6 @@
                     return { ok: true, reason: 'ok' };
                 }
 
-                // ---- DECISION LAYER (read-only, never mutates signal state) ----
                 function computeDecision(sym, d, r) {
                     const s = getSettings();
                     if (!d) return { verdict: 'WAIT', reason: 'waiting for tick data', sym };
@@ -627,8 +642,6 @@
                     if (sig.signalAccuracy && sig.signalAccuracy.total >= 5 && sig.signalAccuracy.rate < 40) {
                         return { verdict: 'STOP', reason: `${strat.short} has been losing — ${sig.signalAccuracy.rate.toFixed(0)}% (${sig.signalAccuracy.wins}W/${sig.signalAccuracy.losses}L)`, sym, sig, strat };
                     }
-                    // === LIVE FLOW GATE (mandatory) ===
-                    // Never issue TRADE when current tick flow runs against the signal.
                     if (r.flowOk === false) {
                         return { verdict: 'WAIT', reason: `${strat.short} signal blocked — ${r.flowReason}`, sym, sig, strat };
                     }
@@ -728,6 +741,7 @@
                     return d.length ? parseInt(d.charAt(d.length-1), 10) : 0;
                 }
 
+                // === UPDATED: includes thirdMost set ===
                 function getDigitPercentages(sym, windowSize) {
                     const data = marketData[sym];
                     if (!data || data.rollingArray.length < Math.min(windowSize, 5)) return null;
@@ -740,19 +754,31 @@
                     const countMap = {};
                     for (let d = 0; d < 10; d++) { const c = cnt[d]; if (!countMap[c]) countMap[c] = []; countMap[c].push(d); }
                     const distinctCounts = Object.keys(countMap).map(Number).sort((a,b) => b-a);
-                    const assigned = new Set(); const most = new Set(), second = new Set(), least = new Set(), secondLeast = new Set();
+                    const assigned = new Set();
+                    const most = new Set(), second = new Set(), thirdMost = new Set(), least = new Set(), secondLeast = new Set();
+                    // 1st most (highest count level)
                     if (distinctCounts.length > 0) { for (const d of countMap[distinctCounts[0]]) { most.add(d); assigned.add(d); } }
+                    // 2nd most (next distinct count level)
                     if (distinctCounts.length > 1) {
                         for (let i = 1; i < distinctCounts.length; i++) {
                             const digits = countMap[distinctCounts[i]].filter(d => !assigned.has(d));
                             if (digits.length > 0) { for (const d of digits) { second.add(d); assigned.add(d); } break; }
                         }
                     }
+                    // 3rd most (next distinct count level) — highlighted YELLOW
+                    if (distinctCounts.length > 2) {
+                        for (let i = 1; i < distinctCounts.length; i++) {
+                            const digits = countMap[distinctCounts[i]].filter(d => !assigned.has(d));
+                            if (digits.length > 0) { for (const d of digits) { thirdMost.add(d); assigned.add(d); } break; }
+                        }
+                    }
+                    // least (lowest distinct count level still unassigned)
                     let unassigned = distinctCounts.filter(c => countMap[c].some(d => !assigned.has(d))).sort((a,b) => a-b);
                     if (unassigned.length > 0) { for (const d of countMap[unassigned[0]]) { if (!assigned.has(d)) { least.add(d); assigned.add(d); } } }
+                    // 2nd least (next lowest)
                     unassigned = distinctCounts.filter(c => countMap[c].some(d => !assigned.has(d))).sort((a,b) => a-b);
                     if (unassigned.length > 0) { for (const d of countMap[unassigned[0]]) { if (!assigned.has(d)) { secondLeast.add(d); assigned.add(d); } } }
-                    return { pct, most, second, least, secondLeast, total, counts: cnt };
+                    return { pct, most, second, thirdMost, least, secondLeast, total, counts: cnt };
                 }
 
                 function captureContext(d, skipLast = 0) {
@@ -862,8 +888,6 @@
                     d._pendingSignal = null;
                 }
 
-                // Only snapshot signals that are actually flow-confirmed, so accuracy
-                // reflects real recommendations rather than all engine output.
                 function maybeSnapshotSignal(sym) {
                     const d = marketData[sym];
                     if (!d || d._pendingSignal) return;
@@ -930,9 +954,6 @@
                     return result;
                 }
 
-                // Prefer flow-confirmed strategies. Fall back to highest composite
-                // only if none is confirmed, so the user still sees "what the engine likes"
-                // but computeDecision will block it with WAIT.
                 function getBestSigForMarket(sym) {
                     const d = marketData[sym];
                     if (!d) return null;
@@ -955,6 +976,7 @@
                     return { sig: best.sig, strat: best.strat, flowOk: best.flowOk, flowReason: best.flowReason };
                 }
 
+                // === UPDATED: applies thirdmost class ===
                 function buildSignalDigitCellsHTML(sym) {
                     const data = marketData[sym];
                     if (!data) return '';
@@ -980,6 +1002,7 @@
                         let cellCls = 'digit-cell';
                         if (freqData.most.has(d)) cellCls += ' most';
                         if (freqData.second.has(d)) cellCls += ' second';
+                        if (freqData.thirdMost.has(d)) cellCls += ' thirdmost';
                         if (freqData.least.has(d)) cellCls += ' least';
                         if (freqData.secondLeast.has(d)) cellCls += ' secondleast';
                         if (data.lastDigit === d) cellCls += ' last-digit-highlight';
@@ -1671,7 +1694,7 @@
                 setTimeout(connectWebSocket, 500);
                 setMarket('evenodd');
 
-                console.log('✅ TAJIRI STREAK BOT: live-flow gate active. TRADE NOW will never fire while the opposing side dominates recent ticks.');
+                console.log('✅ TAJIRI STREAK BOT: third-most digit highlighted in yellow (market-mover indicator).');
             } catch (err) {
                 console.error('Error initializing:', err);
                 document.body.innerHTML = `<div style="color:red;padding:20px;font-size:16px;">Error: ${err.message}</div>`;
