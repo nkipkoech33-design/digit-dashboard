@@ -36,7 +36,7 @@
         .status-badge.live { background: rgba(16,185,129,0.15); color: #4ade80; }
         .status-badge.reconnecting { background: rgba(250,204,21,0.15); color: var(--gold); }
 
-        .session-banner { background: var(--bg-header); padding: 0.3rem 0.8rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--border-color); font-size: 0.7rem; font-family: monospace; flex-shrink: 0; }
+        .session-banner { background: var(--bg-header); padding: 0.3rem 0.8rem; display: flex; gap: 0.9rem; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--border-color); font-size: 0.7rem; font-family: monospace; flex-shrink: 0; }
         .session-banner .sb-stat { display: inline-flex; align-items: center; gap: 0.3rem; }
         .session-banner .sb-stat .sb-label { color: var(--text-secondary); }
         .session-banner .sb-stat .sb-val { font-weight: 800; color: var(--gold); }
@@ -58,6 +58,9 @@
         .last-digit-badge { font-size: 1.4rem; font-weight: 800; background: var(--last-digit-bg); padding: 0 0.35rem; border-radius: 0.6rem; min-width: 38px; text-align: center; color: var(--gold); line-height: 1.35; }
         .signal-score-box { font-size: 0.72rem; font-family: monospace; background: var(--bg-panel); padding: 0.2rem 0.55rem; border-radius: 0.4rem; border: 1px solid var(--border-color); }
         .signal-score-box b { color: var(--gold); }
+        .trade-progress-badge { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.72rem; font-family: monospace; font-weight: 800; padding: 0.18rem 0.55rem; border-radius: 0.4rem; background: var(--bg-panel); border: 1px solid var(--border-color); color: var(--text-secondary); }
+        .trade-progress-badge.active { background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(16,185,129,0.05)); border-color: #10b981; color: #4ade80; }
+        .trade-progress-badge.exhausted { background: rgba(250,204,21,0.1); border-color: rgba(250,204,21,0.5); color: var(--gold); }
 
         .signal-accuracy-pill { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.65rem; font-family: monospace; font-weight: 800; padding: 0.15rem 0.5rem; border-radius: 0.8rem; border: 1px solid var(--border-color); background: var(--bg-body); }
         .signal-accuracy-pill.pos { color: #4ade80; border-color: rgba(16,185,129,0.5); }
@@ -83,20 +86,12 @@
         .collapse-header .chevron { font-weight: 900; font-size: 0.9rem; color: var(--gold); margin-left: 0.5rem; }
         .collapse-body { padding-top: 0.35rem; }
 
-        .hot-cold-bar {
-            display: flex; gap: 0.6rem; padding: 0.4rem 0.5rem; margin-bottom: 0.35rem;
-            background: var(--bg-body); border-radius: 0.4rem; border: 1px solid var(--border-color);
-            flex-wrap: wrap; align-items: center; min-height: 38px;
-        }
+        .hot-cold-bar { display: flex; gap: 0.6rem; padding: 0.4rem 0.5rem; margin-bottom: 0.35rem; background: var(--bg-body); border-radius: 0.4rem; border: 1px solid var(--border-color); flex-wrap: wrap; align-items: center; min-height: 38px; }
         .hot-cold-bar .hc-group { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
         .hot-cold-bar .hc-label { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.4px; margin-right: 0.1rem; }
         .hot-cold-bar .hc-label.hot { color: #4ade80; }
         .hot-cold-bar .hc-label.cold { color: #93c5fd; }
-        .hot-cold-bar .hc-chip {
-            display: inline-flex; align-items: center; justify-content: center;
-            min-width: 22px; height: 22px; padding: 0 0.4rem;
-            border-radius: 0.3rem; font-weight: 900; font-size: 0.8rem; font-family: monospace;
-        }
+        .hot-cold-bar .hc-chip { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 0.4rem; border-radius: 0.3rem; font-weight: 900; font-size: 0.8rem; font-family: monospace; }
         .hot-cold-bar .hc-chip.hot { background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #4ade80; }
         .hot-cold-bar .hc-chip.cold { background: rgba(59,130,246,0.2); border: 1px solid #3b82f6; color: #93c5fd; }
 
@@ -120,10 +115,7 @@
         .entry-step .t { flex: 1; }
         .entry-step .t b { color: var(--gold); }
 
-        .live-banner-slot {
-            min-height: 34px; height: 34px; margin-top: 0.35rem;
-            display: flex; align-items: center; overflow: hidden;
-        }
+        .live-banner-slot { min-height: 34px; height: 34px; margin-top: 0.35rem; display: flex; align-items: center; overflow: hidden; }
 
         .detail-strategy-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 0.4rem; padding: 0.22rem 0.35rem; border-radius: 0.3rem; background: var(--bg-body); font-family: monospace; font-size: 0.65rem; border-left: 2px solid transparent; align-items: center; margin-bottom: 0.15rem; }
         .detail-strategy-row.win { border-left-color: #10b981; }
@@ -175,11 +167,7 @@
         .digit-cell span.digit { font-size: 1.2rem; font-weight: 800; display: block; line-height: 1.15; }
         .digit-cell .percent { font-size: 0.75rem; font-weight: 800; color: var(--percent-accent); margin-top: 3px; display: block; white-space: nowrap; }
         .digit-cell.last-digit-highlight { border: 2px solid var(--gold); box-shadow: 0 0 8px var(--gold); }
-        .most { background: #10b981; }
-        .second { background: #3b82f6; }
-        .thirdmost { background: #facc15; }
-        .least { background: #ef4444; }
-        .secondleast { background: #f97316; }
+        .most { background: #10b981; } .second { background: #3b82f6; } .thirdmost { background: #facc15; } .least { background: #ef4444; } .secondleast { background: #f97316; }
         .most .percent, .second .percent, .least .percent, .secondleast .percent { color: #fff; }
         .most span.digit, .second span.digit, .least span.digit, .secondleast span.digit { color: #fff; }
         .thirdmost .percent, .thirdmost span.digit, .thirdmost .digit-count { color: #000 !important; }
@@ -233,20 +221,14 @@
         @keyframes rowPulse { 0%, 100% { box-shadow: 0 0 5px rgba(250,204,21,0.4); } 50% { box-shadow: 0 0 16px rgba(250,204,21,0.85); } }
 
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; }
-        .modal-content { background: var(--bg-card); border-radius: 0.8rem; padding: 0.8rem; max-width: 560px; width: 90%; max-height: 85vh; overflow-y: auto; font-size: 0.8rem; }
+        .modal-content { background: var(--bg-card); border-radius: 0.8rem; padding: 0.8rem; max-width: 580px; width: 90%; max-height: 85vh; overflow-y: auto; font-size: 0.8rem; }
         .close-modal { float: right; cursor: pointer; font-size: 1.2rem; }
         .settings-panel { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; }
         .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
         select, input[type="range"], input[type="number"] { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.1rem 0.3rem; font-size: 0.7rem; color: var(--text-primary); }
         .refresh-btn { background: #f59e0b; border: none; padding: 0.3rem 0.8rem; border-radius: 1.2rem; font-weight: bold; color: white; cursor: pointer; font-size: 0.72rem; }
 
-        /* ---------- DECISION BANNER (TRADE / WAIT / STOP) ---------- */
-        .verdict-banner {
-            display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
-            margin: 0.45rem 0.5rem 0 0.5rem; padding: 0.5rem 0.8rem;
-            border-radius: 0.6rem; border: 2px solid var(--border-color);
-            background: var(--bg-panel); flex-shrink: 0; transition: all 0.25s;
-        }
+        .verdict-banner { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin: 0.45rem 0.5rem 0 0.5rem; padding: 0.5rem 0.8rem; border-radius: 0.6rem; border: 2px solid var(--border-color); background: var(--bg-panel); flex-shrink: 0; transition: all 0.25s; }
         .verdict-banner .verdict-word { font-size: 1.05rem; font-weight: 900; letter-spacing: 1px; white-space: nowrap; }
         .verdict-banner .verdict-detail { font-size: 0.72rem; font-weight: 600; }
         .verdict-banner.trade { background: linear-gradient(135deg, rgba(16,185,129,0.28), rgba(16,185,129,0.06)); border-color: #10b981; color: #4ade80; animation: verdictPulse 1.4s ease-in-out infinite; }
@@ -263,6 +245,23 @@
         .verdict-reason.trade { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.5); color: #4ade80; }
         .verdict-reason.wait { background: rgba(250,204,21,0.08); border: 1px solid rgba(250,204,21,0.4); color: var(--gold); }
         .verdict-reason.stop { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.5); color: #f87171; }
+
+        .warning-box { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.4); padding: 0.45rem 0.55rem; border-radius: 0.4rem; font-size: 0.68rem; line-height: 1.55; }
+
+        .cycle-history-row { display: grid; grid-template-columns: auto 1fr auto auto; gap: 0.5rem; padding: 0.25rem 0.4rem; background: var(--bg-body); border-radius: 0.3rem; font-family: monospace; font-size: 0.68rem; border-left: 2px solid var(--text-secondary); margin-bottom: 0.2rem; align-items: center; }
+        .cycle-history-row.pos { border-left-color: #10b981; }
+        .cycle-history-row.neg { border-left-color: #f87171; }
+        .cycle-history-row .ch-num { font-weight: 900; color: var(--gold); }
+        .cycle-history-row .ch-stats { font-size: 0.62rem; color: var(--text-secondary); }
+        .cycle-history-row .ch-rate { font-weight: 900; }
+        .cycle-history-row.pos .ch-rate { color: #4ade80; }
+        .cycle-history-row.neg .ch-rate { color: #f87171; }
+
+        .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 2000; padding: 0.7rem 1.1rem; border-radius: 0.6rem; font-weight: 800; font-size: 0.85rem; box-shadow: 0 4px 20px rgba(0,0,0,0.5); animation: toastSlide 0.3s ease-out; max-width: 90vw; text-align: center; }
+        .toast.pos { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+        .toast.neg { background: linear-gradient(135deg, #ef4444, #b91c1c); color: #fff; }
+        .toast.info { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; }
+        @keyframes toastSlide { from { opacity: 0; transform: translateX(-50%) translateY(-20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
         @media (max-width: 800px) { .main-scroll-area { flex-direction: column; } .all-markets-container { flex: none; width: 100%; max-height: 220px; } }
     </style>
@@ -284,10 +283,12 @@
         </div>
 
         <div class="session-banner" id="sessionBanner">
-            <div class="sb-stat"><span class="sb-label">SESSION SIGNALS:</span><span class="sb-val" id="sbTotal">0</span></div>
-            <div class="sb-stat"><span class="sb-label">WINS:</span><span class="sb-val pos" id="sbWins">0</span></div>
-            <div class="sb-stat"><span class="sb-label">LOSSES:</span><span class="sb-val neg" id="sbLosses">0</span></div>
-            <div class="sb-stat"><span class="sb-label">ACCURACY:</span><span class="sb-val" id="sbAccuracy">—</span></div>
+            <div class="sb-stat"><span class="sb-label">CYCLE:</span><span class="sb-val" id="sbCycle">#1 · 0/50</span></div>
+            <div class="sb-stat"><span class="sb-label">CYCLE WR:</span><span class="sb-val" id="sbCycleWR">—</span></div>
+            <div class="sb-stat"><span class="sb-label">SESSION:</span><span class="sb-val" id="sbTotal">0</span></div>
+            <div class="sb-stat"><span class="sb-label">W:</span><span class="sb-val pos" id="sbWins">0</span></div>
+            <div class="sb-stat"><span class="sb-label">L:</span><span class="sb-val neg" id="sbLosses">0</span></div>
+            <div class="sb-stat"><span class="sb-label">ACC:</span><span class="sb-val" id="sbAccuracy">—</span></div>
             <div class="sb-stat"><span class="sb-label">ACTIVE:</span><span class="sb-val" id="sbActive">0</span></div>
             <div class="sb-stat"><span class="sb-label">PAUSED:</span><span class="sb-val neg" id="sbPaused">0</span></div>
         </div>
@@ -323,16 +324,21 @@
         <div class="modal-content">
             <span class="close-modal" id="closeModal">&times;</span>
             <h3>Streak Bot Settings</h3>
+
+            <div class="warning-box" style="margin-top:0.5rem;">
+                <b>📊 Cycle system active:</b> each signal = max <b>3 trades</b>. After 50 signals complete, the cycle win rate is logged and counters reset automatically. Progress: <b id="settingsCycleInfo">Cycle #1 · 0/50</b>
+            </div>
+
             <div class="settings-panel">
                 <div class="setting-row"><label>📍 Pointer Style</label><select id="pointerStyle"><option value="triangle">Triangle</option><option value="arrow">Arrow</option><option value="dot">Dot</option></select></div>
                 <div class="setting-row"><label>🔍 Pointer Scale</label><input type="range" id="pointerScale" min="1" max="20" step="0.5" value="3" /><span id="scaleValue">3.0</span></div>
                 <div class="setting-row" style="border-top:1px solid var(--border-color);padding-top:0.4rem;margin-top:0.4rem;">
                     <label>📊 Analysis Window</label><input type="number" id="analysisWindow" value="1000" min="100" max="2000" step="100" style="width:75px;" />
                 </div>
-                <div class="setting-row" style="border-top:1px solid var(--border-color);padding-top:0.4rem;margin-top:0.4rem;">
+                <div class="setting-row">
                     <label>🎯 Min streak length</label><input type="number" id="minStreakLength" value="5" min="3" max="15" step="1" style="width:75px;" />
                 </div>
-                <div class="setting-row"><label>🔎 Min matching streaks</label><input type="number" id="minMatches" value="3" min="2" max="10" step="1" style="width:75px;" /></div>
+                <div class="setting-row"><label>🔎 Min matching streaks</label><input type="number" id="minMatches" value="4" min="2" max="10" step="1" style="width:75px;" /></div>
                 <div class="setting-row"><label>📐 Min similarity score</label><input type="number" id="minSimilarity" value="0.9" min="0.5" max="0.95" step="0.01" style="width:75px;" /></div>
                 <div class="setting-row"><label>🎓 Signal strictness</label>
                     <select id="signalStrictness">
@@ -342,42 +348,32 @@
                     </select>
                 </div>
                 <div class="setting-row"><label>🛑 Auto-pause losing markets</label><input type="checkbox" id="autoPauseLosing" checked /></div>
+                <div class="setting-row"><label>🕒 Pause cooldown (ticks)</label><input type="number" id="pauseCooldown" value="200" min="50" max="2000" step="50" style="width:75px;" /></div>
+                <div class="setting-row"><label>⏱️ Signal cooldown (ticks)</label><input type="number" id="signalCooldown" value="30" min="0" max="300" step="5" style="width:75px;" /></div>
                 <div class="setting-row"><label>🔢 Show tick counts</label><input type="checkbox" id="showCounts" checked /></div>
-                <div class="setting-row"><label>🔄 Resync (resets all)</label><button id="refreshHistoryBtn" class="refresh-btn">Fetch latest</button></div>
+                <div class="setting-row" style="border-top:1px solid var(--border-color);padding-top:0.5rem;margin-top:0.4rem;"><label>🔓 Resume all paused now</label><button id="resumeAllBtn" class="refresh-btn" style="background:#10b981;">Resume all</button></div>
+                <div class="setting-row"><label>🔄 Reset cycle & stats</label><button id="resetStatsBtn" class="refresh-btn" style="background:#ef4444;">Reset all</button></div>
+                <div class="setting-row"><label>🔄 Resync history</label><button id="refreshHistoryBtn" class="refresh-btn">Fetch latest</button></div>
             </div>
 
             <div style="border-top:1px solid var(--border-color); margin-top:0.6rem; padding-top:0.5rem;">
-                <h4 style="font-size:0.78rem; color:var(--gold); margin-bottom:0.4rem;">🧠 ADAPTIVE LEARNING</h4>
-                <div style="font-size:0.68rem; line-height:1.6; opacity:0.85;">
-                    <b>Signal history tracking:</b> every signal that fires (grade A or B) is recorded and its outcome is resolved on the next tick. Each market builds its own win/loss record of fired signals.<br><br>
-                    <b>Auto-pause:</b> if a market's last 10+ signals won less than 40% of the time, signals from that market are blocked until its accuracy recovers.<br><br>
-                    <b>Position sizing:</b> grade A → 1.5–2% of capital · grade B → 0.75–1% · grade C → skip.
+                <h4 style="font-size:0.78rem; color:var(--gold); margin-bottom:0.4rem;">📊 CYCLE HISTORY</h4>
+                <div id="cycleHistoryList" style="font-size:0.7rem;">
+                    <div style="opacity:0.6;text-align:center;padding:0.3rem;">No completed cycles yet</div>
                 </div>
             </div>
 
             <div style="border-top:1px solid var(--border-color); margin-top:0.6rem; padding-top:0.5rem;">
-                <h4 style="font-size:0.78rem; color:#fbbf24; margin-bottom:0.4rem;">🎯 LIVE FLOW GATE</h4>
+                <h4 style="font-size:0.78rem; color:var(--gold); margin-bottom:0.4rem;">🧠 TRADE DISCIPLINE</h4>
                 <div style="font-size:0.68rem; line-height:1.6; opacity:0.85;">
-                    Every TRADE verdict now requires <b>live tick-flow confirmation</b>. The bot reads the last 40 ticks and computes EVEN% vs ODD% (or OVER% vs UNDER%, or RISE% vs FALL%).<br><br>
-                    <b>Blocked → WAIT</b> if the opposing side is dominant (≥ 55%)<br>
-                    <b>Confirmed → TRADE</b> if any of these holds: target side ≥ 55% · all hot digits on target side · target strengthening ≥ +5pp · opposing side weakening ≤ −5pp<br><br>
-                    Result: TRADE EVEN will never fire while ODD is dominant, and vice-versa.
-                </div>
-            </div>
-
-            <div style="border-top:1px solid var(--border-color); margin-top:0.6rem; padding-top:0.5rem;">
-                <h4 style="font-size:0.78rem; color:#fbbf24; margin-bottom:0.4rem;">🎨 DIGIT CELL COLOR KEY</h4>
-                <div style="font-size:0.68rem; line-height:1.9; opacity:0.9;">
-                    <span style="display:inline-block;width:12px;height:12px;background:#10b981;border-radius:2px;vertical-align:middle;margin-right:4px;"></span> 1st most appearing digit<br>
-                    <span style="display:inline-block;width:12px;height:12px;background:#3b82f6;border-radius:2px;vertical-align:middle;margin-right:4px;"></span> 2nd most appearing digit<br>
-                    <span style="display:inline-block;width:12px;height:12px;background:#facc15;border-radius:2px;vertical-align:middle;margin-right:4px;"></span> <b>3rd most appearing digit — potential market mover</b><br>
-                    <span style="display:inline-block;width:12px;height:12px;background:#f97316;border-radius:2px;vertical-align:middle;margin-right:4px;"></span> 2nd least appearing digit<br>
-                    <span style="display:inline-block;width:12px;height:12px;background:#ef4444;border-radius:2px;vertical-align:middle;margin-right:4px;"></span> least appearing digit
+                    <b>3 trades per signal:</b> once a signal fires, take 3 trades maximum, then stop. Wait for the signal to refresh before counting a new one.<br><br>
+                    <b>50-signal cycles:</b> after 50 signals complete, the win rate is logged. Counters reset automatically and the next cycle begins.<br><br>
+                    <b>Why this helps:</b> caps exposure per signal and forces you to periodically review performance instead of trading indefinitely.
                 </div>
             </div>
 
             <p style="font-size:0.65rem; margin-top:0.6rem; color:#f59e0b; font-weight:600; line-height:1.5;">
-                ⚠️ Deriv digit outcomes are random. These filters reduce false positives and overtrading — they cannot guarantee profits. Trade only with strict risk management.
+                ⚠️ Deriv volatility indices produce random last digits. Any strategy converges to ~50% over time. Use this tool for <b>trade discipline and risk control</b> — not prediction.
             </p>
         </div>
     </div>
@@ -410,19 +406,23 @@
                 const FOCUSED_RENDER_MS = 200;
                 const UNFOCUSED_RENDER_MS = 800;
                 const MAX_STREAK_HISTORY = 100;
-                const MAX_SIGNAL_HISTORY = 200;
+                const MAX_SIGNAL_HISTORY = 400;
                 const CONTEXT_WINDOW = 100;
                 const BOT_ROLLING_WINDOW = 500;
                 const WARMUP_TICKS = 200;
-                const AUTO_PAUSE_MIN_SIGNALS = 8;
-                const AUTO_PAUSE_WIN_RATE = 0.4;
+                const AUTO_PAUSE_MIN_SIGNALS = 12;
+                const AUTO_PAUSE_WIN_RATE = 0.42;
+                const PAUSE_RETRY_LIMIT = 3;
 
-                // === LIVE FLOW GATE CONFIG ===
                 const FLOW_WINDOW = 40;
                 const TREND_WINDOW = 20;
-                const FLOW_DOMINANT_PCT = 55;
-                const FLOW_TARGET_PCT = 55;
-                const FLOW_TREND_PP = 5;
+                const FLOW_DOMINANT_PCT = 60;
+                const FLOW_TARGET_PCT = 60;
+                const FLOW_TREND_PP = 10;
+
+                // === CYCLE CONFIG ===
+                const TRADES_PER_SIGNAL = 3;
+                const SIGNALS_PER_CYCLE = 50;
 
                 let marketData = {}, ws = null, invalidSymbols = new Set(), focusedSymbol = null;
                 let currentMarket = 'evenodd';
@@ -431,6 +431,46 @@
                 const signalCache = {};
                 const PING_EVERY_MS = 30000, PONG_TIMEOUT_MS = 10000;
                 const WS_ENDPOINT = 'wss://api.derivws.com/trading/v1/options/ws/public';
+
+                // === GLOBAL CYCLE STATE ===
+                const sessionState = {
+                    cycleNum: 1,
+                    signalsInCycle: 0,
+                    signalsCompleted: 0,
+                    tradesInCycle: 0,
+                    winsInCycle: 0,
+                    lossesInCycle: 0,
+                    cycleStartedAt: Date.now(),
+                    cycleEndPending: false,
+                    history: []
+                };
+
+                function newTradeCycle() {
+                    return {
+                        state: 'idle',
+                        activeStrat: null,
+                        tradesInSignal: 0,
+                        signalStartTick: null,
+                        signalWins: 0,
+                        signalLosses: 0
+                    };
+                }
+
+                function getPauseCooldown() {
+                    return parseInt(document.getElementById('pauseCooldown')?.value) || 200;
+                }
+                function getSignalCooldown() {
+                    return parseInt(document.getElementById('signalCooldown')?.value) || 30;
+                }
+
+                function showToast(text, type) {
+                    const el = document.createElement('div');
+                    el.className = 'toast ' + (type || 'info');
+                    el.textContent = text;
+                    document.body.appendChild(el);
+                    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.4s'; }, 5000);
+                    setTimeout(() => { el.remove(); }, 5500);
+                }
 
                 function wilsonLowerBound(wins, total, z = 1.96) {
                     if (total === 0) return 0;
@@ -449,14 +489,51 @@
                     return { wins, losses: filtered.length - wins, total: filtered.length, rate: (wins / filtered.length) * 100 };
                 }
 
+                function getModeAccuracy(d) {
+                    if (!d || !d.signalHistory) return null;
+                    const modeStrats = STRATEGIES.filter(s => s.mode === currentMarket).map(s => s.id);
+                    const relevant = d.signalHistory.filter(s => modeStrats.includes(s.stratId));
+                    if (relevant.length === 0) return null;
+                    const wins = relevant.filter(s => s.won).length;
+                    return { wins, losses: relevant.length - wins, total: relevant.length, rate: (wins / relevant.length) * 100 };
+                }
+
                 function isMarketPaused(d, autoPauseEnabled) {
                     if (!d || !autoPauseEnabled) return false;
-                    const acc = getSignalAccuracy(d);
-                    if (!acc || acc.total < AUTO_PAUSE_MIN_SIGNALS) return false;
-                    const recent = d.signalHistory.slice(-10);
+                    if (d._manualResume) {
+                        const modeStrats = STRATEGIES.filter(s => s.mode === currentMarket).map(s => s.id);
+                        const sinceResume = (d.signalHistory || []).filter(s =>
+                            modeStrats.includes(s.stratId) && s.at > (d._manualResumeTick || 0)
+                        );
+                        if (sinceResume.length >= AUTO_PAUSE_MIN_SIGNALS) d._manualResume = false;
+                        else return false;
+                    }
+                    if (d._hardPaused) return true;
+                    if (d._pausedAtTick != null) {
+                        const cooldown = getPauseCooldown();
+                        if (d.tickCount - d._pausedAtTick < cooldown) return true;
+                        d._pausedAtTick = null;
+                        d._lastResumeTick = d.tickCount;
+                        return false;
+                    }
+                    const modeStrats = STRATEGIES.filter(s => s.mode === currentMarket).map(s => s.id);
+                    const relevant = (d.signalHistory || []).filter(s =>
+                        modeStrats.includes(s.stratId) && s.at > (d._lastResumeTick || 0)
+                    );
+                    if (relevant.length < AUTO_PAUSE_MIN_SIGNALS) return false;
+                    const recent = relevant.slice(-20);
                     const recentWins = recent.filter(s => s.won).length;
                     const recentRate = recentWins / recent.length;
-                    return recentRate < AUTO_PAUSE_WIN_RATE;
+                    if (recentRate < AUTO_PAUSE_WIN_RATE) {
+                        d._resumeAttempts = (d._resumeAttempts || 0) + 1;
+                        if (d._resumeAttempts > PAUSE_RETRY_LIMIT) {
+                            d._hardPaused = true;
+                            return true;
+                        }
+                        d._pausedAtTick = d.tickCount;
+                        return true;
+                    }
+                    return false;
                 }
 
                 function getCrossWindowEdges(d, stratId, baselinePct) {
@@ -482,9 +559,93 @@
 
                 function getStrategiesForMode(mode) { return STRATEGIES.filter(s => s.mode === mode); }
 
-                // ============================================================
-                // LIVE FLOW GATE
-                // ============================================================
+                // === CYCLE: signal lifecycle ===
+                function startNewSignal(sym, d, r) {
+                    const c = d._tradeCycle;
+                    c.state = 'active';
+                    c.activeStrat = r.strat.id;
+                    c.tradesInSignal = 0;
+                    c.signalStartTick = d.tickCount;
+                    c.signalWins = 0;
+                    c.signalLosses = 0;
+                    sessionState.signalsInCycle++;
+                    if (sessionState.signalsInCycle >= SIGNALS_PER_CYCLE) {
+                        sessionState.cycleEndPending = true;
+                    }
+                    // Arm first trade
+                    d._pendingSignal = { stratId: r.strat.id, grade: r.sig.grade, at: d.tickCount };
+                }
+
+                function completeSignal(sym, d) {
+                    const c = d._tradeCycle;
+                    if (!c || c.tradesInSignal === 0) {
+                        c.state = 'idle';
+                        c.activeStrat = null;
+                        return;
+                    }
+                    sessionState.signalsCompleted++;
+                    c.state = 'exhausted';
+                    c.activeStrat = null;
+                    d._lastSignalEndTick = d.tickCount;
+                    checkCycleEnd();
+                }
+
+                function checkCycleEnd() {
+                    if (!sessionState.cycleEndPending) return;
+                    if (sessionState.signalsCompleted < sessionState.signalsInCycle) return;
+                    // All signals in this cycle are complete
+                    endGlobalCycle();
+                }
+
+                function endGlobalCycle() {
+                    const total = sessionState.winsInCycle + sessionState.lossesInCycle;
+                    const rate = total > 0 ? (sessionState.winsInCycle / total) * 100 : 0;
+                    const record = {
+                        cycleNum: sessionState.cycleNum,
+                        signals: sessionState.signalsInCycle,
+                        trades: total,
+                        wins: sessionState.winsInCycle,
+                        losses: sessionState.lossesInCycle,
+                        rate: rate,
+                        startedAt: sessionState.cycleStartedAt,
+                        endedAt: Date.now()
+                    };
+                    sessionState.history.push(record);
+                    if (sessionState.history.length > 20) sessionState.history.shift();
+                    const tone = rate >= 55 ? 'pos' : rate < 45 ? 'neg' : 'info';
+                    const emoji = rate >= 55 ? '🟢' : rate < 45 ? '🔴' : '⚪';
+                    showToast(`${emoji} CYCLE #${record.cycleNum} COMPLETE — ${rate.toFixed(1)}% · ${record.wins}W/${record.losses}L over ${total} trades · next cycle starting`, tone);
+                    console.log(`📊 CYCLE #${record.cycleNum}: ${record.signals} signals · ${total} trades · ${record.wins}W/${record.losses}L (${rate.toFixed(1)}%)`);
+                    // Reset
+                    sessionState.cycleNum++;
+                    sessionState.signalsInCycle = 0;
+                    sessionState.signalsCompleted = 0;
+                    sessionState.tradesInCycle = 0;
+                    sessionState.winsInCycle = 0;
+                    sessionState.lossesInCycle = 0;
+                    sessionState.cycleStartedAt = Date.now();
+                    sessionState.cycleEndPending = false;
+                    updateSessionBanner();
+                    renderCycleHistory();
+                }
+
+                function resetAllCycles() {
+                    sessionState.cycleNum = 1;
+                    sessionState.signalsInCycle = 0;
+                    sessionState.signalsCompleted = 0;
+                    sessionState.tradesInCycle = 0;
+                    sessionState.winsInCycle = 0;
+                    sessionState.lossesInCycle = 0;
+                    sessionState.cycleStartedAt = Date.now();
+                    sessionState.cycleEndPending = false;
+                    sessionState.history = [];
+                    for (const sym in marketData) {
+                        marketData[sym]._tradeCycle = newTradeCycle();
+                        marketData[sym]._lastSignalEndTick = null;
+                    }
+                }
+
+                // === Live flow (unchanged) ===
                 function getLiveFlow(sym, windowSize) {
                     const d = marketData[sym];
                     if (!d || !d.rollingArray) return null;
@@ -492,10 +653,7 @@
                     if (n < 15) return null;
                     const digits = d.rollingArray.slice(-n);
                     let evenCount = 0, overCount = 0;
-                    for (const dg of digits) {
-                        if (dg % 2 === 0) evenCount++;
-                        if (dg >= 5) overCount++;
-                    }
+                    for (const dg of digits) { if (dg % 2 === 0) evenCount++; if (dg >= 5) overCount++; }
                     const dirs = (d.directions || []).slice(-n).filter(x => x !== 0);
                     const riseCount = dirs.filter(x => x === 1).length;
                     const fallCount = dirs.filter(x => x === -1).length;
@@ -506,10 +664,8 @@
                     const hot = sorted.slice(0, 3).filter(x => x.c > 0).map(x => x.d);
                     return {
                         n,
-                        evenPct: (evenCount / n) * 100,
-                        oddPct: ((n - evenCount) / n) * 100,
-                        overPct: (overCount / n) * 100,
-                        underPct: ((n - overCount) / n) * 100,
+                        evenPct: (evenCount / n) * 100, oddPct: ((n - evenCount) / n) * 100,
+                        overPct: (overCount / n) * 100, underPct: ((n - overCount) / n) * 100,
                         risePct: dirTotal ? (riseCount / dirTotal) * 100 : 50,
                         fallPct: dirTotal ? (fallCount / dirTotal) * 100 : 50,
                         hot,
@@ -538,20 +694,16 @@
                         pRise = pD.length ? (pD.filter(x => x === 1).length / pD.length) * 100 : 50;
                     }
                     return {
-                        evenTrend: rEven - pEven,
-                        oddTrend: pEven - rEven,
-                        overTrend: rOver - pOver,
-                        underTrend: pOver - rOver,
-                        riseTrend: rRise - pRise,
-                        fallTrend: pRise - rRise
+                        evenTrend: rEven - pEven, oddTrend: pEven - rEven,
+                        overTrend: rOver - pOver, underTrend: pOver - rOver,
+                        riseTrend: rRise - pRise, fallTrend: pRise - rRise
                     };
                 }
 
                 function confirmLiveFlow(sym, strat) {
                     const flow = getLiveFlow(sym, FLOW_WINDOW);
-                    if (!flow) return { ok: false, reason: 'not enough recent ticks to confirm live flow' };
+                    if (!flow) return { ok: false, reason: 'not enough recent ticks' };
                     const trend = getFlowTrend(sym) || { evenTrend: 0, oddTrend: 0, overTrend: 0, underTrend: 0, riseTrend: 0, fallTrend: 0 };
-
                     if (strat.mode === 'evenodd') {
                         const isEven = strat.id === 'EVEN';
                         const targetPct = isEven ? flow.evenPct : flow.oddPct;
@@ -559,19 +711,14 @@
                         const allHotMatch = isEven ? flow.allHotEven : flow.allHotOdd;
                         const targetTrend = isEven ? trend.evenTrend : trend.oddTrend;
                         const opposingTrend = isEven ? trend.oddTrend : trend.evenTrend;
-                        const label = isEven ? 'EVEN' : 'ODD';
-                        const oppLabel = isEven ? 'ODD' : 'EVEN';
-                        if (opposingPct >= FLOW_DOMINANT_PCT) {
-                            return { ok: false, reason: `flow is ${oppLabel}-dominant (E ${flow.evenPct.toFixed(0)}% / O ${flow.oddPct.toFixed(0)}%)` };
-                        }
+                        const label = isEven ? 'EVEN' : 'ODD', oppLabel = isEven ? 'ODD' : 'EVEN';
+                        if (opposingPct >= FLOW_DOMINANT_PCT) return { ok: false, reason: `flow is ${oppLabel}-dominant (E ${flow.evenPct.toFixed(0)}% / O ${flow.oddPct.toFixed(0)}%)` };
                         const targetOK = targetPct >= FLOW_TARGET_PCT || allHotMatch || targetTrend >= FLOW_TREND_PP || opposingTrend <= -FLOW_TREND_PP;
-                        if (!targetOK) {
-                            return { ok: false, reason: `flow not yet confirming ${label} (E ${flow.evenPct.toFixed(0)}% / O ${flow.oddPct.toFixed(0)}%, no hot/trend match)` };
-                        }
+                        if (!targetOK) return { ok: false, reason: `flow not confirming ${label} (E ${flow.evenPct.toFixed(0)}% / O ${flow.oddPct.toFixed(0)}%)` };
                         let reason = `${label} confirmed (E ${flow.evenPct.toFixed(0)}% / O ${flow.oddPct.toFixed(0)}%)`;
-                        if (allHotMatch) reason = `${label} confirmed — all hot digits ${label} (E ${flow.evenPct.toFixed(0)}% / O ${flow.oddPct.toFixed(0)}%)`;
-                        else if (opposingTrend <= -FLOW_TREND_PP) reason = `${label} confirmed — ${oppLabel} weakening ${opposingTrend.toFixed(0)}pp (E ${flow.evenPct.toFixed(0)}% / O ${flow.oddPct.toFixed(0)}%)`;
-                        else if (targetTrend >= FLOW_TREND_PP) reason = `${label} confirmed — ${label} strengthening +${targetTrend.toFixed(0)}pp (E ${flow.evenPct.toFixed(0)}% / O ${flow.oddPct.toFixed(0)}%)`;
+                        if (allHotMatch) reason = `${label} confirmed — all hot digits ${label}`;
+                        else if (opposingTrend <= -FLOW_TREND_PP) reason = `${label} confirmed — ${oppLabel} weakening ${opposingTrend.toFixed(0)}pp`;
+                        else if (targetTrend >= FLOW_TREND_PP) reason = `${label} confirmed — ${label} strengthening +${targetTrend.toFixed(0)}pp`;
                         return { ok: true, reason };
                     }
                     if (strat.mode === 'overunder') {
@@ -581,19 +728,14 @@
                         const allHotMatch = isOver ? flow.allHotOver : flow.allHotUnder;
                         const targetTrend = isOver ? trend.overTrend : trend.underTrend;
                         const opposingTrend = isOver ? trend.underTrend : trend.overTrend;
-                        const label = isOver ? 'OVER' : 'UNDER';
-                        const oppLabel = isOver ? 'UNDER' : 'OVER';
-                        if (opposingPct >= FLOW_DOMINANT_PCT) {
-                            return { ok: false, reason: `flow is ${oppLabel}-dominant (O ${flow.overPct.toFixed(0)}% / U ${flow.underPct.toFixed(0)}%)` };
-                        }
+                        const label = isOver ? 'OVER' : 'UNDER', oppLabel = isOver ? 'UNDER' : 'OVER';
+                        if (opposingPct >= FLOW_DOMINANT_PCT) return { ok: false, reason: `flow is ${oppLabel}-dominant` };
                         const targetOK = targetPct >= FLOW_TARGET_PCT || allHotMatch || targetTrend >= FLOW_TREND_PP || opposingTrend <= -FLOW_TREND_PP;
-                        if (!targetOK) {
-                            return { ok: false, reason: `flow not yet confirming ${label} (O ${flow.overPct.toFixed(0)}% / U ${flow.underPct.toFixed(0)}%, no hot/trend match)` };
-                        }
-                        let reason = `${label} confirmed (O ${flow.overPct.toFixed(0)}% / U ${flow.underPct.toFixed(0)}%)`;
-                        if (allHotMatch) reason = `${label} confirmed — all hot digits ${label} (O ${flow.overPct.toFixed(0)}% / U ${flow.underPct.toFixed(0)}%)`;
-                        else if (opposingTrend <= -FLOW_TREND_PP) reason = `${label} confirmed — ${oppLabel} weakening ${opposingTrend.toFixed(0)}pp (O ${flow.overPct.toFixed(0)}% / U ${flow.underPct.toFixed(0)}%)`;
-                        else if (targetTrend >= FLOW_TREND_PP) reason = `${label} confirmed — ${label} strengthening +${targetTrend.toFixed(0)}pp (O ${flow.overPct.toFixed(0)}% / U ${flow.underPct.toFixed(0)}%)`;
+                        if (!targetOK) return { ok: false, reason: `flow not confirming ${label}` };
+                        let reason = `${label} confirmed`;
+                        if (allHotMatch) reason = `${label} confirmed — hot digits`;
+                        else if (opposingTrend <= -FLOW_TREND_PP) reason = `${label} confirmed — ${oppLabel} weakening`;
+                        else if (targetTrend >= FLOW_TREND_PP) reason = `${label} strengthening`;
                         return { ok: true, reason };
                     }
                     if (strat.mode === 'vanilla') {
@@ -602,18 +744,13 @@
                         const opposingPct = isRise ? flow.fallPct : flow.risePct;
                         const targetTrend = isRise ? trend.riseTrend : trend.fallTrend;
                         const opposingTrend = isRise ? trend.fallTrend : trend.riseTrend;
-                        const label = isRise ? 'RISE' : 'FALL';
-                        const oppLabel = isRise ? 'FALL' : 'RISE';
-                        if (opposingPct >= FLOW_DOMINANT_PCT) {
-                            return { ok: false, reason: `flow is ${oppLabel}-dominant (R ${flow.risePct.toFixed(0)}% / F ${flow.fallPct.toFixed(0)}%)` };
-                        }
+                        const label = isRise ? 'RISE' : 'FALL', oppLabel = isRise ? 'FALL' : 'RISE';
+                        if (opposingPct >= FLOW_DOMINANT_PCT) return { ok: false, reason: `flow is ${oppLabel}-dominant` };
                         const targetOK = targetPct >= FLOW_TARGET_PCT || targetTrend >= FLOW_TREND_PP || opposingTrend <= -FLOW_TREND_PP;
-                        if (!targetOK) {
-                            return { ok: false, reason: `flow not yet confirming ${label} (R ${flow.risePct.toFixed(0)}% / F ${flow.fallPct.toFixed(0)}%, no trend match)` };
-                        }
-                        let reason = `${label} confirmed (R ${flow.risePct.toFixed(0)}% / F ${flow.fallPct.toFixed(0)}%)`;
-                        if (opposingTrend <= -FLOW_TREND_PP) reason = `${label} confirmed — ${oppLabel} weakening ${opposingTrend.toFixed(0)}pp (R ${flow.risePct.toFixed(0)}% / F ${flow.fallPct.toFixed(0)}%)`;
-                        else if (targetTrend >= FLOW_TREND_PP) reason = `${label} confirmed — ${label} strengthening +${targetTrend.toFixed(0)}pp (R ${flow.risePct.toFixed(0)}% / F ${flow.fallPct.toFixed(0)}%)`;
+                        if (!targetOK) return { ok: false, reason: `flow not confirming ${label}` };
+                        let reason = `${label} confirmed`;
+                        if (opposingTrend <= -FLOW_TREND_PP) reason = `${label} confirmed — ${oppLabel} weakening`;
+                        else if (targetTrend >= FLOW_TREND_PP) reason = `${label} strengthening`;
                         return { ok: true, reason };
                     }
                     return { ok: true, reason: 'ok' };
@@ -623,35 +760,27 @@
                     const s = getSettings();
                     if (!d) return { verdict: 'WAIT', reason: 'waiting for tick data', sym };
                     if (r && r.paused) {
-                        const acc = getSignalAccuracy(d);
-                        return { verdict: 'STOP', reason: 'auto-paused on a losing signal record' + (acc ? ` (${acc.rate.toFixed(0)}% over ${acc.total})` : ''), sym };
+                        if (d._hardPaused) return { verdict: 'STOP', reason: `hard-paused — ⚙️ Resume all`, sym };
+                        const pausedTicks = d._pausedAtTick != null ? (d.tickCount - d._pausedAtTick) : 0;
+                        const remaining = Math.max(0, getPauseCooldown() - pausedTicks);
+                        return { verdict: 'STOP', reason: `auto-paused · ${remaining} ticks until retry`, sym };
                     }
                     if (!d.rollingArray || d.rollingArray.length < WARMUP_TICKS) {
                         return { verdict: 'WAIT', reason: `warming up ${d.rollingArray ? d.rollingArray.length : 0}/${WARMUP_TICKS} ticks`, sym };
                     }
-                    const acc = getSignalAccuracy(d);
-                    if (acc && acc.total >= AUTO_PAUSE_MIN_SIGNALS && acc.rate < AUTO_PAUSE_WIN_RATE * 100) {
-                        return { verdict: 'STOP', reason: `fired signals only ${acc.rate.toFixed(0)}% (${acc.wins}W/${acc.losses}L)`, sym };
+                    const modeAcc = getModeAccuracy(d);
+                    if (modeAcc && modeAcc.total >= AUTO_PAUSE_MIN_SIGNALS && modeAcc.rate < AUTO_PAUSE_WIN_RATE * 100) {
+                        return { verdict: 'STOP', reason: `${currentMarket} accuracy ${modeAcc.rate.toFixed(0)}%`, sym };
                     }
                     if (!r || !r.sig) return { verdict: 'WAIT', reason: 'no qualifying streak match yet', sym };
                     const sig = r.sig, strat = r.strat;
                     const allowed = s.signalStrictness === 'strict' ? ['A'] : s.signalStrictness === 'balanced' ? ['A', 'B'] : ['A', 'B', 'C'];
-                    if (!allowed.includes(sig.grade)) {
-                        return { verdict: 'WAIT', reason: `best setup is grade ${sig.grade} — below your ${s.signalStrictness} threshold`, sym, sig, strat };
-                    }
+                    if (!allowed.includes(sig.grade)) return { verdict: 'WAIT', reason: `grade ${sig.grade} below ${s.signalStrictness} threshold`, sym, sig, strat };
                     if (sig.signalAccuracy && sig.signalAccuracy.total >= 5 && sig.signalAccuracy.rate < 40) {
-                        return { verdict: 'STOP', reason: `${strat.short} has been losing — ${sig.signalAccuracy.rate.toFixed(0)}% (${sig.signalAccuracy.wins}W/${sig.signalAccuracy.losses}L)`, sym, sig, strat };
+                        return { verdict: 'STOP', reason: `${strat.short} losing — ${sig.signalAccuracy.rate.toFixed(0)}%`, sym, sig, strat };
                     }
-                    if (r.flowOk === false) {
-                        return { verdict: 'WAIT', reason: `${strat.short} signal blocked — ${r.flowReason}`, sym, sig, strat };
-                    }
-                    return { verdict: 'TRADE', reason: `${strat.label} · grade ${sig.grade} · ${sig.matchCount} matches · ${r.flowReason || 'flow ok'} · stake ${getPositionSize(sig.grade).pct}`, sym, sig, strat };
-                }
-
-                function getDecisionForMarket(sym) {
-                    const d = marketData[sym];
-                    const r = d ? getBestSigForMarket(sym) : null;
-                    return computeDecision(sym, d, r);
+                    if (r.flowOk === false) return { verdict: 'WAIT', reason: `${strat.short} blocked — ${r.flowReason}`, sym, sig, strat };
+                    return { verdict: 'TRADE', reason: `${strat.label} · grade ${sig.grade} · ${sig.matchCount} matches · stake ${getPositionSize(sig.grade).pct}`, sym, sig, strat };
                 }
 
                 function renderGlobalVerdict(decisions) {
@@ -663,31 +792,33 @@
                         el.innerHTML = `<span class="verdict-word">⏳ WAIT</span><span class="verdict-detail">Waiting for connection and tick data…</span>`;
                         return;
                     }
-                    const trades = decisions.filter(x => x.verdict === 'TRADE')
-                        .sort((a, b) => ((b.sig && b.sig.composite) || 0) - ((a.sig && a.sig.composite) || 0));
+                    if (sessionState.cycleEndPending) {
+                        el.className = 'verdict-banner wait';
+                        el.style.cursor = 'default'; el.onclick = null;
+                        el.innerHTML = `<span class="verdict-word">⏳ WAIT</span><span class="verdict-detail">Cycle ending — waiting for in-flight signals to finish</span>`;
+                        return;
+                    }
+                    const trades = decisions.filter(x => x.verdict === 'TRADE').sort((a, b) => ((b.sig && b.sig.composite) || 0) - ((a.sig && a.sig.composite) || 0));
                     const waits = decisions.filter(x => x.verdict === 'WAIT');
                     const stops = decisions.filter(x => x.verdict === 'STOP');
-
                     if (trades.length > 0) {
                         const best = trades[0];
                         el.className = 'verdict-banner trade';
                         el.style.cursor = 'pointer';
                         el.onclick = () => setFocus(best.sym);
                         el.innerHTML = `<span class="verdict-word">✅ TRADE NOW</span>
-                            <span class="verdict-detail"><b>${FULL_NAMES[best.sym]}</b> · ${best.strat.label} · grade ${best.sig.grade} · ${best.sig.matchCount} matching streaks · stake <b>${getPositionSize(best.sig.grade).pct}</b></span>
-                            <span class="verdict-detail" style="opacity:0.75;">(${trades.length} ready${stops.length ? ' · ' + stops.length + ' stopped' : ''}) — click to open</span>`;
+                            <span class="verdict-detail"><b>${FULL_NAMES[best.sym]}</b> · ${best.strat.label} · grade ${best.sig.grade} · stake <b>${getPositionSize(best.sig.grade).pct}</b></span>
+                            <span class="verdict-detail" style="opacity:0.75;">(${trades.length} ready${stops.length ? ' · ' + stops.length + ' stopped' : ''})</span>`;
                         return;
                     }
                     el.style.cursor = 'default'; el.onclick = null;
                     if (waits.length > 0) {
                         el.className = 'verdict-banner wait';
-                        el.innerHTML = `<span class="verdict-word">⏳ WAIT</span>
-                            <span class="verdict-detail">No qualifying setup — ${waits.length} market${waits.length === 1 ? '' : 's'} monitoring${stops.length ? ' · ' + stops.length + ' stopped' : ''}. Do not enter.</span>`;
+                        el.innerHTML = `<span class="verdict-word">⏳ WAIT</span><span class="verdict-detail">No qualifying setup — ${waits.length} monitoring${stops.length ? ' · ' + stops.length + ' paused' : ''}. Do not enter.</span>`;
                         return;
                     }
                     el.className = 'verdict-banner stop';
-                    el.innerHTML = `<span class="verdict-word">🛑 STOP</span>
-                        <span class="verdict-detail">All ${decisions.length} markets are paused or losing — stand down and review your record.</span>`;
+                    el.innerHTML = `<span class="verdict-word">🛑 STOP</span><span class="verdict-detail">All markets paused — ⚙️ → Resume all</span>`;
                 }
 
                 const VERDICT_TEXT = { TRADE: '✅ TRADE NOW', WAIT: '⏳ WAIT', STOP: '🛑 STOP' };
@@ -728,7 +859,7 @@
                         pointerScale: parseFloat(document.getElementById('pointerScale')?.value || 3),
                         analysisWindow: parseInt(document.getElementById('analysisWindow')?.value) || 1000,
                         minStreakLength: parseInt(document.getElementById('minStreakLength')?.value) || 5,
-                        minMatches: parseInt(document.getElementById('minMatches')?.value) || 3,
+                        minMatches: parseInt(document.getElementById('minMatches')?.value) || 4,
                         minSimilarity: parseFloat(document.getElementById('minSimilarity')?.value) || 0.9,
                         signalStrictness: document.getElementById('signalStrictness')?.value || 'balanced',
                         showCounts: !!document.getElementById('showCounts')?.checked,
@@ -741,7 +872,6 @@
                     return d.length ? parseInt(d.charAt(d.length-1), 10) : 0;
                 }
 
-                // === UPDATED: includes thirdMost set ===
                 function getDigitPercentages(sym, windowSize) {
                     const data = marketData[sym];
                     if (!data || data.rollingArray.length < Math.min(windowSize, 5)) return null;
@@ -756,26 +886,11 @@
                     const distinctCounts = Object.keys(countMap).map(Number).sort((a,b) => b-a);
                     const assigned = new Set();
                     const most = new Set(), second = new Set(), thirdMost = new Set(), least = new Set(), secondLeast = new Set();
-                    // 1st most (highest count level)
                     if (distinctCounts.length > 0) { for (const d of countMap[distinctCounts[0]]) { most.add(d); assigned.add(d); } }
-                    // 2nd most (next distinct count level)
-                    if (distinctCounts.length > 1) {
-                        for (let i = 1; i < distinctCounts.length; i++) {
-                            const digits = countMap[distinctCounts[i]].filter(d => !assigned.has(d));
-                            if (digits.length > 0) { for (const d of digits) { second.add(d); assigned.add(d); } break; }
-                        }
-                    }
-                    // 3rd most (next distinct count level) — highlighted YELLOW
-                    if (distinctCounts.length > 2) {
-                        for (let i = 1; i < distinctCounts.length; i++) {
-                            const digits = countMap[distinctCounts[i]].filter(d => !assigned.has(d));
-                            if (digits.length > 0) { for (const d of digits) { thirdMost.add(d); assigned.add(d); } break; }
-                        }
-                    }
-                    // least (lowest distinct count level still unassigned)
+                    if (distinctCounts.length > 1) { for (let i = 1; i < distinctCounts.length; i++) { const digits = countMap[distinctCounts[i]].filter(d => !assigned.has(d)); if (digits.length > 0) { for (const d of digits) { second.add(d); assigned.add(d); } break; } } }
+                    if (distinctCounts.length > 2) { for (let i = 1; i < distinctCounts.length; i++) { const digits = countMap[distinctCounts[i]].filter(d => !assigned.has(d)); if (digits.length > 0) { for (const d of digits) { thirdMost.add(d); assigned.add(d); } break; } } }
                     let unassigned = distinctCounts.filter(c => countMap[c].some(d => !assigned.has(d))).sort((a,b) => a-b);
                     if (unassigned.length > 0) { for (const d of countMap[unassigned[0]]) { if (!assigned.has(d)) { least.add(d); assigned.add(d); } } }
-                    // 2nd least (next lowest)
                     unassigned = distinctCounts.filter(c => countMap[c].some(d => !assigned.has(d))).sort((a,b) => a-b);
                     if (unassigned.length > 0) { for (const d of countMap[unassigned[0]]) { if (!assigned.has(d)) { secondLeast.add(d); assigned.add(d); } } }
                     return { pct, most, second, thirdMost, least, secondLeast, total, counts: cnt };
@@ -821,16 +936,12 @@
 
                 function initBotStats(d) {
                     if (!d) return;
-                    if (!d.botStats) {
-                        d.botStats = {};
-                        for (const strat of STRATEGIES) d.botStats[strat.id] = { history: [], wins: 0, losses: 0 };
-                    }
+                    if (!d.botStats) { d.botStats = {}; for (const strat of STRATEGIES) d.botStats[strat.id] = { history: [], wins: 0, losses: 0 }; }
                 }
                 function initStreakTracking(d) {
                     if (!d) return;
                     if (!d.streaks) {
-                        d.streaks = {};
-                        d.streakState = {};
+                        d.streaks = {}; d.streakState = {};
                         for (const strat of STRATEGIES) {
                             d.streaks[strat.id] = [];
                             d.streakState[strat.id] = { currentCount: 0, startTick: null, startContext: null };
@@ -855,7 +966,6 @@
                         }
                         st.history.push(won ? 1 : 0);
                         if (won) st.wins++; else st.losses++;
-
                         const state = d.streakState[strat.id];
                         if (won) {
                             if (state.currentCount === 0) { state.startTick = d.tickCount; state.startContext = contextBefore; }
@@ -883,20 +993,62 @@
                             if (!d.signalHistory) d.signalHistory = [];
                             d.signalHistory.push({ stratId: ps.stratId, grade: ps.grade, won, at: d.tickCount });
                             if (d.signalHistory.length > MAX_SIGNAL_HISTORY) d.signalHistory.shift();
+
+                            // === Cycle tracking ===
+                            const c = d._tradeCycle;
+                            if (c && c.state === 'active') {
+                                c.tradesInSignal++;
+                                sessionState.tradesInCycle++;
+                                if (won) { c.signalWins++; sessionState.winsInCycle++; }
+                                else { c.signalLosses++; sessionState.lossesInCycle++; }
+                                if (c.tradesInSignal >= TRADES_PER_SIGNAL) {
+                                    completeSignal(sym, d);
+                                }
+                            }
                         }
                     }
                     d._pendingSignal = null;
+                    d._lastResolvedTick = d.tickCount;
                 }
 
+                // === NEW: Cycle-aware signal firing ===
                 function maybeSnapshotSignal(sym) {
                     const d = marketData[sym];
-                    if (!d || d._pendingSignal) return;
+                    if (!d) return;
+                    if (d._pendingSignal) return;
+                    const c = d._tradeCycle;
+                    if (!c) return;
+
                     const r = getBestSigForMarket(sym);
-                    const currentKey = (r && !r.paused && r.sig && r.flowOk && (r.sig.grade === 'A' || r.sig.grade === 'B')) ? r.strat.id : null;
-                    if (currentKey && !d._lastSignalKey) {
-                        d._pendingSignal = { stratId: r.strat.id, grade: r.sig.grade, at: d.tickCount };
+                    const isTrade = !!(r && !r.paused && r.sig && r.flowOk && (r.sig.grade === 'A' || r.sig.grade === 'B'));
+
+                    // Idle → Active (new signal)
+                    if (c.state === 'idle' && isTrade) {
+                        if (sessionState.cycleEndPending) return; // block new signals during cycle end
+                        const cooldown = getSignalCooldown();
+                        if (d._lastSignalEndTick != null && d.tickCount - d._lastSignalEndTick < cooldown) return;
+                        startNewSignal(sym, d, r);
+                        return;
                     }
-                    d._lastSignalKey = currentKey;
+
+                    // Exhausted → Idle (signal dropped away)
+                    if (c.state === 'exhausted' && !isTrade) {
+                        c.state = 'idle';
+                        c.activeStrat = null;
+                        return;
+                    }
+
+                    // Active: check still valid, otherwise complete early
+                    if (c.state === 'active') {
+                        if (!isTrade || (r && r.strat.id !== c.activeStrat)) {
+                            completeSignal(sym, d);
+                            return;
+                        }
+                        // Still valid, under 3 trades → fire next trade (no cooldown within signal)
+                        if (c.tradesInSignal < TRADES_PER_SIGNAL) {
+                            d._pendingSignal = { stratId: r.strat.id, grade: r.sig.grade, at: d.tickCount };
+                        }
+                    }
                 }
 
                 function generateStreakSignal(sym, strat) {
@@ -947,8 +1099,8 @@
                     if (sigAcc && sigAcc.total >= 3) accuracyBonus = Math.max(-12, Math.min(12, (sigAcc.rate - 50) * 0.25));
                     const composite = countScore * 0.25 + avgLenScore * 0.20 + maxLenScore * 0.15 + simScore * 0.15 + wilsonScore * 0.15 + crossWindowScore * 0.10 + accuracyBonus;
                     let grade = 'C';
-                    if (composite >= 78 && matchCount >= 5 && avgLength >= 6 && maxLength >= 8 && crossWindowPass) grade = 'A';
-                    else if (composite >= 55 && matchCount >= 3 && avgLength >= 5) grade = 'B';
+                    if (composite >= 80 && matchCount >= 5 && avgLength >= 6 && maxLength >= 8 && crossWindowPass) grade = 'A';
+                    else if (composite >= 62 && matchCount >= 4 && avgLength >= 5) grade = 'B';
                     const result = { strat, matches, matchCount, avgLength, maxLength, avgSim, composite: Math.round(Math.max(0, Math.min(100, composite))), grade, currentCtx, currentWr, currentEdge, liveStreak, wilson, crossWindowEdges: cwe, crossWindowPass, signalAccuracy: sigAcc, accuracyBonus };
                     signalCache[cacheKey] = { tick: d.tickCount, sig: result };
                     return result;
@@ -958,9 +1110,7 @@
                     const d = marketData[sym];
                     if (!d) return null;
                     const s = getSettings();
-                    if (s.autoPauseLosing && isMarketPaused(d, s.autoPauseLosing)) {
-                        return { sig: null, strat: null, paused: true };
-                    }
+                    if (s.autoPauseLosing && isMarketPaused(d, s.autoPauseLosing)) return { sig: null, strat: null, paused: true };
                     const candidates = [];
                     for (const strat of getStrategiesForMode(currentMarket)) {
                         const sig = generateStreakSignal(sym, strat);
@@ -976,7 +1126,6 @@
                     return { sig: best.sig, strat: best.strat, flowOk: best.flowOk, flowReason: best.flowReason };
                 }
 
-                // === UPDATED: applies thirdmost class ===
                 function buildSignalDigitCellsHTML(sym) {
                     const data = marketData[sym];
                     if (!data) return '';
@@ -1152,6 +1301,7 @@
                     if (!data) return '';
                     const s = getSettings();
                     const uiState = data._uiState || { checklist: false, procedure: false, details: false };
+                    const c = data._tradeCycle || newTradeCycle();
 
                     const r = getBestSigForMarket(sym);
                     const paused = r && r.paused;
@@ -1165,30 +1315,36 @@
                     const priceDisplay = data.lastPriceDisplay || '—';
                     const digitDisplay = (data.lastDigit !== null && data.lastDigit !== undefined) ? data.lastDigit : '?';
 
+                    // Trade progress badge
+                    let tradeBadge = '';
+                    if (c.state === 'active') {
+                        tradeBadge = `<span class="trade-progress-badge active">🎯 trade ${c.tradesInSignal + (data._pendingSignal ? 1 : 0)}/${TRADES_PER_SIGNAL}</span>`;
+                    } else if (c.state === 'exhausted') {
+                        tradeBadge = `<span class="trade-progress-badge exhausted">✅ signal done · ${c.tradesInSignal}/${TRADES_PER_SIGNAL}</span>`;
+                    }
+
                     let headlineBadge;
                     if (paused) {
-                        headlineBadge = `<span class="signal-badge" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid #ef4444;font-weight:800;">🛑 PAUSED — losing record</span>`;
+                        headlineBadge = `<span class="signal-badge" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid #ef4444;font-weight:800;">${data._hardPaused ? '🔒 HARD-PAUSED' : '🛑 PAUSED'}</span>`;
                     } else if (strat) {
-                        const blocked = !flowOk;
-                        headlineBadge = `<span class="signal-badge ${badgeClass} ${blocked ? 'blocked' : ''}">${strat.label}${blocked ? ' ⚠️' : ''}</span>`;
+                        headlineBadge = `<span class="signal-badge ${badgeClass} ${!flowOk ? 'blocked' : ''}">${strat.label}${!flowOk ? ' ⚠️' : ''}</span>`;
                     } else {
                         headlineBadge = `<span class="signal-badge" style="background:var(--bg-body);color:var(--text-secondary);border:1px solid var(--border-color);font-weight:700;">⏸️ Monitoring</span>`;
                     }
-                    const scoreBox = sig
-                        ? `<span class="signal-score-box">score <b>${sig.composite}</b>/100 · ${sig.matchCount} matches</span>`
-                        : (paused ? `<span class="signal-score-box" style="border-color:#ef4444;color:#f87171;">paused</span>` : `<span class="signal-score-box">monitoring</span>`);
+                    const scoreBox = sig ? `<span class="signal-score-box">score <b>${sig.composite}</b>/100 · ${sig.matchCount} matches</span>` : (paused ? `<span class="signal-score-box" style="border-color:#ef4444;color:#f87171;">paused</span>` : `<span class="signal-score-box">monitoring</span>`);
                     const accuracyBadge = buildAccuracyBadge(data, strat ? strat.id : null);
                     const decision = computeDecision(sym, data, r);
                     const verdictPill = `<span class="verdict-pill ${decision.verdict.toLowerCase()}" title="${decision.reason}">${VERDICT_TEXT[decision.verdict]}</span>`;
 
                     let bannerContent = '';
-                    if (sig && sig.liveStreak >= s.minStreakLength) {
-                        bannerContent = `<div style="width:100%;padding:0.35rem 0.55rem;background:rgba(16,185,129,0.15);border:1px solid #10b981;border-radius:0.4rem;font-size:0.72rem;color:#4ade80;font-weight:800;">🔥 LIVE STREAK — ${strat.label} has won ${sig.liveStreak} in a row right now</div>`;
-                    } else if (sig && sig.liveStreak > 0) {
-                        bannerContent = `<div style="width:100%;padding:0.3rem 0.55rem;background:rgba(250,204,21,0.1);border:1px solid rgba(250,204,21,0.5);border-radius:0.4rem;font-size:0.7rem;color:#facc15;">⏳ Building — ${sig.liveStreak} consecutive wins (need ${s.minStreakLength} for "live" status)</div>`;
+                    if (c.state === 'active') {
+                        bannerContent = `<div style="width:100%;padding:0.35rem 0.55rem;background:rgba(16,185,129,0.15);border:1px solid #10b981;border-radius:0.4rem;font-size:0.72rem;color:#4ade80;font-weight:800;">🎯 ACTIVE SIGNAL — ${c.tradesInSignal}/${TRADES_PER_SIGNAL} trades taken · wait for completion</div>`;
+                    } else if (c.state === 'exhausted') {
+                        bannerContent = `<div style="width:100%;padding:0.3rem 0.55rem;background:rgba(250,204,21,0.1);border:1px solid rgba(250,204,21,0.5);border-radius:0.4rem;font-size:0.7rem;color:#facc15;font-weight:700;">✅ SIGNAL COMPLETE — ${c.tradesInSignal}/${TRADES_PER_SIGNAL} trades · waiting for signal to refresh</div>`;
                     } else if (paused) {
-                        const acc = getSignalAccuracy(data);
-                        bannerContent = `<div style="width:100%;padding:0.3rem 0.55rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.5);border-radius:0.4rem;font-size:0.7rem;color:#f87171;font-weight:700;">🛑 Auto-paused — ${acc ? acc.wins + 'W/' + acc.losses + 'L (' + acc.rate.toFixed(0) + '%)' : ''} signals · recovers when accuracy returns above 40%</div>`;
+                        const pausedTicks = data._pausedAtTick != null ? (data.tickCount - data._pausedAtTick) : 0;
+                        const remaining = Math.max(0, getPauseCooldown() - pausedTicks);
+                        bannerContent = `<div style="width:100%;padding:0.3rem 0.55rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.5);border-radius:0.4rem;font-size:0.7rem;color:#f87171;font-weight:700;">${data._hardPaused ? '🔒 Hard-paused — ⚙️ Resume all' : '🛑 Auto-paused · ' + remaining + ' ticks until retry'}</div>`;
                     } else {
                         bannerContent = `<div class="verdict-reason ${decision.verdict.toLowerCase()}">${VERDICT_TEXT[decision.verdict]} — ${decision.reason}</div>`;
                     }
@@ -1212,58 +1368,54 @@
                     const balanceText = currentCtx
                         ? `Even ${(currentCtx.evenPct*100).toFixed(0)}% · Over 4 ${(currentCtx.overPct*100).toFixed(0)}% · Rise ${(currentCtx.risePct*100).toFixed(0)}%`
                         : 'Even —% · Over 4 —% · Rise —%';
-                    const wrText = sig
-                        ? `<span class="v ${sig.currentEdge > 0 ? 'highlight' : ''}">${sig.currentWr.toFixed(1)}% (${sig.currentEdge >= 0 ? '+' : ''}${sig.currentEdge.toFixed(1)}pp vs baseline) · Wilson ${sig.wilson.toFixed(1)}%</span>`
-                        : `<span class="v" style="opacity:0.5;">— vs baseline</span>`;
+                    const wrText = sig ? `<span class="v ${sig.currentEdge > 0 ? 'highlight' : ''}">${sig.currentWr.toFixed(1)}% (${sig.currentEdge >= 0 ? '+' : ''}${sig.currentEdge.toFixed(1)}pp vs baseline) · Wilson ${sig.wilson.toFixed(1)}%</span>` : `<span class="v" style="opacity:0.5;">— vs baseline</span>`;
 
                     let checklistContent = '';
                     if (sig) {
                         const checks = [
                             { ok: sig.matchCount >= s.minMatches, label: 'Matching streaks', detail: `${sig.matchCount} (need ${s.minMatches}+)` },
-                            { ok: sig.avgLength >= s.minStreakLength, label: 'Avg past streak length', detail: `${sig.avgLength.toFixed(1)} (need ${s.minStreakLength}+)` },
-                            { ok: sig.maxLength >= s.minStreakLength + 2, label: 'Longest past streak', detail: `${sig.maxLength} (need ${s.minStreakLength + 2}+)` },
+                            { ok: sig.avgLength >= s.minStreakLength, label: 'Avg streak length', detail: `${sig.avgLength.toFixed(1)} (need ${s.minStreakLength}+)` },
+                            { ok: sig.maxLength >= s.minStreakLength + 2, label: 'Longest past streak', detail: `${sig.maxLength}` },
                             { ok: sig.avgSim >= s.minSimilarity, label: 'Avg similarity', detail: `${sig.avgSim.toFixed(2)} (need ${s.minSimilarity}+)` },
-                            { ok: sig.crossWindowPass, label: 'Cross-window edge', detail: sig.crossWindowPass ? 'all windows agree' : 'windows disagree — C grade' },
+                            { ok: sig.crossWindowPass, label: 'Cross-window edge', detail: sig.crossWindowPass ? 'all windows agree' : 'windows disagree' },
                             { ok: sig.grade === 'A' || sig.grade === 'B', label: 'Signal grade', detail: sig.grade },
-                            { ok: flowOk, label: 'Live flow confirms', detail: flowOk ? 'flow favours signal' : (r && r.flowReason ? r.flowReason : 'flow against signal') },
+                            { ok: flowOk, label: 'Live flow confirms', detail: flowOk ? 'flow favours signal' : (r && r.flowReason ? r.flowReason : 'flow against') },
                         ];
-                        for (const c of checks) checklistContent += `<div class="checklist-row ${c.ok ? 'pass' : 'fail'}"><span class="icon">${c.ok ? '✓' : '✗'}</span><span class="label">${c.label}</span><span class="detail">${c.detail}</span></div>`;
+                        for (const ch of checks) checklistContent += `<div class="checklist-row ${ch.ok ? 'pass' : 'fail'}"><span class="icon">${ch.ok ? '✓' : '✗'}</span><span class="label">${ch.label}</span><span class="detail">${ch.detail}</span></div>`;
                         const ps = getPositionSize(sig.grade);
                         checklistContent += `<div class="checklist-row pass" style="margin-top:0.3rem;padding-top:0.3rem;border-top:1px solid var(--border-color);"><span class="icon">💰</span><span class="label">Position size</span><span class="detail"><span class="position-size-badge grade-${sig.grade}">${ps.pct}</span> ${ps.label}</span></div>`;
                     } else if (paused) {
-                        checklistContent = `<div style="font-size:0.7rem;color:#f87171;padding:0.25rem 0;">🛑 Market is paused due to losing signal history. Will resume when recent accuracy exceeds 40%.</div>`;
+                        checklistContent = `<div style="font-size:0.7rem;color:#f87171;padding:0.25rem 0;">🛑 Market is paused. Will retry after cooldown.</div>`;
                     } else {
-                        checklistContent = `<div style="font-size:0.7rem;color:var(--text-secondary);padding:0.25rem 0;">⏳ Waiting for qualifying signal before checklist can be evaluated.</div>`;
+                        checklistContent = `<div style="font-size:0.7rem;color:var(--text-secondary);padding:0.25rem 0;">⏳ Waiting for qualifying signal.</div>`;
                     }
 
                     let procedureContent = '';
                     if (sig && strat && flowOk) {
                         const ps = getPositionSize(sig.grade);
                         const steps = [
-                            `<b>Confirm still Grade ${sig.grade}</b> — verify signal hasn't dropped to C before entering.`,
+                            `<b>This is trade ${c.tradesInSignal + 1} of ${TRADES_PER_SIGNAL}</b> — you will take ${TRADES_PER_SIGNAL} max on this signal.`,
                             `<b>Open <u>${strat.contractHint}</u></b> on <b>${FULL_NAMES[sym]}</b>.`,
                             `<b>Stake: ${ps.pct} of capital</b> (${ps.label}). Fixed, never martingale.`,
-                            `<b>Stop-loss:</b> 2 consecutive losses → pause 5 minutes.`,
-                            `<b>Take-profit:</b> 3 consecutive wins → consider pausing.`,
-                            `<b>Re-verify</b> — if grade drops below B or match count drops below ${s.minMatches}, skip the trade.`,
+                            `<b>After ${TRADES_PER_SIGNAL} trades:</b> STOP — wait for signal to refresh.`,
+                            `<b>Stop-loss:</b> 2 consecutive losses → close chart, take a break.`,
                         ];
                         steps.forEach((st, i) => { procedureContent += `<div class="entry-step"><span class="n">${i+1}</span><span class="t">${st}</span></div>`; });
+                    } else if (c.state === 'exhausted') {
+                        procedureContent = `<div style="font-size:0.7rem;color:#facc15;padding:0.25rem 0;">✅ Signal complete (${c.tradesInSignal}/${TRADES_PER_SIGNAL} trades). Do NOT trade again on this signal — wait for it to refresh.</div>`;
                     } else if (sig && strat && !flowOk) {
-                        procedureContent = `<div style="font-size:0.7rem;color:#f87171;padding:0.25rem 0;">🛑 Entry blocked — ${r.flowReason || 'live flow runs against the signal'}. Wait for flow to confirm before entering.</div>`;
+                        procedureContent = `<div style="font-size:0.7rem;color:#f87171;padding:0.25rem 0;">🛑 Entry blocked — ${r.flowReason || 'live flow runs against the signal'}.</div>`;
                     } else {
                         procedureContent = `<div style="font-size:0.7rem;color:var(--text-secondary);padding:0.25rem 0;">⏳ Entry procedure will appear once a qualifying signal fires.</div>`;
                     }
 
-                    const detailsContent = `
-                        ${buildStrategyDetailsHTML(data)}
-                        <div class="signal-section-title" style="margin-top:0.4rem;">📜 RECENT FIRED SIGNALS</div>
-                        ${buildRecentSignalsHTML(data)}
-                    `;
+                    const detailsContent = `${buildStrategyDetailsHTML(data)}<div class="signal-section-title" style="margin-top:0.4rem;">📜 RECENT FIRED SIGNALS</div>${buildRecentSignalsHTML(data)}`;
 
                     return `
                         <div class="signal-headline">
                             <span class="grade-badge grade-${grade}">${grade}</span>
                             ${verdictPill}
+                            ${tradeBadge}
                             ${headlineBadge}
                             <span class="signal-market">📈 ${FULL_NAMES[sym]}</span>
                             <span class="live-price-big">${priceDisplay}</span>
@@ -1293,27 +1445,21 @@
                                 <span>✓ PRE-TRADE CHECKLIST</span>
                                 <span class="chevron">${uiState.checklist ? '▾' : '▸'}</span>
                             </div>
-                            <div class="collapse-body" style="display:${uiState.checklist ? 'block' : 'none'};">
-                                ${checklistContent}
-                            </div>
+                            <div class="collapse-body" style="display:${uiState.checklist ? 'block' : 'none'};">${checklistContent}</div>
                         </div>
                         <div class="signal-section collapsible">
                             <div class="signal-section-title collapse-header" data-section="procedure">
                                 <span>🎯 ENTRY PROCEDURE</span>
                                 <span class="chevron">${uiState.procedure ? '▾' : '▸'}</span>
                             </div>
-                            <div class="collapse-body" style="display:${uiState.procedure ? 'block' : 'none'};">
-                                ${procedureContent}
-                            </div>
+                            <div class="collapse-body" style="display:${uiState.procedure ? 'block' : 'none'};">${procedureContent}</div>
                         </div>
                         <div class="signal-section collapsible">
                             <div class="signal-section-title collapse-header" data-section="details">
-                                <span>🔬 DETAILS — strategy breakdown + recent signals</span>
+                                <span>🔬 DETAILS</span>
                                 <span class="chevron">${uiState.details ? '▾' : '▸'}</span>
                             </div>
-                            <div class="collapse-body" style="display:${uiState.details ? 'block' : 'none'};">
-                                ${detailsContent}
-                            </div>
+                            <div class="collapse-body" style="display:${uiState.details ? 'block' : 'none'};">${detailsContent}</div>
                         </div>
                     `;
                 }
@@ -1388,11 +1534,54 @@
                     if (el('sbLosses')) el('sbLosses').textContent = losses;
                     if (el('sbAccuracy')) {
                         const accEl = el('sbAccuracy');
-                        if (total > 0) { accEl.textContent = acc.toFixed(1) + '%'; accEl.className = 'sb-val ' + (acc >= 55 ? 'pos' : acc < 40 ? 'neg' : ''); }
-                        else { accEl.textContent = '—'; accEl.className = 'sb-val'; }
+                        if (total > 0) {
+                            const edge = acc - 50;
+                            accEl.textContent = acc.toFixed(1) + '% (' + (edge >= 0 ? '+' : '') + edge.toFixed(1) + 'pp)';
+                            accEl.className = 'sb-val ' + (acc >= 55 ? 'pos' : acc < 45 ? 'neg' : '');
+                        } else { accEl.textContent = '—'; accEl.className = 'sb-val'; }
+                    }
+                    // === Cycle banner ===
+                    if (el('sbCycle')) {
+                        const pending = sessionState.cycleEndPending ? ' (ending)' : '';
+                        el('sbCycle').textContent = `#${sessionState.cycleNum} · ${sessionState.signalsInCycle}/${SIGNALS_PER_CYCLE}${pending}`;
+                    }
+                    if (el('sbCycleWR')) {
+                        const cTotal = sessionState.winsInCycle + sessionState.lossesInCycle;
+                        if (cTotal > 0) {
+                            const cRate = (sessionState.winsInCycle / cTotal) * 100;
+                            el('sbCycleWR').textContent = `${cRate.toFixed(1)}% (${sessionState.winsInCycle}W/${sessionState.lossesInCycle}L)`;
+                            el('sbCycleWR').className = 'sb-val ' + (cRate >= 55 ? 'pos' : cRate < 45 ? 'neg' : '');
+                        } else {
+                            el('sbCycleWR').textContent = '—';
+                            el('sbCycleWR').className = 'sb-val';
+                        }
+                    }
+                    if (el('settingsCycleInfo')) {
+                        el('settingsCycleInfo').textContent = `Cycle #${sessionState.cycleNum} · ${sessionState.signalsInCycle}/${SIGNALS_PER_CYCLE} signals`;
                     }
                     if (el('sbActive')) el('sbActive').textContent = active;
                     if (el('sbPaused')) el('sbPaused').textContent = paused;
+                }
+
+                function renderCycleHistory() {
+                    const el = document.getElementById('cycleHistoryList');
+                    if (!el) return;
+                    if (sessionState.history.length === 0) {
+                        el.innerHTML = `<div style="opacity:0.6;text-align:center;padding:0.3rem;">No completed cycles yet</div>`;
+                        return;
+                    }
+                    const recent = sessionState.history.slice(-10).reverse();
+                    let html = '';
+                    for (const rec of recent) {
+                        const cls = rec.rate >= 55 ? 'pos' : rec.rate < 45 ? 'neg' : '';
+                        html += `<div class="cycle-history-row ${cls}">
+                            <span class="ch-num">#${rec.cycleNum}</span>
+                            <span class="ch-stats">${rec.signals} sig · ${rec.trades} trades</span>
+                            <span class="ch-stats">${rec.wins}W/${rec.losses}L</span>
+                            <span class="ch-rate">${rec.rate.toFixed(1)}%</span>
+                        </div>`;
+                    }
+                    el.innerHTML = html;
                 }
 
                 function updateAllMarketsList() {
@@ -1410,20 +1599,28 @@
                         const hasSig = r && r.sig;
                         const gradeOK = hasSig && allowed.includes(r.sig.grade);
                         const flowOK = hasSig && r.flowOk !== false;
-                        const tradable = !paused && gradeOK && flowOK;
+                        const tradable = !paused && gradeOK && flowOK && !sessionState.cycleEndPending;
                         if (tradable) signalCount++;
                         const rowClass = paused ? 'market-list-item paused-market' : (tradable ? 'market-list-item signal-on' : 'market-list-item');
 
                         let bestHTML = '';
                         if (paused) {
-                            bestHTML = `<div class="no-signal" style="color:#f87171;">🛑 auto-paused</div>`;
+                            if (data && data._hardPaused) bestHTML = `<div class="no-signal" style="color:#ef4444;">🔒 hard-paused — ⚙️ Resume</div>`;
+                            else if (data && data._pausedAtTick != null) {
+                                const remaining = Math.max(0, getPauseCooldown() - (data.tickCount - data._pausedAtTick));
+                                bestHTML = `<div class="no-signal" style="color:#f87171;">🛑 paused · ${remaining}t</div>`;
+                            } else bestHTML = `<div class="no-signal" style="color:#f87171;">🛑 auto-paused</div>`;
+                        } else if (data && data._tradeCycle && data._tradeCycle.state === 'active') {
+                            bestHTML = `<div class="no-signal" style="color:#4ade80;">🎯 ${data._tradeCycle.tradesInSignal}/${TRADES_PER_SIGNAL} trades taken</div>`;
+                        } else if (data && data._tradeCycle && data._tradeCycle.state === 'exhausted') {
+                            bestHTML = `<div class="no-signal" style="color:#facc15;">✅ signal done · waiting</div>`;
                         } else if (tradable) {
                             const dir = r.strat.direction === 'up' ? 'up' : 'down';
                             bestHTML = `<div class="item-best"><span class="best-label ${dir}">${r.strat.label}</span><span class="best-rate pos">${r.sig.grade} · ${r.sig.matchCount}×avg${r.sig.avgLength.toFixed(0)}w</span></div>`;
                         } else if (hasSig && !flowOK) {
-                            bestHTML = `<div class="no-signal" style="color:#facc15;">⚠️ ${r.strat.short} signal · flow conflict</div>`;
+                            bestHTML = `<div class="no-signal" style="color:#facc15;">⚠️ ${r.strat.short} · flow conflict</div>`;
                         } else if (hasSig && !gradeOK) {
-                            bestHTML = `<div class="no-signal" style="color:var(--text-secondary);">${r.strat.short} · grade ${r.sig.grade} below threshold</div>`;
+                            bestHTML = `<div class="no-signal" style="color:var(--text-secondary);">${r.strat.short} · grade ${r.sig.grade}</div>`;
                         } else {
                             let closestInfo = hasData ? 'building…' : '—';
                             if (hasData && data.streaks) {
@@ -1445,7 +1642,7 @@
                         const acc = data ? getSignalAccuracy(data) : null;
                         let accHTML = '';
                         if (acc) {
-                            const cls = acc.rate >= 55 ? 'pos' : acc.rate < 40 ? 'neg' : '';
+                            const cls = acc.rate >= 55 ? 'pos' : acc.rate < 45 ? 'neg' : '';
                             accHTML = `<div class="acc-line ${cls}"><span>🎯 SIG</span><span>${acc.wins}W/${acc.losses}L · ${acc.rate.toFixed(0)}%</span></div>`;
                         }
 
@@ -1462,14 +1659,8 @@
                     document.querySelectorAll('.market-list-item').forEach(el => { el.onclick = () => setFocus(el.dataset.symbol); });
                 }
 
-                function createMarketUI(sym) {
-                    if (document.getElementById(`market_${sym}`)) return;
-                    const card = document.createElement('div');
-                    card.className = 'market-card grade-C';
-                    card.id = `market_${sym}`;
-                    card.dataset.symbol = sym;
-                    document.getElementById('marketsContainer').appendChild(card);
-                    if (!marketData[sym]) marketData[sym] = {
+                function newMarketState() {
+                    return {
                         rollingArray: [], lastDigit: null, lastPriceDisplay: '—',
                         directions: [], lastPrice: null, tickCount: 0,
                         botStats: null, streaks: null, streakState: null,
@@ -1477,7 +1668,21 @@
                         _dirty: false, _lastRender: 0, _decimals: undefined,
                         _uiState: { checklist: false, procedure: false, details: false },
                         _pendingSignal: null, _lastSignalKey: null,
+                        _lastResolvedTick: null, _lastSignalEndTick: null,
+                        _pausedAtTick: null, _lastResumeTick: 0, _resumeAttempts: 0,
+                        _hardPaused: false, _manualResume: false, _manualResumeTick: 0,
+                        _tradeCycle: newTradeCycle()
                     };
+                }
+
+                function createMarketUI(sym) {
+                    if (document.getElementById(`market_${sym}`)) return;
+                    const card = document.createElement('div');
+                    card.className = 'market-card grade-C';
+                    card.id = `market_${sym}`;
+                    card.dataset.symbol = sym;
+                    document.getElementById('marketsContainer').appendChild(card);
+                    if (!marketData[sym]) marketData[sym] = newMarketState();
                     marketData[sym]._dom = { card };
                     initBotStats(marketData[sym]);
                     initStreakTracking(marketData[sym]);
@@ -1582,6 +1787,10 @@
                                         if (!isNaN(pipSize) && pipSize >= 0) d._decimals = pipSize;
                                         d.rollingArray = []; d.directions = []; d.botStats = null; d.streaks = null; d.streakState = null;
                                         d.signalHistory = []; d._pendingSignal = null; d._lastSignalKey = null;
+                                        d._lastResolvedTick = null; d._lastSignalEndTick = null;
+                                        d._pausedAtTick = null; d._lastResumeTick = 0; d._resumeAttempts = 0;
+                                        d._hardPaused = false; d._manualResume = false;
+                                        d._tradeCycle = newTradeCycle();
                                         d.tickCount = 0; d.lastPrice = null;
                                         initBotStats(d); initStreakTracking(d);
                                         Object.keys(signalCache).forEach(k => { if (k.startsWith(sym + '_')) delete signalCache[k]; });
@@ -1624,15 +1833,7 @@
 
                 function processTick(sym, price, quoteDisplay, epoch, opts = {}) {
                     const fromHistory = !!opts.fromHistory;
-                    if (!marketData[sym]) marketData[sym] = {
-                        rollingArray: [], lastDigit: null, lastPriceDisplay: '—',
-                        directions: [], lastPrice: null, tickCount: 0,
-                        botStats: null, streaks: null, streakState: null,
-                        signalHistory: [],
-                        _dirty: false, _lastRender: 0, _decimals: undefined,
-                        _uiState: { checklist: false, procedure: false, details: false },
-                        _pendingSignal: null, _lastSignalKey: null,
-                    };
+                    if (!marketData[sym]) marketData[sym] = newMarketState();
                     const d = marketData[sym];
                     const prevPrice = d.lastPrice;
                     if (quoteDisplay && d._decimals === undefined) {
@@ -1674,14 +1875,42 @@
                 document.getElementById('refreshHistoryBtn').onclick = () => refreshAllHistory();
                 window.onclick = e => { if (e.target === document.getElementById('settingsModal')) document.getElementById('settingsModal').style.display = 'none'; };
 
+                document.getElementById('resumeAllBtn').onclick = () => {
+                    for (const sym in marketData) {
+                        const d = marketData[sym];
+                        d._pausedAtTick = null; d._lastResumeTick = d.tickCount;
+                        d._resumeAttempts = 0; d._hardPaused = false;
+                        d._manualResume = true; d._manualResumeTick = d.tickCount;
+                        d._dirty = true;
+                    }
+                    showToast('✅ All markets resumed', 'pos');
+                };
+
+                document.getElementById('resetStatsBtn').onclick = () => {
+                    if (!confirm('Reset ALL session stats AND cycle progress? This clears everything.')) return;
+                    for (const sym in marketData) {
+                        const d = marketData[sym];
+                        d.signalHistory = [];
+                        d._pendingSignal = null; d._lastSignalKey = null; d._lastResolvedTick = null; d._lastSignalEndTick = null;
+                        d._pausedAtTick = null; d._lastResumeTick = 0; d._resumeAttempts = 0;
+                        d._hardPaused = false; d._manualResume = false; d._manualResumeTick = 0;
+                        d._tradeCycle = newTradeCycle();
+                        d._dirty = true;
+                    }
+                    resetAllCycles();
+                    updateSessionBanner();
+                    renderCycleHistory();
+                    showToast('🔄 Session + cycles reset', 'info');
+                };
+
                 document.getElementById('analysisWindow')?.addEventListener('change', () => refreshAllHistory());
                 document.getElementById('showCounts')?.addEventListener('change', () => { for (const s in marketData) marketData[s]._dirty = true; });
                 document.getElementById('autoPauseLosing')?.addEventListener('change', () => { for (const s in marketData) marketData[s]._dirty = true; });
+                document.getElementById('pauseCooldown')?.addEventListener('change', () => { for (const s in marketData) marketData[s]._dirty = true; });
+                document.getElementById('signalCooldown')?.addEventListener('change', () => { for (const s in marketData) marketData[s]._dirty = true; });
 
                 ['pointerStyle','pointerScale','minStreakLength','minMatches','minSimilarity','signalStrictness'].forEach(id => {
-                    document.getElementById(id)?.addEventListener('change', () => {
-                        for (const s in marketData) marketData[s]._dirty = true;
-                    });
+                    document.getElementById(id)?.addEventListener('change', () => { for (const s in marketData) marketData[s]._dirty = true; });
                     document.getElementById(id)?.addEventListener('input', () => {
                         if (id === 'pointerScale') {
                             const sv = document.getElementById('scaleValue');
@@ -1693,8 +1922,9 @@
 
                 setTimeout(connectWebSocket, 500);
                 setMarket('evenodd');
+                renderCycleHistory();
 
-                console.log('✅ TAJIRI STREAK BOT: third-most digit highlighted in yellow (market-mover indicator).');
+                console.log('✅ TAJIRI STREAK BOT: 3-trade signal limit + 50-signal cycles active.');
             } catch (err) {
                 console.error('Error initializing:', err);
                 document.body.innerHTML = `<div style="color:red;padding:20px;font-size:16px;">Error: ${err.message}</div>`;
